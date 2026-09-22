@@ -1,0 +1,271 @@
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { AuthenticatedUser } from '../../common/types/auth';
+import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
+import { CreateProductDto } from './dto/create-product.dto';
+import { QueryProductsDto } from './dto/query-products.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import {
+  ProductResponse,
+  toProductResponse,
+  withBusiness,
+} from './products.mapper';
+
+export type ProductDetailResponse = {
+  product: ProductResponse;
+  business: {
+    id: string;
+    type: string;
+    name: string;
+    location: string;
+    description: string | null;
+    phone: string | null;
+    imageUrl: string | null;
+    verified: boolean;
+  };
+  availableQuantity?: number;
+};
+
+// DTO instances are structurally valid JSON, but class instances lack the
+// index signature Prisma's InputJsonValue requires. A round-trip through
+// JSON produces a plain object Prisma accepts, and normalizes nested DTO
+// instances inside arrays (e.g. colors[]).
+function toJson(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
+function filePaths(files: Express.Multer.File[] | undefined): string[] {
+  return (files ?? []).map((f) => `/uploads/products/${f.filename}`);
+}
+
+@Injectable()
+export class ProductsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async list(query: QueryProductsDto): Promise<Paginated<ProductResponse>> {
+    const where: Prisma.ProductWhereInput = { deletedAt: null };
+
+    if (query.businessId) where.businessId = query.businessId;
+    if (query.category) where.category = query.category;
+    if (query.q) {
+      where.OR = [
+        { name: { contains: query.q, mode: 'insensitive' } },
+        { description: { contains: query.q, mode: 'insensitive' } },
+      ];
+    }
+    if (query.inWarehouse !== undefined) {
+      where.inWarehouse = query.inWarehouse === 'true';
+    }
+    if (query.location) {
+      where.business = {
+        location: { contains: query.location, mode: 'insensitive' },
+      };
+    }
+
+    const { skip, take } = skipTake(query.page, query.limit);
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.product.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: { business: { select: { name: true, location: true } } },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return paginate(
+      rows.map((p) => withBusiness(p, p.business.name, p.business.location)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async detail(id: string): Promise<ProductDetailResponse> {
+    const product = await this.prisma.product.findFirst({
+      where: { id, deletedAt: null },
+      include: { business: true },
+    });
+
+    if (!product) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Product not found',
+      });
+    }
+
+    const response: ProductDetailResponse = {
+      product: toProductResponse(product),
+      business: {
+        id: product.business.id,
+        type: product.business.type,
+        name: product.business.name,
+        location: product.business.location,
+        description: product.business.description,
+        phone: product.business.phone,
+        imageUrl: product.business.imageUrl,
+        verified: product.business.verified,
+      },
+    };
+
+    if (product.inWarehouse) {
+      const supply = await this.prisma.supply.findUnique({
+        where: {
+          businessId_productId: {
+            businessId: product.businessId,
+            productId: product.id,
+          },
+        },
+        select: { remaining: true },
+      });
+      response.availableQuantity = supply?.remaining ?? 0;
+    }
+
+    return response;
+  }
+
+  async create(
+    actor: AuthenticatedUser,
+    dto: CreateProductDto,
+    files?: Express.Multer.File[],
+  ): Promise<{ product: ProductResponse }> {
+    await this.assertBusinessOwner(actor, dto.businessId);
+
+    const uploaded = filePaths(files);
+
+    const product = await this.prisma.product.create({
+      data: {
+        businessId: dto.businessId,
+        name: dto.name,
+        category: dto.category,
+        description: dto.description ?? null,
+        unit: dto.unit,
+        price: dto.price,
+        images: uploaded.length > 0 ? uploaded : (dto.images ?? []),
+        inWarehouse: false,
+        colors: dto.colors ? toJson(dto.colors) : Prisma.JsonNull,
+        sizes: dto.sizes ?? [],
+        packaging: dto.packaging ? toJson(dto.packaging) : Prisma.JsonNull,
+        discount: dto.discount ? toJson(dto.discount) : Prisma.JsonNull,
+        offer: dto.offer ?? null,
+      },
+    });
+
+    return { product: toProductResponse(product) };
+  }
+
+  async update(
+    id: string,
+    actor: AuthenticatedUser,
+    dto: UpdateProductDto,
+    files?: Express.Multer.File[],
+  ): Promise<{ product: ProductResponse }> {
+    const existing = await this.prisma.product.findFirst({
+      where: { id, deletedAt: null },
+      select: { businessId: true },
+    });
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Product not found',
+      });
+    }
+    await this.assertBusinessOwner(actor, existing.businessId);
+
+    const uploaded = filePaths(files);
+
+    const data: Prisma.ProductUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.category !== undefined) data.category = dto.category;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.unit !== undefined) data.unit = dto.unit;
+    if (dto.price !== undefined) data.price = dto.price;
+    if (uploaded.length > 0) {
+      data.images = uploaded;
+    } else if (dto.images !== undefined) {
+      data.images = dto.images;
+    }
+    if (dto.colors !== undefined) data.colors = toJson(dto.colors);
+    if (dto.sizes !== undefined) data.sizes = dto.sizes;
+    if (dto.packaging !== undefined) data.packaging = toJson(dto.packaging);
+    if (dto.discount !== undefined) data.discount = toJson(dto.discount);
+    if (dto.offer !== undefined) data.offer = dto.offer;
+
+    const product = await this.prisma.product.update({
+      where: { id },
+      data,
+    });
+
+    return { product: toProductResponse(product) };
+  }
+
+  async remove(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ product: ProductResponse; softDeleted: true }> {
+    const existing = await this.prisma.product.findFirst({
+      where: { id, deletedAt: null },
+      select: { businessId: true },
+    });
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Product not found',
+      });
+    }
+    await this.assertBusinessOwner(actor, existing.businessId);
+
+    const orderLineCount = await this.prisma.orderLine.count({
+      where: { productId: id },
+    });
+
+    if (orderLineCount > 0) {
+      throw new ConflictException({
+        error: 'product_has_orders',
+        message: 'Product has been ordered and cannot be deleted',
+      });
+    }
+
+    const product = await this.prisma.product.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+
+    return { product: toProductResponse(product), softDeleted: true };
+  }
+
+  private async assertBusinessOwner(
+    actor: AuthenticatedUser,
+    businessId: string,
+  ): Promise<void> {
+    // Ownership lives in the body for POST /products, so BusinessOwnerGuard
+    // cannot read it from route params there — the check must live in the
+    // service. PATCH and DELETE reuse this helper for consistency.
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      select: { ownerId: true },
+    });
+
+    if (!business) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Business not found',
+      });
+    }
+
+    if (business.ownerId !== actor.id) {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'Not the owner of this business',
+      });
+    }
+  }
+}

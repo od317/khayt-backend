@@ -117,7 +117,7 @@ model User {
   updatedAt        DateTime @updatedAt
 
   // relations
-  businesses   Business[]     @relation("BusinessOwner")
+  business     Business?      @relation("BusinessOwner")
   posts        Post[]
   comments     Comment[]
   likes        Like[]
@@ -140,7 +140,7 @@ model User {
 
 model Business {
   id          String       @id @default(uuid())
-  ownerId     String
+  ownerId     String   @unique
   type        BusinessType
   name        String
   location    String
@@ -189,6 +189,7 @@ model Product {
   price       Int
   inWarehouse Boolean  @default(false)  // R1 — gates ordering
   available   Boolean  @default(true)
+  deletedAt   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

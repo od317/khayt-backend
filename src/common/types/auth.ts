@@ -8,4 +8,5 @@ export type JwtPayload = {
 export type AuthenticatedUser = {
   id: string;
   role: UserRole;
+  phone: string;
 };

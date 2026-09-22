@@ -7,12 +7,15 @@ import {
   Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { Prisma } from '@prisma/client';
+import multer from 'multer';
 
 type ErrorBody = {
   error: string;
   message: string;
+  statusCode: number;
   fields?: Record<string, string>;
-  [key: string]: unknown;
+  stack?: string;
 };
 
 @Catch()
@@ -24,8 +27,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const { httpAdapter } = this.httpAdapterHost;
     const ctx = host.switchToHttp();
+    const isDevelopment = process.env.NODE_ENV === 'development';
 
-    const { status, body } = this.normalize(exception);
+    const { status, body } = this.normalize(exception, isDevelopment);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(exception);
@@ -34,39 +38,83 @@ export class AllExceptionsFilter implements ExceptionFilter {
     httpAdapter.reply(ctx.getResponse(), body, status);
   }
 
-  private normalize(exception: unknown): { status: number; body: ErrorBody } {
+  private normalize(
+    exception: unknown,
+    isDevelopment: boolean,
+  ): { status: number; body: ErrorBody } {
+    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      if (exception.code === 'P2002') {
+        return this.withStack(
+          {
+            status: HttpStatus.CONFLICT,
+            body: {
+              error: 'duplicate',
+              message: 'A record with this value already exists',
+              statusCode: HttpStatus.CONFLICT,
+            },
+          },
+          exception,
+          isDevelopment,
+        );
+      }
+
+      if (exception.code === 'P2025') {
+        return this.withStack(
+          {
+            status: HttpStatus.NOT_FOUND,
+            body: {
+              error: 'not_found',
+              message: 'Record not found',
+              statusCode: HttpStatus.NOT_FOUND,
+            },
+          },
+          exception,
+          isDevelopment,
+        );
+      }
+    }
+
+    if (exception instanceof multer.MulterError) {
+      return this.withStack(
+        {
+          status: HttpStatus.BAD_REQUEST,
+          body: {
+            error: 'invalid_multipart',
+            message: exception.message,
+            statusCode: HttpStatus.BAD_REQUEST,
+          },
+        },
+        exception,
+        isDevelopment,
+      );
+    }
+
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const response = exception.getResponse();
 
       if (typeof response === 'string') {
-        return {
-          status,
-          body: {
-            error: this.codeFromStatus(status),
-            message: response,
+        return this.withStack(
+          {
+            status,
+            body: {
+              error: this.codeFromStatus(status),
+              message: response,
+              statusCode: status,
+            },
           },
-        };
+          exception,
+          isDevelopment,
+        );
       }
 
       const payload = response as Record<string, unknown>;
-
-      if (
+      const fields = this.readFields(payload['fields']);
+      const errorCode =
         typeof payload['error'] === 'string' &&
         payload['error'] !== 'Bad Request'
-      ) {
-        return {
-          status,
-          body: {
-            ...payload,
-            error: payload['error'],
-            message:
-              typeof payload['message'] === 'string'
-                ? payload['message']
-                : exception.message,
-          },
-        };
-      }
+          ? payload['error']
+          : this.codeFromStatus(status);
 
       const message = payload['message'];
       const formattedMessage = Array.isArray(message)
@@ -75,22 +123,71 @@ export class AllExceptionsFilter implements ExceptionFilter {
           ? message
           : exception.message;
 
-      return {
-        status,
-        body: {
-          error: this.codeFromStatus(status),
-          message: formattedMessage,
+      return this.withStack(
+        {
+          status,
+          body: {
+            error: errorCode,
+            message: formattedMessage,
+            statusCode: status,
+            ...(fields ? { fields } : {}),
+          },
         },
-      };
+        exception,
+        isDevelopment,
+      );
     }
 
-    return {
-      status: HttpStatus.INTERNAL_SERVER_ERROR,
-      body: {
-        error: 'internal_error',
-        message: 'An unexpected error occurred',
+    const message =
+      isDevelopment && exception instanceof Error
+        ? exception.message
+        : 'An unexpected error occurred';
+
+    return this.withStack(
+      {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        body: {
+          error: 'internal_error',
+          message,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        },
       },
-    };
+      exception,
+      isDevelopment,
+    );
+  }
+
+  private withStack(
+    result: { status: number; body: ErrorBody },
+    exception: unknown,
+    isDevelopment: boolean,
+  ): { status: number; body: ErrorBody } {
+    if (
+      isDevelopment &&
+      result.status >= HttpStatus.INTERNAL_SERVER_ERROR &&
+      exception instanceof Error &&
+      exception.stack
+    ) {
+      return {
+        status: result.status,
+        body: { ...result.body, stack: exception.stack },
+      };
+    }
+    return result;
+  }
+
+  private readFields(value: unknown): Record<string, string> | undefined {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return undefined;
+    }
+
+    const fields: Record<string, string> = {};
+    for (const [key, entry] of Object.entries(value)) {
+      if (typeof entry === 'string') {
+        fields[key] = entry;
+      }
+    }
+    return Object.keys(fields).length > 0 ? fields : undefined;
   }
 
   private codeFromStatus(status: number): string {
@@ -105,6 +202,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return 'not_found';
       case HttpStatus.CONFLICT:
         return 'conflict';
+      case HttpStatus.TOO_MANY_REQUESTS:
+        return 'too_many_requests';
       default:
         return 'error';
     }

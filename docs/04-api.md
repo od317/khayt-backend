@@ -61,6 +61,9 @@ text
 
 ### GET /businesses
 
+### GET /businesses
+
+**Public.** No token required.
 List and search. Used by the app for browsing and the dashboard for
 management.
 query: { type?, location?, q?, page?, limit? }
@@ -70,7 +73,9 @@ text
 
 ### GET /businesses/:id
 
+**Public.** No token required.
 One business, with its products and supply summary.
+`isOwner` is `false` when the request is unauthenticated.
 → 200 {
 business: Business,
 products: Product[],
@@ -102,6 +107,9 @@ text
 
 ### GET /products
 
+**Public.** No token required.
+Browse. Used by the app's discover and by store search.
+
 Browse. Used by the app's discover and by store search.
 query: {
 businessId?, category?, q?, location?,
@@ -114,8 +122,10 @@ text
 
 ### GET /products/:id
 
+**Public.** No token required.
 One product. Includes the business and, if warehouse-stocked, the
 available quantity.
+Soft-deleted products return 404.
 → 200 {
 product: Product,
 business: Business,
@@ -145,6 +155,10 @@ body: { ...any product field }
 text
 
 ### DELETE /products/:id
+
+Soft delete. Always returns 200, never 204.
+
+Sets `deletedAt`. The product disappears from every listing.
 
 Soft delete. Fails if the product has been ordered.
 → 204

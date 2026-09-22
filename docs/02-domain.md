@@ -52,6 +52,10 @@ they have. That's logic, not schema.
 
 A workshop, a factory, an institute, or a store — an organization.
 
+**A user owns at most one business.** Enforced by a unique constraint on
+`Business.ownerId`. If a user needs a second organization, that's a new
+requirement and a schema change.
+
 | Field       | Type      | Notes                            |
 | ----------- | --------- | -------------------------------- |
 | id          | uuid      |                                  |
@@ -87,6 +91,25 @@ If institutes ever get scheduling and enrollment, they split.
 
 ### Supply
 
+### SupplyLine (response shape, not an entity)
+
+What the API returns when a business's warehouse stock is requested.
+Not a table. Derived from `Supply` rows, joined with `Product` for the name.
+
+| Field       | Type    | Source                     |
+| ----------- | ------- | -------------------------- |
+| productId   | uuid    | Supply.productId           |
+| productName | string  | Product.name               |
+| sent        | integer | Supply.sent                |
+| remaining   | integer | Supply.remaining           |
+| sold        | integer | computed: sent − remaining |
+| unit        | string  | Product.unit               |
+| unitPrice   | integer | Supply.unitPrice           |
+
+Named `SupplyLine` because it reads better than `Supply` in a response
+body where it represents one line of stock per product. The table is
+still `Supply`.
+
 Stock a business has placed in خيط's warehouse.
 
 | Field      | Type      | Notes                  |
@@ -110,19 +133,30 @@ product, `sent` increases. If it's a different product, a new row.
 
 A thing a business offers. Can be a garment, a fabric, a machine, a course.
 
-| Field       | Type      | Notes                   |
-| ----------- | --------- | ----------------------- |
-| id          | uuid      |                         |
-| businessId  | uuid      | → Business              |
-| name        | string    |                         |
-| category    | string    |                         |
-| description | text      |                         |
-| images      | string[]  |                         |
-| unit        | string    | قطعة / متر / طقم / دورة |
-| price       | integer   | display price           |
-| inWarehouse | boolean   | **see rule R1**         |
-| available   | boolean   | business-controlled     |
-| createdAt   | timestamp |                         |
+| Field       | Type      | Notes                              |
+| ----------- | --------- | ---------------------------------- |
+| id          | uuid      |                                    |
+| businessId  | uuid      | → Business                         |
+| name        | string    |                                    |
+| category    | string    |                                    |
+| description | text      |                                    |
+| images      | string[]  |                                    |
+| unit        | string    | قطعة / متر / طقم / دورة            |
+| price       | integer   | display price                      |
+| inWarehouse | boolean   | **see rule R1**                    |
+| available   | boolean   | business-controlled visibility     |
+| deletedAt   | timestamp | soft delete marker, null when live |
+| createdAt   | timestamp |                                    |
+
+**Two different states, two different fields.**
+
+`available = false` means the owner has hidden the product. It still
+exists, it can be shown again, and it may still be referenced by orders.
+
+`deletedAt` is set means the product is gone. It never appears in any
+listing, and it cannot be restored through the API.
+
+Do not use one for the other.
 
 **Variants** (only for garments):
 
@@ -209,9 +243,9 @@ within a week.
 
 ### PostCategory (join)
 
-| Field      | Type |
+| Field | Type |
 | ---------- | ---- | ---------- |
-| postId     | uuid | → Post     |
+| postId | uuid | → Post |
 | categoryId | uuid | → Category |
 
 A post can have several categories. A category applies to many posts.
@@ -232,10 +266,10 @@ A post can have several categories. A category applies to many posts.
 
 ### Like
 
-| Field     | Type      |
+| Field | Type |
 | --------- | --------- | ------ |
-| userId    | uuid      | → User |
-| postId    | uuid      | → Post |
+| userId | uuid | → User |
+| postId | uuid | → Post |
 | createdAt | timestamp |
 
 Composite primary key on `(userId, postId)`. A user likes a post once.
@@ -302,10 +336,10 @@ the delivery, not `deliveryId` on the order. A driver does one route.
 
 ### DeliveryOrder (join)
 
-| Field      | Type |
+| Field | Type |
 | ---------- | ---- | ---------- |
 | deliveryId | uuid | → Delivery |
-| orderId    | uuid | → Order    |
+| orderId | uuid | → Order |
 
 ---
 
@@ -407,7 +441,7 @@ payments — stored for speed, derivable for correctness.
 
 ## 3. Relationships
 
-User ──< Business one user owns many businesses
+User ── Business one user owns many businesses
 User ──< Post one user writes many posts
 User ──< Comment
 User ──< Like many-to-many with Post
@@ -544,8 +578,9 @@ Worth recording, because these will come up.
 
 ## 6. Open questions
 
-1. **Can a user own more than one business?** Currently yes by schema.
-   May be restricted in practice.
+<!-- 1. **Can a user own more than one business?** Currently yes by schema.
+   May be restricted in practice. -->
+
 2. **Does a store see which factory supplied each line?** Useful for
    returns. Not currently exposed.
 3. **Is there a returns or dispute entity?** No. If a store receives

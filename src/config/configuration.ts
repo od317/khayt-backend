@@ -1,4 +1,6 @@
-export type NodeEnv = 'development' | 'production' | 'test';
+export type NodeEnv = 'development' | 'staging' | 'production' | 'test';
+
+
 
 export type AppConfig = {
   nodeEnv: NodeEnv;

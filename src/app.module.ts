@@ -1,15 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { JwtStrategy } from './common/guards/jwt.strategy';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { RequestLoggerInterceptor } from './common/interceptors/request-logger.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { RedisModule } from './common/redis/redis.module';
 import configuration, { AppConfig } from './config/configuration';
 import { validate } from './config/validation';
 import { HealthController } from './health.controller';
+import { AuthModule } from './modules/auth/auth.module';
+import { BusinessesModule } from './modules/businesses/businesses.module';
+import { ProductsModule } from './modules/products/products.module';
 
 @Module({
   imports: [
@@ -20,6 +25,10 @@ import { HealthController } from './health.controller';
       validate,
     }),
     PrismaModule,
+    RedisModule,
+    BusinessesModule,
+    ProductsModule,
+    AuthModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       global: true,
@@ -34,10 +43,17 @@ import { HealthController } from './health.controller';
   ],
   controllers: [HealthController],
   providers: [
-    JwtStrategy,
     {
-      provide: APP_FILTER,
-      useClass: AllExceptionsFilter,
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestLoggerInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,
