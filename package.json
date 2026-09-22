@@ -1,0 +1,63 @@
+{
+  "name": "khayt-api",
+  "version": "0.1.0",
+  "description": "خيط — warehouse and marketplace API for the Syrian clothing industry",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint \"src/**/*.ts\" --fix"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.0.4",
+    "@nestjs/config": "^12.0.0",
+    "@nestjs/core": "^12.0.4",
+    "@nestjs/jwt": "^12.0.2",
+    "@nestjs/passport": "^12.0.0",
+    "@nestjs/platform-express": "^12.0.4",
+    "@prisma/client": "^6.19.3",
+    "bcrypt": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "ioredis": "^6.0.0",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "prisma": "^6.19.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@nestjs/cli": "^12.0.3",
+    "@nestjs/schematics": "^12.0.4",
+    "@nestjs/testing": "^12.0.4",
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^26.6.2",
+    "@types/passport-jwt": "^4.0.1",
+    "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^5.0.1",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.8",
+    "supertest": "^7.2.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.1"
+  }
+}

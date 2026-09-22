@@ -1,0 +1,586 @@
+// خيط — Database Schema
+// Derived from 02-domain.md. This file is the source of truth for the
+// database shape.
+//
+// Run `npx prisma migrate dev --name init` to create the database.
+// Run `npx prisma generate` to produce the TypeScript types.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  employee    // موظف
+  workshop    // مشغل / مصنع / معمل
+  institute   // معهد
+  store       // متجر
+  // internal
+  super_admin
+  admin
+  inventory
+  delivery
+}
+
+enum BusinessType {
+  workshop
+  institute
+  store
+}
+
+enum PostType {
+  job_seeking         // أبحث عن عمل
+  job_offering        // ابحث عن موظف
+  service_offering    // عرض خدمة
+  service_requesting  // أحتاج شخصاً
+  product_offering    // عرض منتج
+  material_offering   // عرض مواد ومكنات
+  material_requesting // أبحث عن مواد ومكنات
+}
+
+enum MediaType {
+  none
+  image
+  video
+}
+
+enum OrderStatus {
+  review      // قيد المراجعة
+  preparing   // قيد التجهيز
+  ready       // جاهز للتسليم
+  in_transit  // قيد التوصيل
+  delivered   // تم التسليم
+  cancelled   // ملغي
+  failed      // فشل التسليم
+}
+
+enum DeliveryStatus {
+  unassigned  // بانتظار التعيين
+  in_transit  // قيد التوصيل
+  delivered   // تم التسليم
+  failed      // فشل التسليم
+}
+
+enum PaymentType {
+  cash    // نقدي
+  credit  // دين
+}
+
+enum BillStatus {
+  paid     // مدفوع
+  unpaid   // غير مدفوع
+  partial  // مدفوع جزئياً
+}
+
+enum NotificationType {
+  order_placed
+  order_status
+  order_delivered
+  order_cancelled
+  new_comment
+  new_like
+  bill_due
+  low_stock
+  receiving_confirmed
+}
+
+enum CategoryApplies {
+  post
+  product
+  both
+}
+
+// ============================================================
+// USERS
+// ============================================================
+
+model User {
+  id               String   @id @default(uuid())
+  role             UserRole
+  name             String
+  phone            String   @unique
+  location         String?
+  bio              String?
+  avatarUrl        String?
+  availableForWork Boolean  @default(true)  // employee only
+  verified         Boolean  @default(false)
+  suspended        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // relations
+  businesses   Business[]     @relation("BusinessOwner")
+  posts        Post[]
+  comments     Comment[]
+  likes        Like[]
+  orders       Order[]        @relation("StoreOrders")
+  deliveries   Delivery[]     @relation("DriverDeliveries")
+  payments     Payment[]
+  receiving    Receiving[]
+  notifications Notification[]
+  savedPosts   SavedPost[]
+  savedBusinesses SavedBusiness[]
+  savedMarketers  SavedMarketer[]
+
+  @@index([role])
+  @@index([phone])
+}
+
+// ============================================================
+// BUSINESSES
+// ============================================================
+
+model Business {
+  id          String       @id @default(uuid())
+  ownerId     String
+  type        BusinessType
+  name        String
+  location    String
+  description String?
+  phone       String?
+  imageUrl    String?
+  verified    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // type-specific
+  capacity    String?   // workshop
+  equipment   String?   // workshop
+  minOrder    String?   // workshop
+  experience  String?   // workshop, institute
+  duration    String?   // institute
+  topics      String[]  // institute
+
+  // relations
+  owner     User            @relation("BusinessOwner", fields: [ownerId], references: [id])
+  products  Product[]
+  supply    Supply[]
+  posts     Post[]
+  receiving Receiving[]
+  bills     Bill[]
+
+  @@index([type])
+  @@index([location])
+  @@index([ownerId])
+}
+
+// ============================================================
+// PRODUCTS
+// ============================================================
+
+model Product {
+  id          String   @id @default(uuid())
+  businessId  String
+  name        String
+  category    String
+  description String?
+  images      String[]
+  unit        String   // قطعة / متر / طقم / دورة
+  price       Int
+  inWarehouse Boolean  @default(false)  // R1 — gates ordering
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // variants — jsonb, not entities
+  colors    Json?   // [{ name, hex, image, sizes: [] }]
+  sizes     String[]
+  packaging Json?   // { onlyPackage, unitsPerPackage, label }
+  discount  Json?   // { percent, originalPrice }
+  offer     String?
+
+  // relations
+  business      Business        @relation(fields: [businessId], references: [id])
+  supply        Supply[]
+  orderLines    OrderLine[]
+  receivingLines ReceivingLine[]
+  billLines     BillLine[]
+
+  @@index([businessId])
+  @@index([inWarehouse])
+  @@index([category])
+}
+
+// ============================================================
+// SUPPLY
+// ============================================================
+
+model Supply {
+  id        String   @id @default(uuid())
+  businessId String
+  productId String
+  sent      Int
+  remaining Int      @default(0)
+  unitPrice Int
+  updatedAt DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@unique([businessId, productId])
+  @@index([businessId])
+}
+
+// ============================================================
+// POSTS
+// ============================================================
+
+model Post {
+  id        String    @id @default(uuid())
+  authorId  String
+  businessId String?
+  type      PostType
+  title     String
+  body      String
+  media     MediaType @default(none)
+  imageUrls String[]
+  videoUrl  String?
+  location  String
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // type-specific
+  specialty  String[]
+  experience String?
+  workType   String[]
+  salary     String?
+  pricing    String?
+  condition  String?
+  price      String?
+
+  // relations
+  author     User           @relation(fields: [authorId], references: [id])
+  business   Business?      @relation(fields: [businessId], references: [id])
+  categories PostCategory[]
+  comments   Comment[]
+  likes      Like[]
+  savedBy    SavedPost[]
+
+  @@index([authorId])
+  @@index([type])
+  @@index([active])
+  @@index([createdAt])
+}
+
+// ============================================================
+// CATEGORIES
+// ============================================================
+
+model Category {
+  id        String         @id @default(uuid())
+  name      String
+  slug      String         @unique
+  appliesTo CategoryApplies @default(both)
+  sortOrder Int            @default(0)
+
+  posts PostCategory[]
+}
+
+model PostCategory {
+  postId     String
+  categoryId String
+
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@id([postId, categoryId])
+}
+
+// ============================================================
+// COMMENTS AND LIKES
+// ============================================================
+
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([postId])
+}
+
+model Like {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId])
+}
+
+// ============================================================
+// SAVED
+// ============================================================
+
+model SavedPost {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+}
+
+model SavedBusiness {
+  userId     String
+  businessId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@id([userId, businessId])
+}
+
+model SavedMarketer {
+  userId     String
+  marketerId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  marketer Marketer @relation(fields: [marketerId], references: [id])
+
+  @@id([userId, marketerId])
+}
+
+// ============================================================
+// ORDERS
+// ============================================================
+
+model Order {
+  id        String      @id @default(uuid())
+  number    String      @unique
+  storeId   String
+  status    OrderStatus @default(review)
+  total     Int         @default(0)
+  pieces    Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  store    User            @relation("StoreOrders", fields: [storeId], references: [id])
+  lines    OrderLine[]
+  delivery DeliveryOrder[]
+
+  @@index([storeId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderLine {
+  id         String  @id @default(uuid())
+  orderId    String
+  productId  String
+  businessId String   // which factory supplies this line
+  quantity   Int
+  unitPrice  Int      // locked at order time
+  picked     Boolean @default(false)
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@index([orderId])
+  @@index([businessId])
+}
+
+// ============================================================
+// DELIVERY
+// ============================================================
+
+model Delivery {
+  id          String         @id @default(uuid())
+  number      String         @unique
+  driverId    String?
+  status      DeliveryStatus @default(unassigned)
+  area        String
+  createdAt   DateTime       @default(now())
+  deliveredAt DateTime?
+
+  driver User?           @relation("DriverDeliveries", fields: [driverId], references: [id])
+  orders DeliveryOrder[]
+
+  @@index([status])
+  @@index([driverId])
+}
+
+model DeliveryOrder {
+  deliveryId String
+  orderId    String
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  order    Order    @relation(fields: [orderId], references: [id])
+
+  @@id([deliveryId, orderId])
+  @@unique([orderId])  // an order belongs to one delivery
+}
+
+// ============================================================
+// RECEIVING
+// ============================================================
+
+model Receiving {
+  id          String      @id @default(uuid())
+  number      String      @unique
+  businessId  String
+  receivedAt  DateTime    @default(now())
+  paymentType PaymentType
+  createdBy   String
+  createdAt   DateTime    @default(now())
+
+  business Business        @relation(fields: [businessId], references: [id])
+  creator  User            @relation(fields: [createdBy], references: [id])
+  lines    ReceivingLine[]
+  bill     Bill?
+
+  @@index([businessId])
+}
+
+model ReceivingLine {
+  id          String @id @default(uuid())
+  receivingId String
+  productId   String
+  quantity    Int
+  unitPrice   Int
+
+  receiving Receiving @relation(fields: [receivingId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id])
+
+  @@index([receivingId])
+}
+
+// ============================================================
+// BILLS AND PAYMENTS
+// ============================================================
+
+model Bill {
+  id          String      @id @default(uuid())
+  number      String      @unique
+  businessId  String
+  receivingId String      @unique
+  paymentType PaymentType
+  status      BillStatus  @default(unpaid)
+  issuedAt    DateTime    @default(now())
+  dueAt       DateTime?
+  total       Int         @default(0)
+  paid        Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  business  Business   @relation(fields: [businessId], references: [id])
+  receiving Receiving  @relation(fields: [receivingId], references: [id])
+  lines     BillLine[]
+  payments  Payment[]
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model BillLine {
+  id        String @id @default(uuid())
+  billId    String
+  productId String
+  quantity  Int
+  unitPrice Int
+
+  bill    Bill    @relation(fields: [billId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([billId])
+}
+
+model Payment {
+  id         String   @id @default(uuid())
+  billId     String
+  amount     Int
+  paidAt     DateTime @default(now())
+  recordedBy String
+
+  bill     Bill @relation(fields: [billId], references: [id])
+  recorder User @relation(fields: [recordedBy], references: [id])
+
+  @@index([billId])
+}
+
+// ============================================================
+// DIRECTORY (no accounts)
+// ============================================================
+
+model Marketer {
+  id          String   @id @default(uuid())
+  name        String
+  location    String
+  description String?
+  phone       String
+  channels    String[]
+  areas       String[]
+  createdAt   DateTime @default(now())
+
+  savedBy SavedMarketer[]
+}
+
+model ShippingCompany {
+  id           String   @id @default(uuid())
+  name         String
+  location     String
+  verified     Boolean  @default(false)
+  coverage     String[]
+  deliveryTime String
+  pricing      String?
+  fleet        String?
+  phone        String
+  createdAt    DateTime @default(now())
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  linkTo    String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+// ============================================================
+// AUDIT
+// ============================================================
+
+model StockMovement {
+  id         String   @id @default(uuid())
+  supplyId   String
+  type       String   // "in" | "out"
+  quantity   Int
+  reference  String?  // ORD-#### or RCV-####
+  createdAt  DateTime @default(now())
+
+  @@index([supplyId])
+  @@index([createdAt])
+}
