@@ -1,4 +1,10 @@
-import { User, UserRole } from '@prisma/client';
+import {
+  Business,
+  BusinessType,
+  Location,
+  User,
+  UserRole,
+} from '@prisma/client';
 import {
   BusinessResponse,
   toBusinessResponse,
@@ -19,13 +25,15 @@ export type UserResponse = {
   verified: boolean;
 };
 
-export function toUserResponse(user: User): UserResponse {
+export function toUserResponse(
+  user: User & { location: Location | null },
+): UserResponse {
   return {
     id: user.id,
     role: user.role,
     name: user.name,
     phone: user.phone,
-    location: user.location,
+    location: user.location?.name ?? null,
     bio: user.bio,
     avatarUrl: user.avatarUrl,
     availableForWork: user.availableForWork,

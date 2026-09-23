@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, User, UserRole } from '@prisma/client';
+import { Location, Prisma, User, UserRole } from '@prisma/client';
 import { randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
@@ -218,6 +218,7 @@ export class AuthService {
   async getMe(userId: string): Promise<MeResponse> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: { location: true },
     });
     if (!user) {
       throw new UnauthorizedException({
@@ -266,9 +267,6 @@ export class AuthService {
     if (dto.name !== undefined) {
       data.name = dto.name;
     }
-    if (dto.location !== undefined) {
-      data.location = dto.location;
-    }
     if (dto.bio !== undefined) {
       data.bio = dto.bio;
     }
@@ -279,9 +277,30 @@ export class AuthService {
       data.availableForWork = dto.availableForWork;
     }
 
+    if (dto.locationId !== undefined) {
+      const location = await this.prisma.location.findFirst({
+        where: { id: dto.locationId, active: true },
+        select: { id: true },
+      });
+
+      if (!location) {
+        throw new HttpException(
+          {
+            error: 'validation_failed',
+            message: 'Location does not exist or is inactive',
+            fields: { locationId: 'must reference an active location' },
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      data.location = { connect: { id: dto.locationId } };
+    }
+
     const user = await this.prisma.user.update({
       where: { id: actor.id },
       data,
+      include: { location: true },
     });
 
     return { user: toUserResponse(user) };
@@ -294,8 +313,13 @@ export class AuthService {
     return String(randomInt(100000, 1000000));
   }
 
-  private async findOrCreateUser(phone: string): Promise<User> {
-    const existing = await this.prisma.user.findUnique({ where: { phone } });
+  private async findOrCreateUser(
+    phone: string,
+  ): Promise<User & { location: Location | null }> {
+    const existing = await this.prisma.user.findUnique({
+      where: { phone },
+      include: { location: true },
+    });
     if (existing) {
       return existing;
     }
@@ -307,13 +331,17 @@ export class AuthService {
           name: phone,
           role: UserRole.employee,
         },
+        include: { location: true },
       });
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        const raced = await this.prisma.user.findUnique({ where: { phone } });
+        const raced = await this.prisma.user.findUnique({
+          where: { phone },
+          include: { location: true },
+        });
         if (raced) {
           return raced;
         }

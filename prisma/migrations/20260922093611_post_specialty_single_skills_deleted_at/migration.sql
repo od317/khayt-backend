@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Post" ALTER COLUMN "specialty" SET NOT NULL,
+ALTER COLUMN "specialty" SET DATA TYPE TEXT;

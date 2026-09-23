@@ -107,14 +107,17 @@ model User {
   role             UserRole
   name             String
   phone            String   @unique
-  location         String?
   bio              String?
   avatarUrl        String?
-  availableForWork Boolean  @default(true)  // employee only
+  availableForWork Boolean  @default(true)
   verified         Boolean  @default(false)
   suspended        Boolean  @default(false)
+  onboardingCompleted Boolean @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id])
 
   // relations
   business     Business?      @relation("BusinessOwner")
@@ -132,6 +135,24 @@ model User {
 
   @@index([role])
   @@index([phone])
+  @@index([locationId])
+}
+
+
+model Location {
+  id        String     @id @default(uuid())
+  name      String
+  parentId  String?
+  parent    Location?  @relation("LocationTree", fields: [parentId], references: [id])
+  children  Location[] @relation("LocationTree")
+  sortOrder Int        @default(0)
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+
+  users User[]
+
+  @@index([parentId])
+  @@index([active])
 }
 
 // ============================================================
@@ -250,15 +271,19 @@ model Post {
   active    Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-
+  deletedAt  DateTime?
+  
   // type-specific
-  specialty  String[]
+  specialty  String?
   experience String?
   workType   String[]
+  skills     String[]
   salary     String?
   pricing    String?
   condition  String?
   price      String?
+
+  
 
   // relations
   author     User           @relation(fields: [authorId], references: [id])

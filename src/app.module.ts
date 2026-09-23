@@ -15,6 +15,10 @@ import { HealthController } from './health.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { ProductsModule } from './modules/products/products.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { CommentsModule } from './modules/comments/comments.module';
+import { PostsModule } from './modules/posts/posts.module';
+import { LocationsModule } from './modules/locations/locations.module';
 
 @Module({
   imports: [
@@ -25,9 +29,13 @@ import { ProductsModule } from './modules/products/products.module';
       validate,
     }),
     PrismaModule,
+    LocationsModule,
     RedisModule,
     BusinessesModule,
     ProductsModule,
+    CategoriesModule,
+    PostsModule,
+    CommentsModule,
     AuthModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

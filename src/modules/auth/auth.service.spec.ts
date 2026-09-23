@@ -23,17 +23,21 @@ import { SmsService } from './sms.service';
 
 const PHONE = '0955123456';
 
-const makeUser = (overrides: Partial<User> = {}): User => ({
+const makeUser = (
+  overrides: Partial<User & { location: null }> = {},
+): User & { location: null } => ({
   id: 'user-1',
   role: UserRole.employee,
   name: PHONE,
   phone: PHONE,
-  location: null,
   bio: null,
   avatarUrl: null,
   availableForWork: true,
   verified: false,
   suspended: false,
+  onboardingCompleted: false,
+  locationId: null,
+  location: null,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   ...overrides,
@@ -56,8 +60,9 @@ describe('AuthService', () => {
       create: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
     };
-    business: { findFirst: ReturnType<typeof vi.fn> };
+    business: { findUnique: ReturnType<typeof vi.fn> };
     notification: { count: ReturnType<typeof vi.fn> };
+    location: { findFirst: ReturnType<typeof vi.fn> };
   };
   let sms: { send: ReturnType<typeof vi.fn> };
   let jwt: {
@@ -82,8 +87,9 @@ describe('AuthService', () => {
         create: vi.fn(),
         update: vi.fn(),
       },
-      business: { findFirst: vi.fn() },
+      business: { findUnique: vi.fn() },
       notification: { count: vi.fn() },
+      location: { findFirst: vi.fn() },
     };
 
     sms = { send: vi.fn().mockResolvedValue(undefined) };
@@ -246,6 +252,7 @@ describe('AuthService', () => {
         name: PHONE,
         role: UserRole.employee,
       },
+      include: { location: true },
     });
     expect(result.user.id).toBe(created.id);
     expect(result.accessToken).toBe('access-token');

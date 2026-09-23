@@ -1,0 +1,580 @@
+import {
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  Business,
+  Location,
+  MediaType,
+  Post,
+  Prisma,
+  User,
+} from '@prisma/client';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { AuthenticatedUser } from '../../common/types/auth';
+import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { CreatePostDto } from './dto/create-post.dto';
+import { QueryPostsDto } from './dto/query-posts.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
+import {
+  CommentResponse,
+  PostCounts,
+  PostResponse,
+  toCommentResponse,
+  toPostResponse,
+} from './posts.mapper';
+import { POST_TYPE_REQUIRED_FIELDS } from './post-type-rules';
+
+type PostWithRelations = Post & {
+  author: User & { location: Location | null };
+  business: Business | null;
+};
+
+@Injectable()
+export class PostsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async list(
+    query: QueryPostsDto,
+    actor: AuthenticatedUser | undefined,
+  ): Promise<Paginated<PostResponse>> {
+    const where: Prisma.PostWhereInput = { deletedAt: null };
+
+    if (query.type) where.type = query.type;
+    if (query.authorId) where.authorId = query.authorId;
+    if (query.businessId) where.businessId = query.businessId;
+    if (query.media) where.media = query.media;
+    if (query.location) {
+      where.location = { contains: query.location, mode: 'insensitive' };
+    }
+    if (query.q) {
+      where.OR = [
+        { title: { contains: query.q, mode: 'insensitive' } },
+        { body: { contains: query.q, mode: 'insensitive' } },
+      ];
+    }
+    if (query.categoryId) {
+      where.categories = { some: { categoryId: query.categoryId } };
+    }
+
+    const activeFilter = query.active ?? 'true';
+    where.active = activeFilter === 'true';
+
+    const { skip, take } = skipTake(query.page, query.limit);
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.post.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          author: { include: { location: true } },
+          business: true,
+        },
+      }),
+      this.prisma.post.count({ where }),
+    ]);
+
+    const items = await this.attachCounts(rows, actor);
+    return paginate(items, total, query.page, query.limit);
+  }
+
+  async detail(
+    id: string,
+    actor: AuthenticatedUser | undefined,
+  ): Promise<PostResponse> {
+    const post = await this.prisma.post.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        author: { include: { location: true } },
+        business: true,
+      },
+    });
+
+    if (!post) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+
+    const isAuthor = actor !== undefined && actor.id === post.authorId;
+    if (!post.active && !isAuthor) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+
+    const [response] = await this.attachCounts([post], actor);
+    if (!response) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+    return response;
+  }
+
+  async create(
+    actor: AuthenticatedUser,
+    dto: CreatePostDto,
+  ): Promise<{ post: PostResponse }> {
+    this.assertTypeRequirements(dto);
+    this.assertMediaRequirements(dto);
+
+    if (dto.businessId) {
+      const business = await this.prisma.business.findUnique({
+        where: { id: dto.businessId },
+        select: { ownerId: true },
+      });
+      if (!business || business.ownerId !== actor.id) {
+        throw new ForbiddenException({
+          error: 'forbidden',
+          message: 'Not the owner of this business',
+        });
+      }
+    }
+
+    if (dto.categoryIds && dto.categoryIds.length > 0) {
+      const found = await this.prisma.category.count({
+        where: { id: { in: dto.categoryIds } },
+      });
+      if (found !== dto.categoryIds.length) {
+        throw new HttpException(
+          {
+            error: 'validation_failed',
+            message: 'One or more categories do not exist',
+            fields: { categoryIds: 'contains an unknown id' },
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
+    const post = await this.prisma.post.create({
+      data: {
+        authorId: actor.id,
+        businessId: dto.businessId ?? null,
+        type: dto.type,
+        title: dto.title,
+        body: dto.body,
+        location: dto.location,
+        media: dto.media ?? MediaType.none,
+        imageUrls: dto.imageUrls ?? [],
+        videoUrl: dto.videoUrl ?? null,
+        specialty: dto.specialty ?? null,
+        skills: dto.skills ?? [],
+        workType: dto.workType ?? [],
+        experience: dto.experience ?? null,
+        salary: dto.salary ?? null,
+        pricing: dto.pricing ?? null,
+        condition: dto.condition ?? null,
+        price: dto.price ?? null,
+        categories:
+          dto.categoryIds && dto.categoryIds.length > 0
+            ? {
+                create: dto.categoryIds.map((categoryId) => ({ categoryId })),
+              }
+            : undefined,
+      },
+      include: {
+        author: { include: { location: true } },
+        business: true,
+      },
+    });
+
+    const [response] = await this.attachCounts([post], actor);
+    if (!response) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+    return { post: response };
+  }
+
+  async update(
+    id: string,
+    actor: AuthenticatedUser,
+    dto: UpdatePostDto,
+  ): Promise<{ post: PostResponse }> {
+    const existing = await this.prisma.post.findFirst({
+      where: { id, deletedAt: null },
+      select: { authorId: true, type: true },
+    });
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+    if (existing.authorId !== actor.id) {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'Not the author of this post',
+      });
+    }
+
+    if (dto.categoryIds) {
+      const found = await this.prisma.category.count({
+        where: { id: { in: dto.categoryIds } },
+      });
+      if (found !== dto.categoryIds.length) {
+        throw new HttpException(
+          {
+            error: 'validation_failed',
+            message: 'One or more categories do not exist',
+            fields: { categoryIds: 'contains an unknown id' },
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
+    const post = await this.prisma.$transaction(
+      async (tx): Promise<PostWithRelations> => {
+        const data: Prisma.PostUpdateInput = {};
+        if (dto.title !== undefined) data.title = dto.title;
+        if (dto.body !== undefined) data.body = dto.body;
+        if (dto.location !== undefined) data.location = dto.location;
+        if (dto.media !== undefined) data.media = dto.media;
+        if (dto.imageUrls !== undefined) data.imageUrls = dto.imageUrls;
+        if (dto.videoUrl !== undefined) data.videoUrl = dto.videoUrl;
+        if (dto.specialty !== undefined) data.specialty = dto.specialty;
+        if (dto.skills !== undefined) data.skills = dto.skills;
+        if (dto.workType !== undefined) data.workType = dto.workType;
+        if (dto.experience !== undefined) data.experience = dto.experience;
+        if (dto.salary !== undefined) data.salary = dto.salary;
+        if (dto.pricing !== undefined) data.pricing = dto.pricing;
+        if (dto.condition !== undefined) data.condition = dto.condition;
+        if (dto.price !== undefined) data.price = dto.price;
+        if (dto.active !== undefined) data.active = dto.active;
+
+        if (dto.categoryIds !== undefined) {
+          await tx.postCategory.deleteMany({ where: { postId: id } });
+          if (dto.categoryIds.length > 0) {
+            await tx.postCategory.createMany({
+              data: dto.categoryIds.map((categoryId) => ({
+                postId: id,
+                categoryId,
+              })),
+            });
+          }
+        }
+
+        return tx.post.update({
+          where: { id },
+          data,
+          include: {
+            author: { include: { location: true } },
+            business: true,
+          },
+        });
+      },
+    );
+
+    const [response] = await this.attachCounts([post], actor);
+    if (!response) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+    return { post: response };
+  }
+
+  async remove(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ post: PostResponse; deleted: true }> {
+    const existing = await this.prisma.post.findFirst({
+      where: { id, deletedAt: null },
+      select: { authorId: true },
+    });
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+    if (existing.authorId !== actor.id) {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'Not the author of this post',
+      });
+    }
+
+    const post = await this.prisma.post.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+      include: {
+        author: { include: { location: true } },
+        business: true,
+      },
+    });
+
+    const [response] = await this.attachCounts([post], actor);
+    if (!response) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+    return { post: response, deleted: true };
+  }
+
+  async like(
+    postId: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ liked: true; likes: number }> {
+    await this.assertPostVisible(postId);
+    await this.prisma.like.upsert({
+      where: { userId_postId: { userId: actor.id, postId } },
+      create: { userId: actor.id, postId },
+      update: {},
+    });
+    const likes = await this.prisma.like.count({ where: { postId } });
+    return { liked: true, likes };
+  }
+
+  async unlike(
+    postId: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ liked: false; likes: number }> {
+    await this.prisma.like.deleteMany({
+      where: { userId: actor.id, postId },
+    });
+    const likes = await this.prisma.like.count({ where: { postId } });
+    return { liked: false, likes };
+  }
+
+  async save(
+    postId: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ saved: true }> {
+    await this.assertPostVisible(postId);
+    await this.prisma.savedPost.upsert({
+      where: { userId_postId: { userId: actor.id, postId } },
+      create: { userId: actor.id, postId },
+      update: {},
+    });
+    return { saved: true };
+  }
+
+  async unsave(
+    postId: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ saved: false }> {
+    await this.prisma.savedPost.deleteMany({
+      where: { userId: actor.id, postId },
+    });
+    return { saved: false };
+  }
+
+  async listComments(
+    postId: string,
+    page: number,
+    limit: number,
+  ): Promise<Paginated<CommentResponse>> {
+    await this.assertPostVisible(postId, { requireActive: false });
+
+    const { skip, take } = skipTake(page, limit);
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.comment.findMany({
+        where: { postId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: { author: true },
+      }),
+      this.prisma.comment.count({ where: { postId } }),
+    ]);
+
+    return paginate(rows.map(toCommentResponse), total, page, limit);
+  }
+
+  async createComment(
+    postId: string,
+    actor: AuthenticatedUser,
+    dto: CreateCommentDto,
+  ): Promise<{ comment: CommentResponse }> {
+    await this.assertPostVisible(postId, { requireActive: true });
+
+    const comment = await this.prisma.comment.create({
+      data: { postId, authorId: actor.id, body: dto.body },
+      include: { author: true },
+    });
+
+    return { comment: toCommentResponse(comment) };
+  }
+
+  async deleteComment(
+    commentId: string,
+    actor: AuthenticatedUser,
+  ): Promise<void> {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { post: { select: { authorId: true } } },
+    });
+
+    if (!comment) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Comment not found',
+      });
+    }
+
+    const isCommentAuthor = comment.authorId === actor.id;
+    const isPostAuthor = comment.post.authorId === actor.id;
+    if (!isCommentAuthor && !isPostAuthor) {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'Not the author of this comment or post',
+      });
+    }
+
+    await this.prisma.comment.delete({ where: { id: commentId } });
+  }
+
+  private async assertPostVisible(
+    postId: string,
+    opts: { requireActive?: boolean } = {},
+  ): Promise<void> {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, deletedAt: null },
+      select: { active: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+
+    if (opts.requireActive && !post.active) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+  }
+
+  private assertTypeRequirements(dto: CreatePostDto): void {
+    const required = POST_TYPE_REQUIRED_FIELDS[dto.type];
+    const fields: Record<string, string> = {};
+
+    for (const field of required) {
+      const value = dto[field as keyof CreatePostDto];
+      const empty =
+        value === undefined ||
+        value === null ||
+        (typeof value === 'string' && value.trim() === '') ||
+        (Array.isArray(value) && value.length === 0);
+      if (empty) {
+        fields[field] = `${field} is required for ${dto.type}`;
+      }
+    }
+
+    if (Object.keys(fields).length > 0) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'Missing type-specific fields',
+          fields,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  private assertMediaRequirements(dto: CreatePostDto): void {
+    const media = dto.media ?? MediaType.none;
+    const fields: Record<string, string> = {};
+
+    if (media === MediaType.image) {
+      if (!dto.imageUrls || dto.imageUrls.length === 0) {
+        fields.imageUrls = 'imageUrls is required when media is image';
+      }
+    }
+
+    if (media === MediaType.video) {
+      if (!dto.videoUrl || dto.videoUrl.trim() === '') {
+        fields.videoUrl = 'videoUrl is required when media is video';
+      }
+    }
+
+    if (Object.keys(fields).length > 0) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'Invalid media configuration',
+          fields,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  private async attachCounts(
+    posts: PostWithRelations[],
+    actor: AuthenticatedUser | undefined,
+  ): Promise<PostResponse[]> {
+    if (posts.length === 0) {
+      return [];
+    }
+
+    const postIds = posts.map((p) => p.id);
+
+    const [likeCounts, commentCounts, likedByMe, savedByMe] = await Promise.all(
+      [
+        this.prisma.like.groupBy({
+          by: ['postId'],
+          where: { postId: { in: postIds } },
+          _count: { _all: true },
+        }),
+        this.prisma.comment.groupBy({
+          by: ['postId'],
+          where: { postId: { in: postIds } },
+          _count: { _all: true },
+        }),
+        actor
+          ? this.prisma.like.findMany({
+              where: { userId: actor.id, postId: { in: postIds } },
+              select: { postId: true },
+            })
+          : Promise.resolve([] as { postId: string }[]),
+        actor
+          ? this.prisma.savedPost.findMany({
+              where: { userId: actor.id, postId: { in: postIds } },
+              select: { postId: true },
+            })
+          : Promise.resolve([] as { postId: string }[]),
+      ],
+    );
+
+    const likeMap = new Map(likeCounts.map((r) => [r.postId, r._count._all]));
+    const commentMap = new Map(
+      commentCounts.map((r) => [r.postId, r._count._all]),
+    );
+    const likedSet = new Set(likedByMe.map((r) => r.postId));
+    const savedSet = new Set(savedByMe.map((r) => r.postId));
+
+    return posts.map((post) => {
+      const counts: PostCounts = {
+        likes: likeMap.get(post.id) ?? 0,
+        comments: commentMap.get(post.id) ?? 0,
+        likedByMe: likedSet.has(post.id),
+        savedByMe: savedSet.has(post.id),
+      };
+      return toPostResponse(post, counts);
+    });
+  }
+}

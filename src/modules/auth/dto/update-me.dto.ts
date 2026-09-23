@@ -17,11 +17,6 @@ export class UpdateMeDto {
   @IsOptional()
   @IsString()
   @MaxLength(200)
-  location?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
   bio?: string;
 
   @IsOptional()
@@ -35,4 +30,8 @@ export class UpdateMeDto {
   @IsString()
   @MaxLength(500)
   avatarUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  locationId?: string;
 }
