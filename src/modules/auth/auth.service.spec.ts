@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -10,6 +11,7 @@ import { User, UserRole } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
+import { AuthenticatedUser } from '../../common/types/auth';
 import { AppConfig } from '../../config/configuration';
 import {
   OTP_RATE_WINDOW_SECONDS,
@@ -22,6 +24,12 @@ import { AuthService } from './auth.service';
 import { SmsService } from './sms.service';
 
 const PHONE = '0955123456';
+
+const actor: AuthenticatedUser = {
+  id: 'user-1',
+  role: UserRole.employee,
+  phone: PHONE,
+};
 
 const makeUser = (
   overrides: Partial<User & { location: null }> = {},
@@ -282,6 +290,94 @@ describe('AuthService', () => {
     expect(error).toBeInstanceOf(ForbiddenException);
     expect((error as ForbiddenException).getResponse()).toMatchObject({
       error: 'account_suspended',
+    });
+  });
+
+  describe('onboarding', () => {
+    const LOCATION_ID = 'loc-damascus';
+
+    it('sets role, locationId, and the flag', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: false,
+      });
+      prisma.location.findFirst.mockResolvedValue({ id: LOCATION_ID });
+      const updated = makeUser({
+        role: UserRole.store,
+        locationId: LOCATION_ID,
+        onboardingCompleted: true,
+      });
+      prisma.user.update.mockResolvedValue(updated);
+
+      const result = await service.onboarding(actor, {
+        role: UserRole.store,
+        locationId: LOCATION_ID,
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: actor.id },
+        data: {
+          role: UserRole.store,
+          location: { connect: { id: LOCATION_ID } },
+          onboardingCompleted: true,
+        },
+        include: { location: true },
+      });
+      expect(result.user.onboardingCompleted).toBe(true);
+      expect(result.user.role).toBe(UserRole.store);
+    });
+
+    it('rejects an unknown locationId', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: false,
+      });
+      prisma.location.findFirst.mockResolvedValue(null);
+
+      const error = await service
+        .onboarding(actor, {
+          role: UserRole.employee,
+          locationId: 'does-not-exist',
+        })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(HttpStatus.BAD_REQUEST);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects an inactive locationId', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: false,
+      });
+      prisma.location.findFirst.mockResolvedValue(null);
+
+      const error = await service
+        .onboarding(actor, {
+          role: UserRole.employee,
+          locationId: 'loc-inactive',
+        })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(HttpStatus.BAD_REQUEST);
+    });
+
+    it('returns 409 when already onboarded', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: true,
+      });
+
+      const error = await service
+        .onboarding(actor, {
+          role: UserRole.store,
+          locationId: LOCATION_ID,
+        })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getResponse()).toMatchObject({
+        error: 'already_onboarded',
+      });
+      expect(prisma.user.update).not.toHaveBeenCalled();
     });
   });
 });

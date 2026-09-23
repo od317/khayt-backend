@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -31,6 +32,7 @@ import {
   toUserResponse,
   UserResponse,
 } from './auth.mapper';
+import { OnboardingDto } from './dto/onboarding.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { normalizePhone } from './phone';
 import { SmsService } from './sms.service';
@@ -300,6 +302,58 @@ export class AuthService {
     const user = await this.prisma.user.update({
       where: { id: actor.id },
       data,
+      include: { location: true },
+    });
+
+    return { user: toUserResponse(user) };
+  }
+
+  async onboarding(
+    actor: AuthenticatedUser,
+    dto: OnboardingDto,
+  ): Promise<{ user: UserResponse }> {
+    const existing = await this.prisma.user.findUnique({
+      where: { id: actor.id },
+      select: { onboardingCompleted: true },
+    });
+
+    if (!existing) {
+      throw new UnauthorizedException({
+        error: 'unauthorized',
+        message: 'User not found',
+      });
+    }
+
+    if (existing.onboardingCompleted) {
+      throw new ConflictException({
+        error: 'already_onboarded',
+        message: 'Onboarding has already been completed',
+      });
+    }
+
+    const location = await this.prisma.location.findFirst({
+      where: { id: dto.locationId, active: true },
+      select: { id: true },
+    });
+
+    if (!location) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'Location does not exist or is inactive',
+          fields: { locationId: 'must reference an active location' },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: actor.id },
+      data: {
+        role: dto.role,
+        location: { connect: { id: dto.locationId } },
+        onboardingCompleted: true,
+      },
       include: { location: true },
     });
 

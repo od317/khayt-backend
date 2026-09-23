@@ -1,3 +1,6 @@
+// TODO: admin-only role change endpoint. Role is set only by
+// POST /auth/onboarding today; admins will need a way to change it later.
+
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,

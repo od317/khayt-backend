@@ -23,6 +23,7 @@ export type UserResponse = {
   avatarUrl: string | null;
   availableForWork: boolean;
   verified: boolean;
+  onboardingCompleted: boolean;
 };
 
 export function toUserResponse(
@@ -38,5 +39,6 @@ export function toUserResponse(
     avatarUrl: user.avatarUrl,
     availableForWork: user.availableForWork,
     verified: user.verified,
+    onboardingCompleted: user.onboardingCompleted,
   };
 }

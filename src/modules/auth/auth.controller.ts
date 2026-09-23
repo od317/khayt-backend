@@ -10,11 +10,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequireUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { AuthenticatedUser } from '../../common/types/auth';
 import { AppConfig } from '../../config/configuration';
+import type { UserResponse } from './auth.mapper';
 import { AuthService } from './auth.service';
+import { OnboardingDto } from './dto/onboarding.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RequestCodeDto } from './dto/request-code.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -56,7 +58,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
-    @CurrentUser() user: AuthenticatedUser,
+    @RequireUser() user: AuthenticatedUser,
     @Body() dto: RefreshDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ success: true }> {
@@ -66,13 +68,22 @@ export class AuthController {
   }
 
   @Get('me')
-  me(@CurrentUser() user: AuthenticatedUser) {
+  me(@RequireUser() user: AuthenticatedUser) {
     return this.auth.getMe(user.id);
   }
 
   @Patch('me')
-  updateMe(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateMeDto) {
+  updateMe(@RequireUser() user: AuthenticatedUser, @Body() dto: UpdateMeDto) {
     return this.auth.updateMe(user, dto);
+  }
+
+  @Post('onboarding')
+  @HttpCode(HttpStatus.OK)
+  onboarding(
+    @RequireUser() user: AuthenticatedUser,
+    @Body() dto: OnboardingDto,
+  ): Promise<{ user: UserResponse }> {
+    return this.auth.onboarding(user, dto);
   }
 
   private setRefreshCookie(res: Response, refreshToken: string): void {
