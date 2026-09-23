@@ -1,0 +1,3 @@
+-- Order number sequence. Starts at 1001; ORD-1001, ORD-1002, ...
+-- Rolls to 5 digits naturally past 9999.
+CREATE SEQUENCE order_number_seq START 1001;
