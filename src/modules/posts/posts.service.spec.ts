@@ -345,8 +345,8 @@ describe('PostsService', () => {
 
       const result = await service.detail('post-1', actor);
 
-      expect(result.id).toBe('post-1');
-      expect(result.active).toBe(false);
+      expect(result.post.id).toBe('post-1');
+      expect(result.post.active).toBe(false);
     });
   });
 

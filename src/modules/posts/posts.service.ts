@@ -117,7 +117,7 @@ export class PostsService {
   async detail(
     id: string,
     actor: AuthenticatedUser | undefined,
-  ): Promise<PostResponse> {
+  ): Promise<{ post: PostResponse }> {
     const post = await this.prisma.post.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -148,7 +148,7 @@ export class PostsService {
         message: 'Post not found',
       });
     }
-    return response;
+    return { post: response };
   }
 
   async create(

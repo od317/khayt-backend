@@ -43,7 +43,7 @@ export class PostsController {
   detail(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser | undefined,
-  ): Promise<PostResponse> {
+  ): Promise<{ post: PostResponse }> {
     return this.posts.detail(id, user);
   }
 
