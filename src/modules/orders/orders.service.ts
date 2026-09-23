@@ -406,9 +406,9 @@ export class OrdersService {
   ): void {
     if (isInternal(actor.role)) return;
     if (actor.role === 'store' && order.storeId === actor.id) return;
-    throw new ForbiddenException({
+    throw new NotFoundException({
       error: 'order_not_accessible',
-      message: 'You do not have access to this order',
+      message: 'Order not found',
     });
   }
 }

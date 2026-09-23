@@ -240,6 +240,9 @@ describe('OrdersService', () => {
         .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(NotFoundException);
+      expect((error as NotFoundException).getResponse()).toMatchObject({
+        error: 'order_not_accessible',
+      });
     });
 
     it('returns the detail with canCancel true for the store at review', async () => {
