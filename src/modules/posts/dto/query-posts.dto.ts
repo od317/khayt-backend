@@ -2,6 +2,7 @@ import { MediaType, PostType } from '@prisma/client';
 import {
   IsBooleanString,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   MaxLength,
@@ -42,4 +43,8 @@ export class QueryPostsDto extends PaginationDto {
   @IsOptional()
   @IsBooleanString()
   active?: string;
+
+  @IsOptional()
+  @IsIn(['me'])
+  savedBy?: 'me';
 }

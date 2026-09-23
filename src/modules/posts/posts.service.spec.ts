@@ -3,8 +3,9 @@ import {
   HttpException,
   HttpStatus,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { BusinessType, MediaType, PostType, UserRole } from '@prisma/client';
+import { MediaType, PostType, UserRole } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
@@ -400,6 +401,55 @@ describe('PostsService', () => {
           where: expect.objectContaining({ active: true }),
         }),
       );
+    });
+
+    it('a stranger cannot see another user’s inactive posts', async () => {
+      // Requester is `actor`. The target author is `other`.
+      // The service must ignore any authorId the caller passes and
+      // force authorId = actor.id.
+      await service.list(
+        { page: 1, limit: 20, active: 'false', authorId: other.id },
+        actor,
+      );
+
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            active: false,
+            authorId: actor.id,
+          }),
+        }),
+      );
+    });
+
+    it('rejects active=false for unauthenticated callers', async () => {
+      const error = await service
+        .list({ page: 1, limit: 20, active: 'false' }, undefined)
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(UnauthorizedException);
+      expect(prisma.post.findMany).not.toHaveBeenCalled();
+    });
+
+    it('filters to the current user’s saved posts when savedBy=me', async () => {
+      await service.list({ page: 1, limit: 20, savedBy: 'me' }, actor);
+
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            savedBy: { some: { userId: actor.id } },
+          }),
+        }),
+      );
+    });
+
+    it('rejects savedBy=me for unauthenticated callers', async () => {
+      const error = await service
+        .list({ page: 1, limit: 20, savedBy: 'me' }, undefined)
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(UnauthorizedException);
+      expect(prisma.post.findMany).not.toHaveBeenCalled();
     });
   });
 

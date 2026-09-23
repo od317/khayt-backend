@@ -4,6 +4,7 @@ import {
   HttpStatus,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   Business,
@@ -44,8 +45,40 @@ export class PostsService {
   ): Promise<Paginated<PostResponse>> {
     const where: Prisma.PostWhereInput = { deletedAt: null };
 
+    // Active filter.
+    // Default: active posts only.
+    // active=false: the caller must be authenticated, and may only
+    // see their OWN inactive posts. Any authorId they passed is
+    // ignored.
+    const activeFilter = query.active ?? 'true';
+    const wantInactive = activeFilter === 'false';
+
+    if (wantInactive) {
+      if (!actor) {
+        throw new UnauthorizedException({
+          error: 'unauthorized',
+          message: 'Authentication required to list inactive posts',
+        });
+      }
+      where.active = false;
+      where.authorId = actor.id;
+    } else {
+      where.active = true;
+      if (query.authorId) where.authorId = query.authorId;
+    }
+
+    // savedBy=me: filter to posts the current user has saved.
+    if (query.savedBy === 'me') {
+      if (!actor) {
+        throw new UnauthorizedException({
+          error: 'unauthorized',
+          message: 'Authentication required to list saved posts',
+        });
+      }
+      where.savedBy = { some: { userId: actor.id } };
+    }
+
     if (query.type) where.type = query.type;
-    if (query.authorId) where.authorId = query.authorId;
     if (query.businessId) where.businessId = query.businessId;
     if (query.media) where.media = query.media;
     if (query.location) {
@@ -60,9 +93,6 @@ export class PostsService {
     if (query.categoryId) {
       where.categories = { some: { categoryId: query.categoryId } };
     }
-
-    const activeFilter = query.active ?? 'true';
-    where.active = activeFilter === 'true';
 
     const { skip, take } = skipTake(query.page, query.limit);
 
