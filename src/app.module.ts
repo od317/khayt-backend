@@ -21,6 +21,7 @@ import { PostsModule } from './modules/posts/posts.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
     PrismaModule,
     LocationsModule,
     InventoryModule,
+    BillingModule,
     OrdersModule,
     RedisModule,
     BusinessesModule,
