@@ -16,7 +16,24 @@ type ErrorBody = {
   statusCode: number;
   fields?: Record<string, string>;
   stack?: string;
+  [key: string]: unknown;
 };
+
+/**
+ * Extra top-level keys we allow through from an HttpException's response
+ * payload, in addition to the standard { error, message, statusCode }.
+ * Everything else a thrown payload carries is stripped, so a route can't
+ * accidentally leak internals.
+ */
+const ALLOWED_EXTRA = new Set([
+  'productId',
+  'available',
+  'from',
+  'to',
+  'field',
+  'fields',
+  'code',
+]);
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -123,19 +140,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
           ? message
           : exception.message;
 
-      return this.withStack(
-        {
-          status,
-          body: {
-            error: errorCode,
-            message: formattedMessage,
-            statusCode: status,
-            ...(fields ? { fields } : {}),
-          },
-        },
-        exception,
-        isDevelopment,
-      );
+      const body: ErrorBody = {
+        error: errorCode,
+        message: formattedMessage,
+        statusCode: status,
+        ...(fields ? { fields } : {}),
+      };
+
+      // Pass through any allowed extra context keys the caller set.
+      for (const [key, value] of Object.entries(payload)) {
+        if (ALLOWED_EXTRA.has(key) && key !== 'fields') {
+          body[key] = value;
+        }
+      }
+
+      return this.withStack({ status, body }, exception, isDevelopment);
     }
 
     const message =
