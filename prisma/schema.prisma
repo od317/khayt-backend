@@ -601,10 +601,15 @@ model Notification {
 // AUDIT
 // ============================================================
 
+enum StockMovementType {
+  in
+  out
+}
+
 model StockMovement {
   id         String   @id @default(uuid())
   supplyId   String
-  type       String   // "in" | "out"
+  type       StockMovementType
   quantity   Int
   reference  String?  // ORD-#### or RCV-####
   createdAt  DateTime @default(now())

@@ -89,6 +89,9 @@ type PrismaMock = {
     findUnique: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
   };
+  stockMovement: {
+    createMany: ReturnType<typeof vi.fn>;
+  };
   $transaction: ReturnType<typeof vi.fn>;
   $queryRaw: ReturnType<typeof vi.fn>;
 };
@@ -116,7 +119,10 @@ describe('OrdersService', () => {
       product: { findMany: vi.fn().mockResolvedValue([]) },
       supply: {
         findUnique: vi.fn().mockResolvedValue({ remaining: 100 }),
-        update: vi.fn(),
+        update: vi.fn().mockResolvedValue({ id: 'supply-1' }),
+      },
+      stockMovement: {
+        createMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
       $transaction: vi.fn(),
       $queryRaw: vi.fn().mockResolvedValue([{ nextval: 1001n }]),
@@ -352,13 +358,16 @@ describe('OrdersService', () => {
       });
     });
 
-    it('decrements Supply.remaining on delivered', async () => {
+    it('decrements Supply.remaining and writes a StockMovement on delivered', async () => {
       const existing = makeOrder({ status: OrderStatus.in_transit });
       prisma.order.findUnique
         .mockResolvedValueOnce(existing)
         .mockResolvedValueOnce({ ...existing, status: OrderStatus.delivered });
-      prisma.orderLine.findMany.mockResolvedValue([{ picked: true }]);
-      prisma.supply.update.mockResolvedValue(undefined);
+      prisma.orderLine.findMany.mockResolvedValue([
+        { productId: 'prod-1', businessId: 'biz-1', quantity: 2, picked: true },
+      ]);
+      prisma.supply.update.mockResolvedValue({ id: 'supply-1' });
+      prisma.stockMovement.createMany.mockResolvedValue({ count: 1 });
       prisma.order.update.mockResolvedValue({
         ...existing,
         status: OrderStatus.delivered,
@@ -372,6 +381,28 @@ describe('OrdersService', () => {
 
       await service.updateStatus('order-1', deliveryActor, {
         status: OrderStatus.delivered,
+      });
+
+      expect(prisma.supply.update).toHaveBeenCalledWith({
+        where: {
+          businessId_productId: {
+            businessId: 'biz-1',
+            productId: 'prod-1',
+          },
+        },
+        data: { remaining: { decrement: 2 } },
+        select: { id: true },
+      });
+
+      expect(prisma.stockMovement.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            supplyId: 'supply-1',
+            type: 'out',
+            quantity: 2,
+            reference: 'ORD-1001',
+          },
+        ],
       });
 
       expect(prisma.order.update).toHaveBeenCalledWith({

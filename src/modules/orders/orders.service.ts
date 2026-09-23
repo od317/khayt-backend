@@ -6,7 +6,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Order, OrderStatus, Prisma, User, UserRole } from '@prisma/client';
+import {
+  Order,
+  OrderStatus,
+  Prisma,
+  StockMovementType,
+  User,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
@@ -317,8 +324,10 @@ export class OrdersService {
           select: { productId: true, businessId: true, quantity: true },
         });
 
+        const supplyIds: string[] = [];
+
         for (const line of orderLines) {
-          await tx.supply.update({
+          const supply = await tx.supply.update({
             where: {
               businessId_productId: {
                 businessId: line.businessId,
@@ -326,8 +335,19 @@ export class OrdersService {
               },
             },
             data: { remaining: { decrement: line.quantity } },
+            select: { id: true },
           });
+          supplyIds.push(supply.id);
         }
+
+        await tx.stockMovement.createMany({
+          data: orderLines.map((line, i) => ({
+            supplyId: supplyIds[i]!,
+            type: StockMovementType.out,
+            quantity: line.quantity,
+            reference: existing.number,
+          })),
+        });
       }
 
       await tx.order.update({
