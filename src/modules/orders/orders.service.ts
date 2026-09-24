@@ -37,6 +37,8 @@ import {
   toOrderLineResponse,
   toOrderListItem,
 } from './orders.mapper';
+import { RedisService } from '../../common/redis/redis.service';
+import { ORDER_CHANNEL } from '../notifications/notifications.pubsub';
 
 const OPEN_STATUSES: readonly OrderStatus[] = [
   OrderStatus.review,
@@ -52,6 +54,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly redis: RedisService,
   ) {}
 
   async list(
@@ -411,7 +414,13 @@ export class OrdersService {
         linkTo: `/orders/${updated.id}`,
       });
     }
-
+    await this.redis.publish(
+      ORDER_CHANNEL(id),
+      JSON.stringify({
+        status: updated.status,
+        updatedAt: updated.updatedAt.toISOString(),
+      }),
+    );
     return { order: toOrderListItem(updated) };
   }
 
@@ -529,6 +538,22 @@ export class OrdersService {
         reference,
       })),
     });
+  }
+
+  async assertCanReadById(id: string, actor: AuthenticatedUser): Promise<void> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: { store: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Order not found',
+      });
+    }
+
+    this.assertCanRead(order, actor);
   }
 
   private assertCanRead(

@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { NotificationType, Prisma } from '@prisma/client';
+import { Notification, NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { RedisService } from '../../common/redis/redis.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
@@ -8,6 +9,7 @@ import {
   NotificationResponse,
   toNotificationResponse,
 } from './notifications.mapper';
+import { NOTIFY_USER_CHANNEL } from './notifications.pubsub';
 
 export type NotifyInput = {
   userId: string;
@@ -22,12 +24,15 @@ export type NotifyInput = {
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
 
   /**
    * Fire-and-forget notification write. Never throws.
-   * Callers use this AFTER their own transaction commits — a notification
-   * failure must never roll back or block the business operation.
+   * Callers use this AFTER their own transaction commits.
+   * After the DB write succeeds, publishes to the user's SSE channel.
    */
   async notify(input: NotifyInput): Promise<void> {
     try {
@@ -40,7 +45,8 @@ export class NotificationsService {
         actorId: input.actorId ?? null,
       };
 
-      await this.prisma.notification.create({ data });
+      const created = await this.prisma.notification.create({ data });
+      await this.publishNotification(created);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'unknown error';
       this.logger.error(
@@ -50,11 +56,8 @@ export class NotificationsService {
   }
 
   /**
-   * Like-notification with one-hour batching.
-   * If an unread like-notification for the same post exists within the
-   * last hour, increment its count. Otherwise create a new one.
-   *
-   * Never throws.
+   * Like-notification with one-hour batching. Never throws.
+   * Publishes on both the create and the increment branch.
    */
   async notifyLike(input: {
     userId: string;
@@ -80,10 +83,11 @@ export class NotificationsService {
       if (existing) {
         const match = existing.body.match(/^(\d+)/);
         const count = match ? parseInt(match[1]!, 10) + 1 : 2;
-        await this.prisma.notification.update({
+        const updated = await this.prisma.notification.update({
           where: { id: existing.id },
           data: { body: `${count} أشخاص أعجبوا بمنشورك` },
         });
+        await this.publishNotification(updated);
         return;
       }
 
@@ -169,5 +173,13 @@ export class NotificationsService {
     });
 
     return { updated: result.count };
+  }
+
+  private async publishNotification(notification: Notification): Promise<void> {
+    const payload: NotificationResponse = toNotificationResponse(notification);
+    await this.redis.publish(
+      NOTIFY_USER_CHANNEL(notification.userId),
+      JSON.stringify(payload),
+    );
   }
 }
