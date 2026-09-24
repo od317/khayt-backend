@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -43,6 +42,8 @@ const OPEN_STATUSES: readonly OrderStatus[] = [
   OrderStatus.in_transit,
 ];
 
+type OrderWithStore = Order & { store: User };
+
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -53,13 +54,11 @@ export class OrdersService {
   ): Promise<Paginated<OrderListItemResponse>> {
     const where: Prisma.OrderWhereInput = {};
 
-    // Stores only see their own orders. Internal staff see all.
-    if (actor.role === 'store') {
+    if (actor.role === UserRole.store) {
       where.storeId = actor.id;
     } else if (isInternal(actor.role)) {
       if (query.storeId) where.storeId = query.storeId;
     } else {
-      // Other external roles (employee, workshop, institute) have no orders.
       return paginate([], 0, query.page, query.limit);
     }
 
@@ -105,9 +104,36 @@ export class OrdersService {
 
     const lines = await this.prisma.orderLine.findMany({
       where: { orderId: id },
-      include: { product: true, business: true },
+      include: {
+        product: { select: { name: true } },
+        business: { select: { name: true } },
+      },
       orderBy: { id: 'asc' },
     });
+
+    const deliveryOrder = await this.prisma.deliveryOrder.findUnique({
+      where: { orderId: id },
+      include: {
+        delivery: {
+          include: { driver: true },
+        },
+      },
+    });
+
+    const delivery = deliveryOrder
+      ? {
+          id: deliveryOrder.delivery.id,
+          number: deliveryOrder.delivery.number,
+          status: deliveryOrder.delivery.status,
+          driver: deliveryOrder.delivery.driver
+            ? {
+                id: deliveryOrder.delivery.driver.id,
+                name: deliveryOrder.delivery.driver.name,
+                phone: deliveryOrder.delivery.driver.phone,
+              }
+            : null,
+        }
+      : null;
 
     const allLinesPicked = lines.every((l) => l.picked);
     const ctx = {
@@ -116,10 +142,15 @@ export class OrdersService {
       allLinesPicked,
     };
 
-    return toOrderDetailResponse(order, lines, {
-      canCancel: canActorCancel(ctx),
-      canAdvance: canActorAdvance(ctx),
-    });
+    return toOrderDetailResponse(
+      order,
+      lines,
+      {
+        canCancel: canActorCancel(ctx),
+        canAdvance: canActorAdvance(ctx),
+      },
+      delivery,
+    );
   }
 
   async create(
@@ -132,14 +163,12 @@ export class OrdersService {
         message: 'Only stores can place orders',
       });
     }
-    // Dedupe product ids for the lock query.
+
     const productIds = Array.from(
       new Set(dto.lines.map((l) => l.productId)),
     ).sort();
 
     const order = await this.prisma.$transaction(async (tx) => {
-      // 1. Load the products we're ordering. Verify all exist and are
-      //    in the warehouse (R1 + R10).
       const products = await tx.product.findMany({
         where: { id: { in: productIds }, deletedAt: null },
       });
@@ -166,8 +195,6 @@ export class OrdersService {
         }
       }
 
-      // 2. Lock the Supply rows for these products, in a stable order.
-      //    This serializes concurrent orders for the same products.
       await tx.$queryRaw`
         SELECT id FROM "Supply"
         WHERE "productId" = ANY(${productIds}::text[])
@@ -175,9 +202,6 @@ export class OrdersService {
         FOR UPDATE
       `;
 
-      // 3. For each line, compute available = remaining − open reservations.
-      //    Aggregate requested quantity per product (a client could send
-      //    the same product twice).
       const requestedByProduct = new Map<string, number>();
       for (const line of dto.lines) {
         const current = requestedByProduct.get(line.productId) ?? 0;
@@ -186,7 +210,7 @@ export class OrdersService {
 
       for (const [productId, requested] of requestedByProduct) {
         const product = productById.get(productId);
-        if (!product) continue; // already checked above
+        if (!product) continue;
 
         const supply = await tx.supply.findUnique({
           where: {
@@ -212,22 +236,23 @@ export class OrdersService {
         const available = remaining - reserved;
 
         if (requested > available) {
-          throw new ConflictException({
-            error: 'insufficient_stock',
-            message: 'Not enough stock available',
-            productId,
-            available,
-          });
+          throw new HttpException(
+            {
+              error: 'insufficient_stock',
+              message: 'Not enough stock available',
+              productId,
+              available,
+            },
+            HttpStatus.CONFLICT,
+          );
         }
       }
 
-      // 4. Get a fresh order number.
       const [{ nextval }] = await tx.$queryRaw<{ nextval: bigint }[]>`
         SELECT nextval('order_number_seq') AS nextval
       `;
       const number = `ORD-${nextval.toString()}`;
 
-      // 5. Compute total and pieces.
       let total = 0;
       let pieces = 0;
       for (const line of dto.lines) {
@@ -237,7 +262,6 @@ export class OrdersService {
         pieces += line.quantity;
       }
 
-      // 6. Insert the order + lines.
       const created = await tx.order.create({
         data: {
           number,
@@ -317,37 +341,12 @@ export class OrdersService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      // Decrement Supply.remaining on delivery (R9).
       if (dto.status === OrderStatus.delivered) {
-        const orderLines = await tx.orderLine.findMany({
-          where: { orderId: id },
-          select: { productId: true, businessId: true, quantity: true },
-        });
+        await this.decrementStockForOrder(tx, id, existing.number);
+      }
 
-        const supplyIds: string[] = [];
-
-        for (const line of orderLines) {
-          const supply = await tx.supply.update({
-            where: {
-              businessId_productId: {
-                businessId: line.businessId,
-                productId: line.productId,
-              },
-            },
-            data: { remaining: { decrement: line.quantity } },
-            select: { id: true },
-          });
-          supplyIds.push(supply.id);
-        }
-
-        await tx.stockMovement.createMany({
-          data: orderLines.map((line, i) => ({
-            supplyId: supplyIds[i]!,
-            type: StockMovementType.out,
-            quantity: line.quantity,
-            reference: existing.number,
-          })),
-        });
+      if (dto.status === OrderStatus.cancelled) {
+        await tx.deliveryOrder.deleteMany({ where: { orderId: id } });
       }
 
       await tx.order.update({
@@ -377,11 +376,10 @@ export class OrdersService {
     actor: AuthenticatedUser,
     dto: UpdateOrderLineDto,
   ): Promise<{ line: OrderLineResponse }> {
-    // Inventory or admin only.
     if (
-      actor.role !== 'inventory' &&
-      actor.role !== 'admin' &&
-      actor.role !== 'super_admin'
+      actor.role !== UserRole.inventory &&
+      actor.role !== UserRole.admin &&
+      actor.role !== UserRole.super_admin
     ) {
       throw new ForbiddenException({
         error: 'forbidden',
@@ -391,7 +389,11 @@ export class OrdersService {
 
     const line = await this.prisma.orderLine.findFirst({
       where: { id: lineId, orderId },
-      include: { product: true, business: true, order: true },
+      include: {
+        product: { select: { name: true } },
+        business: { select: { name: true } },
+        order: true,
+      },
     });
 
     if (!line) {
@@ -414,10 +416,82 @@ export class OrdersService {
     const updated = await this.prisma.orderLine.update({
       where: { id: lineId },
       data: { picked: dto.picked },
-      include: { product: true, business: true },
+      include: {
+        product: { select: { name: true } },
+        business: { select: { name: true } },
+      },
     });
 
     return { line: toOrderLineResponse(updated) };
+  }
+
+  /**
+   * Cascades an order status change driven by the delivery lifecycle.
+   * Used by DeliveryService inside its own transaction.
+   *
+   * Does NOT run the transition matrix check — the caller is responsible
+   * for the invariants (orders are `ready` when a delivery is created,
+   * etc.). See slice 7 decisions.
+   */
+  async cascadeOrderStatus(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    newStatus: OrderStatus,
+  ): Promise<void> {
+    if (newStatus === OrderStatus.delivered) {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { number: true },
+      });
+      if (!order) {
+        throw new NotFoundException({
+          error: 'not_found',
+          message: 'Order not found',
+        });
+      }
+      await this.decrementStockForOrder(tx, orderId, order.number);
+    }
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: { status: newStatus },
+    });
+  }
+
+  private async decrementStockForOrder(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    reference: string,
+  ): Promise<void> {
+    const orderLines = await tx.orderLine.findMany({
+      where: { orderId },
+      select: { productId: true, businessId: true, quantity: true },
+    });
+
+    const supplyIds: string[] = [];
+
+    for (const line of orderLines) {
+      const supply = await tx.supply.update({
+        where: {
+          businessId_productId: {
+            businessId: line.businessId,
+            productId: line.productId,
+          },
+        },
+        data: { remaining: { decrement: line.quantity } },
+        select: { id: true },
+      });
+      supplyIds.push(supply.id);
+    }
+
+    await tx.stockMovement.createMany({
+      data: orderLines.map((line, i) => ({
+        supplyId: supplyIds[i]!,
+        type: StockMovementType.out,
+        quantity: line.quantity,
+        reference,
+      })),
+    });
   }
 
   private assertCanRead(
@@ -425,7 +499,7 @@ export class OrdersService {
     actor: AuthenticatedUser,
   ): void {
     if (isInternal(actor.role)) return;
-    if (actor.role === 'store' && order.storeId === actor.id) return;
+    if (actor.role === UserRole.store && order.storeId === actor.id) return;
     throw new NotFoundException({
       error: 'order_not_accessible',
       message: 'Order not found',

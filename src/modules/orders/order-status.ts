@@ -33,7 +33,7 @@ export function isInternal(role: UserRole): boolean {
 const LEGAL_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   review: [OrderStatus.preparing, OrderStatus.cancelled],
   preparing: [OrderStatus.ready, OrderStatus.cancelled],
-  ready: [OrderStatus.in_transit, OrderStatus.cancelled],
+  ready: [OrderStatus.cancelled],
   in_transit: [OrderStatus.delivered, OrderStatus.failed],
   delivered: [],
   cancelled: [],
@@ -64,23 +64,22 @@ export function canActorTransition(
     return false;
   }
 
-  // Cancellation rules (R3 + F6).
   if (to === OrderStatus.cancelled) {
-    // The store can only cancel their own order, and only from review.
     if (actor.role === UserRole.store) {
       return actor.id === order.storeId && from === OrderStatus.review;
     }
-    // Internal staff can cancel from review or preparing.
     if (isInternal(actor.role)) {
-      return from === OrderStatus.review || from === OrderStatus.preparing;
+      return (
+        from === OrderStatus.review ||
+        from === OrderStatus.preparing ||
+        from === OrderStatus.ready
+      );
     }
     return false;
   }
 
-  // Non-cancellation transitions.
   switch (from) {
     case OrderStatus.review:
-      // review → preparing
       return (
         actor.role === UserRole.inventory ||
         actor.role === UserRole.admin ||
@@ -88,7 +87,6 @@ export function canActorTransition(
       );
 
     case OrderStatus.preparing:
-      // preparing → ready. Only when all lines are picked.
       if (!allLinesPicked) return false;
       return (
         actor.role === UserRole.inventory ||
@@ -97,11 +95,9 @@ export function canActorTransition(
       );
 
     case OrderStatus.ready:
-      // ready → in_transit
-      return actor.role === UserRole.delivery || actor.role === UserRole.admin;
+      return false;
 
     case OrderStatus.in_transit:
-      // in_transit → delivered | failed
       return actor.role === UserRole.delivery || actor.role === UserRole.admin;
 
     case OrderStatus.delivered:

@@ -604,6 +604,14 @@ async function main(): Promise<void> {
       locationId: null,
       onboardingCompleted: true,
     },
+    {
+      id: 'user-delivery',
+      phone: '0994000006',
+      name: 'أبو محمد',
+      role: UserRole.delivery,
+      locationId: 'loc-damascus',
+      onboardingCompleted: true,
+    },
   ];
 
   for (const u of users) {

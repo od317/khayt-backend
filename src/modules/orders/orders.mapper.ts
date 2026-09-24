@@ -1,10 +1,13 @@
 import {
   Business,
+  BusinessType,
+  Location,
+  MediaType,
   Order,
-  OrderLine,
   OrderStatus,
-  Product,
+  PostType,
   User,
+  UserRole,
 } from '@prisma/client';
 
 export type OrderListItemResponse = {
@@ -29,6 +32,13 @@ export type OrderLineResponse = {
   picked: boolean;
 };
 
+export type OrderDeliveryResponse = {
+  id: string;
+  number: string;
+  status: string;
+  driver: { id: string; name: string; phone: string } | null;
+};
+
 export type OrderDetailResponse = {
   order: {
     id: string;
@@ -43,14 +53,21 @@ export type OrderDetailResponse = {
   };
   store: { id: string; name: string; phone: string };
   lines: OrderLineResponse[];
-  delivery: null;
+  delivery: OrderDeliveryResponse | null;
 };
 
 type OrderWithStore = Order & { store: User };
 
-type OrderLineWithRelations = OrderLine & {
-  product: Product;
-  business: Business;
+type OrderLineWithRelations = {
+  id: string;
+  orderId: string;
+  productId: string;
+  businessId: string;
+  quantity: number;
+  unitPrice: number;
+  picked: boolean;
+  product: { name: string };
+  business: { name: string };
 };
 
 export function toOrderListItem(order: OrderWithStore): OrderListItemResponse {
@@ -85,6 +102,7 @@ export function toOrderDetailResponse(
   order: OrderWithStore,
   lines: OrderLineWithRelations[],
   flags: { canCancel: boolean; canAdvance: boolean },
+  delivery: OrderDeliveryResponse | null = null,
 ): OrderDetailResponse {
   return {
     order: {
@@ -104,6 +122,6 @@ export function toOrderDetailResponse(
       phone: order.store.phone,
     },
     lines: lines.map(toOrderLineResponse),
-    delivery: null,
+    delivery,
   };
 }
