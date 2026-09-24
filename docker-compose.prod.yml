@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: khayt-db-prod
+    environment:
+      POSTGRES_USER: khayt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-khayt_prod_CHANGE_ME}
+      POSTGRES_DB: khayt
+    # No host port. Internal to the compose network only.
+    volumes: ['pgdata:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U khayt']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: khayt-redis-prod
+    # No host port. Internal to the compose network only.
+    volumes: ['redisdata:/data']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build: .
+    container_name: khayt-api-prod
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file: .env.production
+    expose: ['3000']
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: khayt-nginx-prod
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

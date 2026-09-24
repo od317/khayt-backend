@@ -4,3 +4,5 @@ dist
 coverage
 *.log
 uploads/
+.env.production
+.env.production.local
