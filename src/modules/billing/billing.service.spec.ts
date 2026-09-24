@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { BillingService } from './billing.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const actor: AuthenticatedUser = {
   id: 'user-inv',
@@ -167,7 +168,11 @@ describe('BillingService', () => {
       return undefined;
     });
 
-    service = new BillingService(prisma as unknown as PrismaService);
+    const notifications = { notify: vi.fn().mockResolvedValue(undefined) };
+    service = new BillingService(
+      prisma as unknown as PrismaService,
+      notifications as unknown as NotificationsService,
+    );
   });
 
   describe('createReceiving', () => {

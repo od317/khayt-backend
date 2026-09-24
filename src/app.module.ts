@@ -23,6 +23,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { DeliveryModule } from './modules/delivery/delivery.module';
     LocationsModule,
     InventoryModule,
     DeliveryModule,
+    NotificationsModule,
     BillingModule,
     OrdersModule,
     RedisModule,

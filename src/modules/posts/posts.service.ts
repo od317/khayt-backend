@@ -10,6 +10,7 @@ import {
   Business,
   Location,
   MediaType,
+  NotificationType,
   Post,
   Prisma,
   User,
@@ -17,6 +18,7 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
@@ -37,7 +39,10 @@ type PostWithRelations = Post & {
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async list(
     query: QueryPostsDto,
@@ -45,11 +50,6 @@ export class PostsService {
   ): Promise<Paginated<PostResponse>> {
     const where: Prisma.PostWhereInput = { deletedAt: null };
 
-    // Active filter.
-    // Default: active posts only.
-    // active=false: the caller must be authenticated, and may only
-    // see their OWN inactive posts. Any authorId they passed is
-    // ignored.
     const activeFilter = query.active ?? 'true';
     const wantInactive = activeFilter === 'false';
 
@@ -67,7 +67,6 @@ export class PostsService {
       if (query.authorId) where.authorId = query.authorId;
     }
 
-    // savedBy=me: filter to posts the current user has saved.
     if (query.savedBy === 'me') {
       if (!actor) {
         throw new UnauthorizedException({
@@ -364,12 +363,34 @@ export class PostsService {
     actor: AuthenticatedUser,
   ): Promise<{ liked: true; likes: number }> {
     await this.assertPostVisible(postId);
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { authorId: true },
+    });
+
+    const existing = await this.prisma.like.findUnique({
+      where: { userId_postId: { userId: actor.id, postId } },
+      select: { userId: true },
+    });
+
     await this.prisma.like.upsert({
       where: { userId_postId: { userId: actor.id, postId } },
       create: { userId: actor.id, postId },
       update: {},
     });
     const likes = await this.prisma.like.count({ where: { postId } });
+
+    if (!existing && post && post.authorId !== actor.id) {
+      const actorName = await this.getActorName(actor.id);
+      await this.notifications.notifyLike({
+        userId: post.authorId,
+        actorId: actor.id,
+        actorName,
+        postId,
+      });
+    }
+
     return { liked: true, likes };
   }
 
@@ -437,10 +458,27 @@ export class PostsService {
   ): Promise<{ comment: CommentResponse }> {
     await this.assertPostVisible(postId, { requireActive: true });
 
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { authorId: true },
+    });
+
     const comment = await this.prisma.comment.create({
       data: { postId, authorId: actor.id, body: dto.body },
       include: { author: true },
     });
+
+    if (post && post.authorId !== actor.id) {
+      const actorName = await this.getActorName(actor.id);
+      await this.notifications.notify({
+        userId: post.authorId,
+        type: NotificationType.new_comment,
+        title: 'تعليق جديد',
+        body: `${actorName} علّق على منشورك`,
+        linkTo: `/posts/${postId}`,
+        actorId: actor.id,
+      });
+    }
 
     return { comment: toCommentResponse(comment) };
   }
@@ -471,6 +509,14 @@ export class PostsService {
     }
 
     await this.prisma.comment.delete({ where: { id: commentId } });
+  }
+
+  private async getActorName(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+    return user?.name ?? userId;
   }
 
   private async assertPostVisible(

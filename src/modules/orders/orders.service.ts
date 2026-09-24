@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  NotificationType,
   Order,
   OrderStatus,
   Prisma,
@@ -16,6 +17,8 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
+import { ORDER_STATUS_LABELS } from '../../common/order-status-labels';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
 import { UpdateOrderLineDto } from './dto/update-order-line.dto';
@@ -46,7 +49,10 @@ type OrderWithStore = Order & { store: User };
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async list(
     query: QueryOrdersDto,
@@ -293,7 +299,27 @@ export class OrdersService {
       return created;
     });
 
-    return this.detail(order.id, actor);
+    // Build the response first — detail() can throw. Notifying before
+    // it would send notifications about an order the caller can't read.
+    const response = await this.detail(order.id, actor);
+
+    // Notify every inventory user — after the transaction commits.
+    const inventoryUsers = await this.prisma.user.findMany({
+      where: { role: UserRole.inventory, suspended: false },
+      select: { id: true },
+    });
+
+    for (const inv of inventoryUsers) {
+      await this.notifications.notify({
+        userId: inv.id,
+        type: NotificationType.order_placed,
+        title: 'طلب جديد',
+        body: `طلب جديد ${order.number} من ${order.store.name}`,
+        linkTo: `/orders/${order.id}`,
+      });
+    }
+
+    return response;
   }
 
   async updateStatus(
@@ -367,6 +393,25 @@ export class OrdersService {
       });
     }
 
+    // Notify the store — after the transaction commits.
+    if (dto.status === OrderStatus.cancelled) {
+      await this.notifications.notify({
+        userId: updated.storeId,
+        type: NotificationType.order_cancelled,
+        title: 'تم إلغاء الطلب',
+        body: `تم إلغاء الطلب ${updated.number}`,
+        linkTo: `/orders/${updated.id}`,
+      });
+    } else {
+      await this.notifications.notify({
+        userId: updated.storeId,
+        type: NotificationType.order_status,
+        title: 'تحديث حالة الطلب',
+        body: `طلبك ${updated.number} أصبح ${ORDER_STATUS_LABELS[dto.status]}`,
+        linkTo: `/orders/${updated.id}`,
+      });
+    }
+
     return { order: toOrderListItem(updated) };
   }
 
@@ -425,14 +470,6 @@ export class OrdersService {
     return { line: toOrderLineResponse(updated) };
   }
 
-  /**
-   * Cascades an order status change driven by the delivery lifecycle.
-   * Used by DeliveryService inside its own transaction.
-   *
-   * Does NOT run the transition matrix check — the caller is responsible
-   * for the invariants (orders are `ready` when a delivery is created,
-   * etc.). See slice 7 decisions.
-   */
   async cascadeOrderStatus(
     tx: Prisma.TransactionClient,
     orderId: string,

@@ -1,15 +1,21 @@
 import {
   ConflictException,
-  ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DeliveryStatus, OrderStatus, Prisma, UserRole } from '@prisma/client';
+import {
+  DeliveryStatus,
+  NotificationType,
+  OrderStatus,
+  Prisma,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
+import { NotificationsService } from '../notifications/notifications.service';
 import { OrdersService } from '../orders/orders.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { QueryDeliveriesDto } from './dto/query-deliveries.dto';
@@ -24,13 +30,12 @@ import {
   toOrderSummary,
 } from './delivery.mapper';
 
-const DELIVERY_ROLES = ['delivery', 'admin', 'super_admin'] as const;
-
 @Injectable()
 export class DeliveryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orders: OrdersService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async list(
@@ -125,7 +130,6 @@ export class DeliveryService {
     actor: AuthenticatedUser,
     dto: CreateDeliveryDto,
   ): Promise<{ delivery: DeliveryResponse }> {
-    // Dedupe orderIds.
     const uniqueOrderIds = Array.from(new Set(dto.orderIds));
 
     const orders = await this.prisma.order.findMany({
@@ -133,7 +137,6 @@ export class DeliveryService {
       select: { id: true, number: true, status: true },
     });
 
-    // All must exist.
     const foundIds = new Set(orders.map((o) => o.id));
     for (const id of uniqueOrderIds) {
       if (!foundIds.has(id)) {
@@ -144,7 +147,6 @@ export class DeliveryService {
       }
     }
 
-    // All must be ready.
     for (const order of orders) {
       if (order.status !== OrderStatus.ready) {
         throw new HttpException(
@@ -160,7 +162,6 @@ export class DeliveryService {
       }
     }
 
-    // None already assigned.
     const assigned = await this.prisma.deliveryOrder.findFirst({
       where: { orderId: { in: uniqueOrderIds } },
     });
@@ -268,7 +269,6 @@ export class DeliveryService {
       });
     }
 
-    // Enforce R4.
     if (dto.status === DeliveryStatus.in_transit && !existing.driverId) {
       throw new HttpException(
         {
@@ -279,7 +279,6 @@ export class DeliveryService {
       );
     }
 
-    // Legal transitions.
     if (!this.isLegalTransition(existing.status, dto.status)) {
       throw new HttpException(
         {
@@ -295,7 +294,6 @@ export class DeliveryService {
     const orderIds = existing.orders.map((o) => o.orderId);
 
     const result = await this.prisma.$transaction(async (tx) => {
-      // Determine the cascaded order status.
       let cascadeTo: OrderStatus | null = null;
       if (dto.status === DeliveryStatus.in_transit) {
         cascadeTo = OrderStatus.in_transit;
@@ -305,14 +303,12 @@ export class DeliveryService {
         cascadeTo = OrderStatus.failed;
       }
 
-      // Cascade first (order status changes).
       if (cascadeTo) {
         for (const orderId of orderIds) {
           await this.orders.cascadeOrderStatus(tx, orderId, cascadeTo);
         }
       }
 
-      // Update the delivery.
       const data: Prisma.DeliveryUpdateInput = { status: dto.status };
       if (dto.status === DeliveryStatus.delivered) {
         data.deliveredAt = new Date();
@@ -329,6 +325,63 @@ export class DeliveryService {
 
       return updated;
     });
+
+    // Notifications — after the transaction commits.
+    // Re-read the orders we cascaded so we have their numbers, storeIds,
+    // and (for delivered) the distinct supplier business ids.
+    if (orderIds.length > 0) {
+      const orderRows = await this.prisma.order.findMany({
+        where: { id: { in: orderIds } },
+        select: { id: true, number: true, storeId: true },
+      });
+
+      if (dto.status === DeliveryStatus.in_transit) {
+        for (const order of orderRows) {
+          await this.notifications.notify({
+            userId: order.storeId,
+            type: NotificationType.order_status,
+            title: 'طلبك في الطريق',
+            body: `طلبك ${order.number} في الطريق إليك`,
+            linkTo: `/orders/${order.id}`,
+          });
+        }
+      }
+
+      if (dto.status === DeliveryStatus.delivered) {
+        // Notify each store.
+        for (const order of orderRows) {
+          await this.notifications.notify({
+            userId: order.storeId,
+            type: NotificationType.order_delivered,
+            title: 'تم التسليم',
+            body: `تم تسليم طلبك ${order.number}`,
+            linkTo: `/orders/${order.id}`,
+          });
+        }
+
+        // Notify each distinct supplier business owner.
+        const supplierLines = await this.prisma.orderLine.findMany({
+          where: { orderId: { in: orderIds } },
+          select: {
+            business: { select: { ownerId: true } },
+          },
+          distinct: ['businessId'],
+        });
+        const supplierOwnerIds = new Set(
+          supplierLines.map((l) => l.business.ownerId),
+        );
+
+        for (const ownerId of supplierOwnerIds) {
+          await this.notifications.notify({
+            userId: ownerId,
+            type: NotificationType.order_delivered,
+            title: 'تم بيع منتجاتك',
+            body: `تم بيع منتجات من طلب ${orderRows.map((o) => o.number).join(', ')}`,
+            linkTo: `/orders/${orderIds[0]}`,
+          });
+        }
+      }
+    }
 
     return { delivery: toDeliveryResponse(result) };
   }

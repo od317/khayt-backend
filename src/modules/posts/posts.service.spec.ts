@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { PostsService } from './posts.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const actor: AuthenticatedUser = {
   id: 'user-1',
@@ -85,6 +86,7 @@ type PrismaMock = {
     count: ReturnType<typeof vi.fn>;
     findMany: ReturnType<typeof vi.fn>;
     groupBy: ReturnType<typeof vi.fn>;
+    findUnique: ReturnType<typeof vi.fn>;
   };
   savedPost: {
     upsert: ReturnType<typeof vi.fn>;
@@ -104,6 +106,7 @@ type PrismaMock = {
     createMany: ReturnType<typeof vi.fn>;
   };
   $transaction: ReturnType<typeof vi.fn>;
+  user: { findUnique: ReturnType<typeof vi.fn> };
 };
 
 describe('PostsService', () => {
@@ -113,6 +116,7 @@ describe('PostsService', () => {
   beforeEach(() => {
     prisma = {
       post: {
+        findUnique: vi.fn(),
         findFirst: vi.fn(),
         findMany: vi.fn().mockResolvedValue([]),
         create: vi.fn(),
@@ -127,6 +131,7 @@ describe('PostsService', () => {
         count: vi.fn().mockResolvedValue(0),
         findMany: vi.fn().mockResolvedValue([]),
         groupBy: vi.fn().mockResolvedValue([]),
+        findUnique: vi.fn().mockResolvedValue(null),
       },
       savedPost: {
         upsert: vi.fn().mockResolvedValue(undefined),
@@ -145,6 +150,7 @@ describe('PostsService', () => {
         deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
         createMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
+      user: { findUnique: vi.fn().mockResolvedValue({ name: 'أحمد' }) },
       $transaction: vi.fn(),
     };
 
@@ -158,7 +164,14 @@ describe('PostsService', () => {
       return undefined;
     });
 
-    service = new PostsService(prisma as unknown as PrismaService);
+    const notifications = {
+      notify: vi.fn().mockResolvedValue(undefined),
+      notifyLike: vi.fn().mockResolvedValue(undefined),
+    };
+    service = new PostsService(
+      prisma as unknown as PrismaService,
+      notifications as unknown as NotificationsService,
+    );
   });
 
   describe('create', () => {

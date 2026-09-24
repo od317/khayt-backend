@@ -5,10 +5,16 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { BillStatus, PaymentType, Prisma } from '@prisma/client';
+import {
+  BillStatus,
+  NotificationType,
+  PaymentType,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CREDIT_DUE_DAYS } from './constants';
 import { CreateReceivingDto } from './dto/create-receiving.dto';
 import { QueryBillsDto } from './dto/query-bills.dto';
@@ -33,7 +39,10 @@ import {
 
 @Injectable()
 export class BillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // ============================================================
   // Receiving
@@ -90,7 +99,6 @@ export class BillingService {
     }
 
     if (!receiving.bill) {
-      // R6: a Receiving ALWAYS has a Bill.
       throw new InternalServerErrorException({
         error: 'internal_error',
         message: 'Receiving is missing its bill',
@@ -198,13 +206,11 @@ export class BillingService {
     );
 
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1. RCV number
       const [{ nextval: rcvNext }] = await tx.$queryRaw<{ nextval: bigint }[]>`
         SELECT nextval('receiving_number_seq') AS nextval
       `;
       const receivingNumber = `RCV-${rcvNext.toString()}`;
 
-      // 2. Insert Receiving + ReceivingLine
       const receiving = await tx.receiving.create({
         data: {
           number: receivingNumber,
@@ -222,7 +228,6 @@ export class BillingService {
         include: { business: true },
       });
 
-      // 3. Upsert Supply
       for (const line of dto.lines) {
         await tx.supply.upsert({
           where: {
@@ -246,19 +251,16 @@ export class BillingService {
         });
       }
 
-      // 4. Product.inWarehouse = true
       await tx.product.updateMany({
         where: { id: { in: productIds } },
         data: { inWarehouse: true },
       });
 
-      // 5. BILL number
       const [{ nextval: billNext }] = await tx.$queryRaw<{ nextval: bigint }[]>`
         SELECT nextval('bill_number_seq') AS nextval
       `;
       const billNumber = `BILL-${billNext.toString()}`;
 
-      // 6. Insert Bill + BillLine
       const dueAt =
         dto.paymentType === PaymentType.credit
           ? new Date(Date.now() + CREDIT_DUE_DAYS * 24 * 60 * 60 * 1000)
@@ -285,7 +287,6 @@ export class BillingService {
         include: { business: true },
       });
 
-      // 7. StockMovement rows
       const supplies = await tx.supply.findMany({
         where: {
           businessId: dto.businessId,
@@ -312,9 +313,6 @@ export class BillingService {
         await tx.stockMovement.createMany({ data: movementData });
       }
 
-      // 8. Notify the business — no-op in slice 6.
-      //    TODO: wire to notifications in slice 8.
-
       const billLines = await tx.billLine.findMany({
         where: { billId: bill.id },
         include: { product: true },
@@ -326,6 +324,15 @@ export class BillingService {
       });
 
       return { receiving, bill, billLines, receivingLines };
+    });
+
+    // Notify the business owner — after the transaction commits.
+    await this.notifications.notify({
+      userId: result.receiving.business.ownerId,
+      type: NotificationType.receiving_confirmed,
+      title: 'تم استلام شحنتك',
+      body: `تم استلام ${result.receiving.number} بقيمة ${billTotal} ل.س`,
+      linkTo: '/supply',
     });
 
     return {
@@ -411,7 +418,6 @@ export class BillingService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
-      // Lock the bill row to serialize concurrent payments.
       const locked = await tx.$queryRaw<{ id: string }[]>`
         SELECT id FROM "Bill" WHERE id = ${billId} FOR UPDATE
       `;
@@ -464,6 +470,15 @@ export class BillingService {
       });
 
       return { payment, bill: updatedBill };
+    });
+
+    // Notify the business owner — after the transaction commits.
+    await this.notifications.notify({
+      userId: result.bill.business.ownerId,
+      type: NotificationType.order_status,
+      title: 'تم تسجيل دفعة',
+      body: `تم تسجيل دفعة بقيمة ${dto.amount} ل.س على الفاتورة ${result.bill.number}`,
+      linkTo: `/bills/${result.bill.id}`,
     });
 
     return {

@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { OrdersService } from './orders.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const store: AuthenticatedUser = {
   id: 'user-store',
@@ -94,6 +95,13 @@ type PrismaMock = {
   };
   $transaction: ReturnType<typeof vi.fn>;
   $queryRaw: ReturnType<typeof vi.fn>;
+  deliveryOrder: {
+    findUnique: ReturnType<typeof vi.fn>;
+    deleteMany: ReturnType<typeof vi.fn>;
+  };
+  user: {
+    findMany: ReturnType<typeof vi.fn>;
+  };
 };
 
 describe('OrdersService', () => {
@@ -124,6 +132,13 @@ describe('OrdersService', () => {
       stockMovement: {
         createMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
+      deliveryOrder: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+      },
+      user: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
       $transaction: vi.fn(),
       $queryRaw: vi.fn().mockResolvedValue([{ nextval: 1001n }]),
     };
@@ -138,7 +153,14 @@ describe('OrdersService', () => {
       return undefined;
     });
 
-    service = new OrdersService(prisma as unknown as PrismaService);
+    const notifications = {
+      notify: vi.fn().mockResolvedValue(undefined),
+      notifyLike: vi.fn().mockResolvedValue(undefined),
+    };
+    service = new OrdersService(
+      prisma as unknown as PrismaService,
+      notifications as unknown as NotificationsService,
+    );
   });
 
   describe('create', () => {
@@ -220,8 +242,9 @@ describe('OrdersService', () => {
 
       const error = await service.create(store, dto).catch((e: unknown) => e);
 
-      expect(error).toBeInstanceOf(ConflictException);
-      expect((error as ConflictException).getResponse()).toMatchObject({
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(HttpStatus.CONFLICT);
+      expect((error as HttpException).getResponse()).toMatchObject({
         error: 'insufficient_stock',
         productId: 'prod-1',
         available: 1,
