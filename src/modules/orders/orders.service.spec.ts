@@ -9,8 +9,9 @@ import { OrderStatus, UserRole } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
-import { OrdersService } from './orders.service';
+import { RedisService } from '../../common/redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { OrdersService } from './orders.service';
 
 const store: AuthenticatedUser = {
   id: 'user-store',
@@ -93,8 +94,6 @@ type PrismaMock = {
   stockMovement: {
     createMany: ReturnType<typeof vi.fn>;
   };
-  $transaction: ReturnType<typeof vi.fn>;
-  $queryRaw: ReturnType<typeof vi.fn>;
   deliveryOrder: {
     findUnique: ReturnType<typeof vi.fn>;
     deleteMany: ReturnType<typeof vi.fn>;
@@ -102,10 +101,24 @@ type PrismaMock = {
   user: {
     findMany: ReturnType<typeof vi.fn>;
   };
+  $transaction: ReturnType<typeof vi.fn>;
+  $queryRaw: ReturnType<typeof vi.fn>;
+};
+
+type RedisMock = {
+  publish: ReturnType<typeof vi.fn>;
+  subscribe: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+  del: ReturnType<typeof vi.fn>;
+  exists: ReturnType<typeof vi.fn>;
+  increment: ReturnType<typeof vi.fn>;
+  expire: ReturnType<typeof vi.fn>;
 };
 
 describe('OrdersService', () => {
   let prisma: PrismaMock;
+  let redis: RedisMock;
   let service: OrdersService;
 
   beforeEach(() => {
@@ -157,9 +170,22 @@ describe('OrdersService', () => {
       notify: vi.fn().mockResolvedValue(undefined),
       notifyLike: vi.fn().mockResolvedValue(undefined),
     };
+
+    redis = {
+      publish: vi.fn().mockResolvedValue(undefined),
+      subscribe: vi.fn(),
+      get: vi.fn(),
+      set: vi.fn(),
+      del: vi.fn(),
+      exists: vi.fn(),
+      increment: vi.fn(),
+      expire: vi.fn(),
+    };
+
     service = new OrdersService(
       prisma as unknown as PrismaService,
       notifications as unknown as NotificationsService,
+      redis as unknown as RedisService,
     );
   });
 
@@ -182,8 +208,8 @@ describe('OrdersService', () => {
       prisma.supply.findUnique.mockResolvedValue({ remaining: 10 });
       prisma.orderLine.aggregate.mockResolvedValue({ _sum: { quantity: 0 } });
       prisma.$queryRaw
-        .mockResolvedValueOnce([]) // FOR UPDATE select
-        .mockResolvedValueOnce([{ nextval: 1001n }]); // nextval
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ nextval: 1001n }]);
       const created = makeOrder({ total: 10000, pieces: 2 });
       prisma.order.create.mockResolvedValue(created);
       prisma.order.findUnique.mockResolvedValue(created);
@@ -432,6 +458,30 @@ describe('OrdersService', () => {
         where: { id: 'order-1' },
         data: { status: OrderStatus.delivered },
       });
+    });
+
+    it('publishes to the order channel after a status change', async () => {
+      const existing = makeOrder();
+      prisma.order.findUnique
+        .mockResolvedValueOnce(existing)
+        .mockResolvedValueOnce({
+          ...existing,
+          status: OrderStatus.preparing,
+        });
+      prisma.orderLine.findMany.mockResolvedValue([]);
+      prisma.order.update.mockResolvedValue({
+        ...existing,
+        status: OrderStatus.preparing,
+      });
+
+      await service.updateStatus('order-1', inventory, {
+        status: OrderStatus.preparing,
+      });
+
+      expect(redis.publish).toHaveBeenCalledWith(
+        'order:order-1',
+        expect.stringContaining('"status":"preparing"'),
+      );
     });
   });
 
