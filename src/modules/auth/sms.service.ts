@@ -9,15 +9,12 @@ import { AppConfig } from '../../config/configuration';
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
 
-  constructor(private readonly config: ConfigService<AppConfig, true>) { }
+  constructor(private readonly config: ConfigService<AppConfig, true>) {}
 
   async send(phone: string, message: string): Promise<void> {
-    const nodeEnv = this.config.get('nodeEnv', { infer: true });
-
-    if (nodeEnv === 'production' || nodeEnv === 'staging') {
-      throw new Error('SMS provider not configured');
-    }
-
-    this.logger.log(`[SMS] to ${phone}: ${message}`);
+    // TEMPORARY: no SMS provider wired. Log in every environment so the
+    // fixed OTP flow doesn't break on production.
+    // TODO: replace with a real provider before public launch.
+    this.logger.warn(`[SMS-STUB] to ${phone}: ${message}`);
   }
 }

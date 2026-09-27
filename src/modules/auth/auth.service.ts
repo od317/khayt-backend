@@ -361,10 +361,13 @@ export class AuthService {
   }
 
   private generateCode(): string {
-    if (this.config.get('nodeEnv', { infer: true }) === 'development') {
-      return DEV_CODE;
-    }
-    return String(randomInt(100000, 1000000));
+    // TEMPORARY: fixed OTP in every environment so the app is testable
+    // before an SMS provider is wired.
+    // TODO: restore the environment check before public launch.
+    //   return this.config.get('nodeEnv', { infer: true }) === 'development'
+    //     ? DEV_CODE
+    //     : String(randomInt(100000, 1000000));
+    return DEV_CODE;
   }
 
   private async findOrCreateUser(
