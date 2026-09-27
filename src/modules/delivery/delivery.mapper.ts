@@ -3,7 +3,7 @@ import { Delivery, DeliveryStatus, User } from '@prisma/client';
 export type DriverResponse = {
   id: string;
   name: string;
-  phone: string;
+  phone: string | null;
 };
 
 export type DeliveryResponse = {

@@ -5,7 +5,7 @@
 //   npm run db:seed     upsert everything
 //   npm run db:reset    wipe the DB, re-run migrations, then seed
 //
-// Uses fixed UUIDs so re-running updates the same rows instead of
+// Uses fixed IDs so re-running updates the same rows instead of
 // creating duplicates.
 
 import {
@@ -16,6 +16,7 @@ import {
   PrismaClient,
   UserRole,
 } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -548,7 +549,6 @@ async function main(): Promise<void> {
       parentId: 'loc-outside-syria',
       sortOrder: 6,
     },
-    // عمل عن بعد: no areas
   ];
 
   for (const a of areas) {
@@ -636,6 +636,38 @@ async function main(): Promise<void> {
     });
   }
   console.log(`  users: ${users.length}`);
+
+  // ------------------------------------------------------------
+  // Superadmin (from env vars — skipped if unset)
+  // ------------------------------------------------------------
+  const superEmail = process.env.SUPER_ADMIN_EMAIL;
+  const superPassword = process.env.SUPER_ADMIN_PASSWORD;
+
+  if (superEmail && superPassword) {
+    const passwordHash = await bcrypt.hash(superPassword, 12);
+    await prisma.user.upsert({
+      where: { email: superEmail },
+      create: {
+        email: superEmail,
+        passwordHash,
+        name: 'Super Admin',
+        role: UserRole.super_admin,
+        onboardingCompleted: true,
+        verified: true,
+      },
+      update: {
+        passwordHash,
+        role: UserRole.super_admin,
+        onboardingCompleted: true,
+        verified: true,
+      },
+    });
+    console.log('  superadmin: 1');
+  } else {
+    console.warn(
+      '  SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD not set. Skipping superadmin seed.',
+    );
+  }
 
   // ------------------------------------------------------------
   // Businesses
@@ -930,7 +962,7 @@ async function main(): Promise<void> {
   // ------------------------------------------------------------
   // Post ↔ Category
   // ------------------------------------------------------------
-  const postCategories = [
+  const postCategories: { postId: string; categoryId: string }[] = [
     { postId: 'post-job-offer-1', categoryId: 'cat-wazaif' },
     { postId: 'post-job-seek-1', categoryId: 'cat-wazaif' },
     { postId: 'post-service-offer-1', categoryId: 'cat-tatriz' },
@@ -940,8 +972,7 @@ async function main(): Promise<void> {
     { postId: 'post-material-req-1', categoryId: 'cat-aqmsha' },
   ];
 
-  for (const pc of postCategories) {
-    const { postId, categoryId } = pc as { postId: string; categoryId: string };
+  for (const { postId, categoryId } of postCategories) {
     await prisma.postCategory.upsert({
       where: { postId_categoryId: { postId, categoryId } },
       create: { postId, categoryId },

@@ -36,7 +36,7 @@ export type OrderDeliveryResponse = {
   id: string;
   number: string;
   status: string;
-  driver: { id: string; name: string; phone: string } | null;
+  driver: { id: string; name: string; phone: string | null } | null;
 };
 
 export type OrderDetailResponse = {
@@ -51,7 +51,7 @@ export type OrderDetailResponse = {
     canCancel: boolean;
     canAdvance: boolean;
   };
-  store: { id: string; name: string; phone: string };
+  store: { id: string; name: string; phone: string | null };
   lines: OrderLineResponse[];
   delivery: OrderDeliveryResponse | null;
 };

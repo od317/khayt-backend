@@ -1,7 +1,5 @@
 export type NodeEnv = 'development' | 'staging' | 'production' | 'test';
 
-
-
 export type AppConfig = {
   nodeEnv: NodeEnv;
   port: number;
@@ -11,6 +9,17 @@ export type AppConfig = {
     secret: string;
     accessExpires: string;
     refreshExpires: string;
+  };
+  smtp: {
+    host: string;
+    port: number;
+    user: string;
+    pass: string;
+    from: string;
+  };
+  superAdmin: {
+    email: string | null;
+    password: string | null;
   };
   corsOrigins: string[];
 };
@@ -32,6 +41,17 @@ export default (): AppConfig => ({
     secret: required('JWT_SECRET'),
     accessExpires: process.env.JWT_ACCESS_EXPIRES ?? '15m',
     refreshExpires: process.env.JWT_REFRESH_EXPIRES ?? '30d',
+  },
+  smtp: {
+    host: required('SMTP_HOST'),
+    port: parseInt(process.env.SMTP_PORT ?? '587', 10),
+    user: required('SMTP_USER'),
+    pass: required('SMTP_PASS'),
+    from: process.env.SMTP_FROM ?? required('SMTP_USER'),
+  },
+  superAdmin: {
+    email: process.env.SUPER_ADMIN_EMAIL ?? null,
+    password: process.env.SUPER_ADMIN_PASSWORD ?? null,
   },
   corsOrigins: ['http://localhost:3000', 'http://localhost:3001'],
 });

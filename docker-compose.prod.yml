@@ -4,10 +4,9 @@ services:
     container_name: khayt-db-prod
     environment:
       POSTGRES_USER: khayt
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-khayt_prod_CHANGE_ME}
+      POSTGRES_PASSWORD: khayt_prod_local
       POSTGRES_DB: khayt
-    # No host port. Internal to the compose network only.
-    volumes: ['pgdata:/var/lib/postgresql/data']
+    volumes: ['pgdata_prod:/var/lib/postgresql/data']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U khayt']
       interval: 5s
@@ -18,8 +17,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: khayt-redis-prod
-    # No host port. Internal to the compose network only.
-    volumes: ['redisdata:/data']
+    volumes: ['redisdata_prod:/data']
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -47,5 +45,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
-  redisdata:
+  pgdata_prod:
+  redisdata_prod:

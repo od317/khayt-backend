@@ -44,6 +44,27 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   JWT_REFRESH_EXPIRES!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  SMTP_HOST!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  SMTP_PORT!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  SMTP_USER!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  SMTP_PASS!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  SMTP_FROM!: string;
 }
 
 export function validate(

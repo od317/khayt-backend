@@ -15,6 +15,5 @@ docs
 infra
 README.md
 api.http
-tsconfig.seed.json
 .vscode
 .idea

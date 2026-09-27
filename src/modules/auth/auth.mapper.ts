@@ -1,10 +1,4 @@
-import {
-  Business,
-  BusinessType,
-  Location,
-  User,
-  UserRole,
-} from '@prisma/client';
+import { Location, User, UserRole } from '@prisma/client';
 import {
   BusinessResponse,
   toBusinessResponse,
@@ -17,7 +11,8 @@ export type UserResponse = {
   id: string;
   role: UserRole;
   name: string;
-  phone: string;
+  phone: string | null;
+  email: string | null;
   location: string | null;
   bio: string | null;
   avatarUrl: string | null;
@@ -34,6 +29,7 @@ export function toUserResponse(
     role: user.role,
     name: user.name,
     phone: user.phone,
+    email: user.email,
     location: user.location?.name ?? null,
     bio: user.bio,
     avatarUrl: user.avatarUrl,

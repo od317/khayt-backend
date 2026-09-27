@@ -12,18 +12,19 @@ import { RedisModule } from './common/redis/redis.module';
 import configuration, { AppConfig } from './config/configuration';
 import { validate } from './config/validation';
 import { HealthController } from './health.controller';
+import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
-import { ProductsModule } from './modules/products/products.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { CommentsModule } from './modules/comments/comments.module';
-import { PostsModule } from './modules/posts/posts.module';
-import { LocationsModule } from './modules/locations/locations.module';
-import { OrdersModule } from './modules/orders/orders.module';
-import { InventoryModule } from './modules/inventory/inventory.module';
-import { BillingModule } from './modules/billing/billing.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
+import { LocationsModule } from './modules/locations/locations.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { PostsModule } from './modules/posts/posts.module';
+import { ProductsModule } from './modules/products/products.module';
 
 @Module({
   imports: [
@@ -34,19 +35,20 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
       validate,
     }),
     PrismaModule,
-    LocationsModule,
-    InventoryModule,
-    DeliveryModule,
-    NotificationsModule,
-    BillingModule,
-    OrdersModule,
     RedisModule,
+    AuthModule,
+    AdminModule,
     BusinessesModule,
     ProductsModule,
     CategoriesModule,
     PostsModule,
     CommentsModule,
-    AuthModule,
+    LocationsModule,
+    OrdersModule,
+    InventoryModule,
+    BillingModule,
+    DeliveryModule,
+    NotificationsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       global: true,
@@ -61,22 +63,10 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
   ],
   controllers: [HealthController],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: RequestLoggerInterceptor,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: ResponseInterceptor,
-    },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],
 })
 export class AppModule {}
