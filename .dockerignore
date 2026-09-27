@@ -16,6 +16,5 @@ infra
 README.md
 api.http
 tsconfig.seed.json
-prisma/seed.ts
 .vscode
 .idea

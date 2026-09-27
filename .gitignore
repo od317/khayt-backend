@@ -6,3 +6,4 @@ coverage
 uploads/
 .env.production
 .env.production.local
+docker-compose.prod.yml
