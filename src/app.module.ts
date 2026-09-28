@@ -25,6 +25,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OrdersModule } from './modules/orders/orders.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { ProductsModule } from './modules/products/products.module';
+import { RolesModule } from './modules/roles/roles.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ProductsModule } from './modules/products/products.module';
     PrismaModule,
     RedisModule,
     AuthModule,
+    RolesModule,
     AdminModule,
     BusinessesModule,
     ProductsModule,
