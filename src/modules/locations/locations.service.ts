@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Location } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
 export type AreaResponse = {
@@ -10,6 +11,11 @@ export type CityResponse = {
   id: string;
   name: string;
   areas: AreaResponse[];
+};
+
+export type CityFlatResponse = {
+  id: string;
+  name: string;
 };
 
 @Injectable()
@@ -39,5 +45,15 @@ export class LocationsService {
         })),
       })),
     };
+  }
+
+  async listCities(): Promise<{ items: CityFlatResponse[] }> {
+    const cities = await this.prisma.location.findMany({
+      where: { parentId: null, active: true },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, name: true },
+    });
+
+    return { items: cities };
   }
 }
