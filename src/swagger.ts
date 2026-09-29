@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { enrichOpenApiDocument } from './common/swagger/enrich-document';
 
 export function setupSwagger(app: INestApplication): void {
   const config = new DocumentBuilder()
@@ -20,7 +21,9 @@ export function setupSwagger(app: INestApplication): void {
     .addSecurityRequirements('access-token')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = enrichOpenApiDocument(
+    SwaggerModule.createDocument(app, config),
+  );
   SwaggerModule.setup('docs', app, document, {
     useGlobalPrefix: true,
     swaggerOptions: {

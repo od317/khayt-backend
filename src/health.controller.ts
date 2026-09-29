@@ -7,9 +7,9 @@ type HealthResponse = {
   uptime: number;
 };
 
-@Public()
 @Controller('health')
 export class HealthController {
+  @Public()
   @Get()
   getHealth(): HealthResponse {
     return {
