@@ -14,6 +14,7 @@ import { toUserResponse, UserResponse } from '../auth/auth.mapper';
 import { normalizePhone } from '../auth/phone';
 import { CreateStaffUserDto } from './dto/create-staff-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
+import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { UpdateStaffUserDto } from './dto/update-staff-user.dto';
 
 @Injectable()
@@ -63,10 +64,33 @@ export class AdminService {
 
   async updateEmployee(
     userId: string,
-    dto: UpdateStaffUserDto,
+    dto: UpdateEmployeeDto,
   ): Promise<{ user: UserResponse }> {
     const appRoles = await this.roleValues(true);
-    const target = await this.requireUserInGroup(userId, appRoles, false);
+    const target = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        email: true,
+        phone: true,
+        passwordHash: true,
+      },
+    });
+
+    if (!target) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'User not found',
+      });
+    }
+
+    if (appRoles.includes(target.role)) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Employee not found',
+      });
+    }
 
     if (target.role === UserRole.super_admin) {
       if (dto.role !== undefined) {
@@ -83,11 +107,102 @@ export class AdminService {
       }
     }
 
-    if (dto.role !== undefined) {
-      await this.requireEmployeeRole(dto.role);
+    const nextRole =
+      dto.role !== undefined
+        ? (await this.requireEmployeeRole(dto.role)).value
+        : target.role;
+
+    const nextEmail = dto.email !== undefined ? dto.email : target.email;
+    const nextPhone =
+      dto.phone !== undefined
+        ? dto.phone === null
+          ? null
+          : normalizePhone(dto.phone)
+        : target.phone;
+
+    if (nextRole === UserRole.delivery) {
+      if (!nextPhone) {
+        throw new HttpException(
+          {
+            error: 'validation_failed',
+            message: 'phone is required for this role',
+            fields: { phone: 'required for this role' },
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    } else {
+      if (!nextEmail) {
+        throw new HttpException(
+          {
+            error: 'validation_failed',
+            message: 'email is required for this role',
+            fields: { email: 'required for this role' },
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (!target.passwordHash && !dto.password) {
+        throw new HttpException(
+          {
+            error: 'validation_failed',
+            message: 'password is required for this role',
+            fields: { password: 'required for this role' },
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
 
-    return this.applyUserUpdate(target.id, dto);
+    if (nextEmail && nextEmail !== target.email) {
+      const existing = await this.prisma.user.findUnique({
+        where: { email: nextEmail },
+      });
+      if (existing && existing.id !== userId) {
+        throw new ConflictException({
+          error: 'duplicate',
+          message: 'A user with this email already exists',
+        });
+      }
+    }
+
+    if (nextPhone && nextPhone !== target.phone) {
+      const existing = await this.prisma.user.findUnique({
+        where: { phone: nextPhone },
+      });
+      if (existing && existing.id !== userId) {
+        throw new ConflictException({
+          error: 'duplicate',
+          message: 'A user with this phone already exists',
+        });
+      }
+    }
+
+    const data: Prisma.UserUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.role !== undefined) data.role = nextRole;
+    if (dto.email !== undefined) data.email = dto.email;
+    if (dto.phone !== undefined) {
+      data.phone = dto.phone === null ? null : nextPhone;
+    }
+    if (dto.password !== undefined) {
+      data.passwordHash = await bcrypt.hash(dto.password, 12);
+    }
+    if (dto.verified !== undefined) data.verified = dto.verified;
+    if (dto.suspended !== undefined) data.suspended = dto.suspended;
+    if (dto.bio !== undefined) data.bio = dto.bio;
+    if (dto.avatarUrl !== undefined) data.avatarUrl = dto.avatarUrl;
+    if (dto.locationId !== undefined) {
+      data.location = await this.locationConnect(dto.locationId);
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      include: { location: true },
+    });
+
+    return { user: toUserResponse(updated) };
   }
 
   private async listByRoles(
@@ -234,6 +349,31 @@ export class AdminService {
       select: { value: true },
     });
     return rows.map((row) => row.value);
+  }
+
+  private async locationConnect(
+    locationId: string | null,
+  ): Promise<Prisma.LocationUpdateOneWithoutUsersNestedInput> {
+    if (locationId === null) {
+      return { disconnect: true };
+    }
+
+    const location = await this.prisma.location.findFirst({
+      where: { id: locationId, active: true },
+      select: { id: true },
+    });
+    if (!location) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'Location does not exist or is inactive',
+          fields: { locationId: 'must reference an active location' },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    return { connect: { id: locationId } };
   }
 
   private async createEmailUser(

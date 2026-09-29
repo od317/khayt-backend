@@ -292,6 +292,9 @@ describe('AdminService', () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'super-1',
         role: UserRole.super_admin,
+        email: 'super@example.com',
+        phone: null,
+        passwordHash: '$2b$12$abc',
       });
 
       const error = await service
@@ -305,6 +308,9 @@ describe('AdminService', () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'super-1',
         role: UserRole.super_admin,
+        email: 'super@example.com',
+        phone: null,
+        passwordHash: '$2b$12$abc',
       });
 
       const error = await service
@@ -314,10 +320,41 @@ describe('AdminService', () => {
       expect(error).toBeInstanceOf(ForbiddenException);
     });
 
+    it('updates an employee name and email', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        role: UserRole.admin,
+        email: 'old@example.com',
+        phone: null,
+        passwordHash: '$2b$12$abc',
+      });
+      prisma.user.update.mockResolvedValue(
+        makeUser({ name: 'Updated', email: 'new@example.com' }),
+      );
+
+      const result = await service.updateEmployee('user-1', {
+        name: 'Updated',
+        email: 'new@example.com',
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: 'Updated',
+            email: 'new@example.com',
+          }),
+        }),
+      );
+      expect(result.user.name).toBe('Updated');
+    });
+
     it('updates an employee', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
         role: UserRole.admin,
+        email: 'new@example.com',
+        phone: null,
+        passwordHash: '$2b$12$abc',
       });
       prisma.user.update.mockResolvedValue(makeUser({ verified: false }));
 
