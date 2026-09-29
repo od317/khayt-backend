@@ -1,20 +1,21 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { IsIn, IsString } from 'class-validator';
+import { IsNotIn, IsString } from 'class-validator';
 
-const SELF_SELECTABLE_ROLES = [
-  UserRole.employee,
-  UserRole.workshop,
-  UserRole.institute,
-  UserRole.store,
+const INTERNAL_ROLES = [
+  UserRole.super_admin,
+  UserRole.admin,
+  UserRole.inventory,
+  UserRole.delivery,
 ] as const;
 
 export class OnboardingDto {
-  @ApiProperty({ enum: SELF_SELECTABLE_ROLES, example: UserRole.employee })
-  @IsIn(SELF_SELECTABLE_ROLES, {
-    message: 'must be one of employee, workshop, institute, store',
+  @ApiProperty({ example: 'employee' })
+  @IsString()
+  @IsNotIn(INTERNAL_ROLES, {
+    message: 'must be a self-selectable role',
   })
-  role!: UserRole;
+  role!: string;
 
   @ApiProperty({ example: '' })
   @IsString()

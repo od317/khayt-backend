@@ -26,7 +26,7 @@ export function toUserResponse(
 ): UserResponse {
   return {
     id: user.id,
-    role: user.role,
+    role: user.role as UserRole,
     name: user.name,
     phone: user.phone,
     email: user.email,

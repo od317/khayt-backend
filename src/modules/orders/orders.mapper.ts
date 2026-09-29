@@ -7,7 +7,6 @@ import {
   OrderStatus,
   PostType,
   User,
-  UserRole,
 } from '@prisma/client';
 
 export type OrderListItemResponse = {

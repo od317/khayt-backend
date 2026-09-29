@@ -200,7 +200,7 @@ export class AdminAuthService {
     };
   }
 
-  private isEmailAuthRole(role: UserRole): boolean {
+  private isEmailAuthRole(role: string): boolean {
     return (
       role === UserRole.admin ||
       role === UserRole.super_admin ||

@@ -71,6 +71,7 @@ describe('AuthService', () => {
     business: { findUnique: ReturnType<typeof vi.fn> };
     notification: { count: ReturnType<typeof vi.fn> };
     location: { findFirst: ReturnType<typeof vi.fn> };
+    role: { findFirst: ReturnType<typeof vi.fn> };
   };
   let sms: { send: ReturnType<typeof vi.fn> };
   let jwt: {
@@ -98,6 +99,7 @@ describe('AuthService', () => {
       business: { findUnique: vi.fn() },
       notification: { count: vi.fn() },
       location: { findFirst: vi.fn() },
+      role: { findFirst: vi.fn() },
     };
 
     sms = { send: vi.fn().mockResolvedValue(undefined) };
@@ -301,6 +303,7 @@ describe('AuthService', () => {
         onboardingCompleted: false,
       });
       prisma.location.findFirst.mockResolvedValue({ id: LOCATION_ID });
+      prisma.role.findFirst.mockResolvedValue({ value: UserRole.store });
       const updated = makeUser({
         role: UserRole.store,
         locationId: LOCATION_ID,

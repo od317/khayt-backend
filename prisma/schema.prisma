@@ -102,7 +102,7 @@ enum CategoryApplies {
 
 model User {
   id               String   @id @default(uuid())
-  role             UserRole
+  role             String
   name             String
   phone            String?  @unique
   email            String?  @unique
@@ -138,6 +138,19 @@ model User {
   @@index([locationId])
 }
 
+model Role {
+  id          String   @id @default(uuid())
+  value       String   @unique
+  label       String
+  description String  @default("")
+  selectable  Boolean @default(true)
+  system      Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([selectable, sortOrder])
+}
 
 model Location {
   id        String     @id @default(uuid())

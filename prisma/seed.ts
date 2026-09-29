@@ -27,6 +27,90 @@ async function main(): Promise<void> {
   console.log('Seeding…');
 
   // ------------------------------------------------------------
+  // Roles
+  // ------------------------------------------------------------
+  const roles = [
+    {
+      id: 'role-employee',
+      value: 'employee',
+      label: 'موظف',
+      selectable: true,
+      system: true,
+      sortOrder: 10,
+    },
+    {
+      id: 'role-workshop',
+      value: 'workshop',
+      label: 'مشغل / معمل',
+      selectable: true,
+      system: true,
+      sortOrder: 20,
+    },
+    {
+      id: 'role-store',
+      value: 'store',
+      label: 'متجر',
+      selectable: true,
+      system: true,
+      sortOrder: 30,
+    },
+    {
+      id: 'role-institute',
+      value: 'institute',
+      label: 'معهد',
+      selectable: false,
+      system: true,
+      sortOrder: 40,
+    },
+    {
+      id: 'role-super-admin',
+      value: 'super_admin',
+      label: 'مدير عام',
+      selectable: false,
+      system: true,
+      sortOrder: 100,
+    },
+    {
+      id: 'role-admin',
+      value: 'admin',
+      label: 'مدير',
+      selectable: false,
+      system: true,
+      sortOrder: 110,
+    },
+    {
+      id: 'role-inventory',
+      value: 'inventory',
+      label: 'مستودع',
+      selectable: false,
+      system: true,
+      sortOrder: 120,
+    },
+    {
+      id: 'role-delivery',
+      value: 'delivery',
+      label: 'توصيل',
+      selectable: false,
+      system: true,
+      sortOrder: 130,
+    },
+  ];
+
+  for (const role of roles) {
+    await prisma.role.upsert({
+      where: { id: role.id },
+      update: {
+        value: role.value,
+        label: role.label,
+        selectable: role.selectable,
+        system: role.system,
+        sortOrder: role.sortOrder,
+      },
+      create: { ...role, description: '' },
+    });
+  }
+
+  // ------------------------------------------------------------
   // Categories
   // ------------------------------------------------------------
   const categories = [

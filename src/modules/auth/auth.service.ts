@@ -352,10 +352,26 @@ export class AuthService {
       );
     }
 
+    const role = await this.prisma.role.findFirst({
+      where: { value: dto.role, selectable: true },
+      select: { value: true },
+    });
+
+    if (!role) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'Role is not available for onboarding',
+          fields: { role: 'must be a selectable role' },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const user = await this.prisma.user.update({
       where: { id: actor.id },
       data: {
-        role: dto.role,
+        role: role.value,
         location: { connect: { id: dto.locationId } },
         onboardingCompleted: true,
       },

@@ -8,7 +8,7 @@ export class RolesController {
 
   @Public()
   @Get()
-  list(): { items: RoleResponse[] } {
+  list(): Promise<{ items: RoleResponse[] }> {
     return this.roles.list();
   }
 }
