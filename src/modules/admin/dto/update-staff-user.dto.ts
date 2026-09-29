@@ -1,13 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
-import { IsBoolean, IsIn, IsOptional } from 'class-validator';
-
-const INTERNAL_ROLES = [
-  UserRole.admin,
-  UserRole.inventory,
-  UserRole.delivery,
-  UserRole.super_admin,
-] as const;
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateStaffUserDto {
   @ApiPropertyOptional({ example: true })
@@ -20,8 +18,10 @@ export class UpdateStaffUserDto {
   @IsBoolean()
   suspended?: boolean;
 
-  @ApiPropertyOptional({ enum: INTERNAL_ROLES, example: UserRole.admin })
+  @ApiPropertyOptional({ example: 'employee' })
   @IsOptional()
-  @IsIn(INTERNAL_ROLES)
-  role?: UserRole;
+  @IsString()
+  @MinLength(1)
+  @MaxLength(50)
+  role?: string;
 }

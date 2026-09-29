@@ -1,7 +1,6 @@
-import { UserRole } from '@prisma/client';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBooleanString,
-  IsEnum,
   IsOptional,
   IsString,
   MaxLength,
@@ -9,18 +8,23 @@ import {
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class QueryUsersDto extends PaginationDto {
+  @ApiPropertyOptional({ example: 'employee' })
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+  @IsString()
+  @MaxLength(50)
+  role?: string;
 
+  @ApiPropertyOptional({ example: 'true' })
   @IsOptional()
   @IsBooleanString()
   verified?: string;
 
+  @ApiPropertyOptional({ example: 'false' })
   @IsOptional()
   @IsBooleanString()
   suspended?: string;
 
+  @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()
   @MaxLength(200)

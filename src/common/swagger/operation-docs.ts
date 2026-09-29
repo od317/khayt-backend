@@ -808,13 +808,19 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '200': ok({ items: [{ id: '', name: '', phone: null }] }),
   },
 
-  'post /admin/users': {
-    '201': created({ user: { ...sampleUser, role: 'admin' } }),
+  'post /admin/employees': {
+    '201': created({ user: { ...sampleUser, role: 'admin', phone: null } }),
+  },
+  'get /admin/employees': {
+    '200': ok(paginated({ ...sampleUser, role: 'admin', phone: null })),
+  },
+  'patch /admin/employees/{id}': {
+    '200': ok({ user: { ...sampleUser, role: 'inventory', phone: null } }),
   },
   'get /admin/users': {
-    '200': ok(paginated({ ...sampleUser, role: 'admin' })),
+    '200': ok(paginated(sampleUser)),
   },
   'patch /admin/users/{id}': {
-    '200': ok({ user: { ...sampleUser, role: 'admin' } }),
+    '200': ok({ user: sampleUser }),
   },
 };

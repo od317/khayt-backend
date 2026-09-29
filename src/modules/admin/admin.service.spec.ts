@@ -7,20 +7,7 @@ import {
 import { UserRole } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { AuthenticatedUser } from '../../common/types/auth';
 import { AdminService } from './admin.service';
-
-const superAdmin: AuthenticatedUser = {
-  id: 'super-1',
-  role: UserRole.super_admin,
-  phone: null,
-};
-
-const otherAdmin: AuthenticatedUser = {
-  id: 'admin-1',
-  role: UserRole.admin,
-  phone: null,
-};
 
 const makeUser = (overrides: Record<string, unknown> = {}) => ({
   id: 'user-1',
@@ -42,6 +29,16 @@ const makeUser = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const appRole = (value: string) => ({
+  value,
+  selectable: true,
+});
+
+const staffRole = (value: string) => ({
+  value,
+  selectable: false,
+});
+
 type PrismaMock = {
   user: {
     findUnique: ReturnType<typeof vi.fn>;
@@ -49,6 +46,10 @@ type PrismaMock = {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     count: ReturnType<typeof vi.fn>;
+  };
+  role: {
+    findMany: ReturnType<typeof vi.fn>;
+    findUnique: ReturnType<typeof vi.fn>;
   };
   $transaction: ReturnType<typeof vi.fn>;
 };
@@ -66,6 +67,14 @@ describe('AdminService', () => {
         update: vi.fn(),
         count: vi.fn().mockResolvedValue(0),
       },
+      role: {
+        findMany: vi.fn().mockResolvedValue([
+          appRole('employee'),
+          appRole('workshop'),
+          appRole('store'),
+        ]),
+        findUnique: vi.fn(),
+      },
       $transaction: vi.fn(),
     };
 
@@ -80,23 +89,61 @@ describe('AdminService', () => {
     service = new AdminService(prisma as unknown as PrismaService);
   });
 
-  describe('createStaffUser', () => {
-    it('rejects a non-super-admin', async () => {
+  describe('listAppUsers', () => {
+    it('filters to roles that appear in the app', async () => {
+      prisma.user.findMany.mockResolvedValue([
+        makeUser({ role: UserRole.employee, email: null }),
+      ]);
+      prisma.user.count.mockResolvedValue(1);
+
+      await service.listAppUsers({ page: 1, limit: 20 });
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            role: { in: ['employee', 'workshop', 'store'] },
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('listEmployees', () => {
+    it('excludes app-visible roles', async () => {
+      await service.listEmployees({ page: 1, limit: 20 });
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            role: { notIn: ['employee', 'workshop', 'store'] },
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('createEmployee', () => {
+    it('rejects an app-visible role', async () => {
+      prisma.role.findUnique.mockResolvedValue(appRole('employee'));
+
       const error = await service
-        .createStaffUser(otherAdmin, {
+        .createEmployee({
           name: 'x',
-          role: UserRole.admin,
-          email: 'x@example.com',
-          password: 'password1234',
+          role: 'employee',
         })
         .catch((e: unknown) => e);
 
-      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+      });
     });
 
     it('requires email and password for admin', async () => {
+      prisma.role.findUnique.mockResolvedValue(staffRole(UserRole.admin));
+
       const error = await service
-        .createStaffUser(superAdmin, {
+        .createEmployee({
           name: 'x',
           role: UserRole.admin,
         })
@@ -109,10 +156,11 @@ describe('AdminService', () => {
     });
 
     it('creates an admin user', async () => {
+      prisma.role.findUnique.mockResolvedValue(staffRole(UserRole.admin));
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue(makeUser());
 
-      const result = await service.createStaffUser(superAdmin, {
+      const result = await service.createEmployee({
         name: 'New Admin',
         role: UserRole.admin,
         email: 'new@example.com',
@@ -130,13 +178,14 @@ describe('AdminService', () => {
       expect(result.user.email).toBe('new@example.com');
     });
 
-    it('creates an inventory user (email auth, no 2FA)', async () => {
+    it('creates an inventory user', async () => {
+      prisma.role.findUnique.mockResolvedValue(staffRole(UserRole.inventory));
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue(
         makeUser({ role: UserRole.inventory }),
       );
 
-      const result = await service.createStaffUser(superAdmin, {
+      const result = await service.createEmployee({
         name: 'Warehouse',
         role: UserRole.inventory,
         email: 'warehouse@example.com',
@@ -147,8 +196,10 @@ describe('AdminService', () => {
     });
 
     it('requires phone for delivery', async () => {
+      prisma.role.findUnique.mockResolvedValue(staffRole(UserRole.delivery));
+
       const error = await service
-        .createStaffUser(superAdmin, {
+        .createEmployee({
           name: 'Driver',
           role: UserRole.delivery,
         })
@@ -162,12 +213,13 @@ describe('AdminService', () => {
     });
 
     it('creates a delivery user with only a phone', async () => {
+      prisma.role.findUnique.mockResolvedValue(staffRole(UserRole.delivery));
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue(
         makeUser({ role: UserRole.delivery, phone: '0994000009', email: null }),
       );
 
-      const result = await service.createStaffUser(superAdmin, {
+      const result = await service.createEmployee({
         name: 'Driver',
         role: UserRole.delivery,
         phone: '0994000009',
@@ -178,10 +230,11 @@ describe('AdminService', () => {
     });
 
     it('rejects a duplicate email', async () => {
+      prisma.role.findUnique.mockResolvedValue(staffRole(UserRole.admin));
       prisma.user.findUnique.mockResolvedValue({ id: 'existing' });
 
       const error = await service
-        .createStaffUser(superAdmin, {
+        .createEmployee({
           name: 'x',
           role: UserRole.admin,
           email: 'dup@example.com',
@@ -193,20 +246,43 @@ describe('AdminService', () => {
     });
   });
 
-  describe('updateUser', () => {
-    it('rejects a non-super-admin', async () => {
+  describe('updateAppUser', () => {
+    it('404s for a staff account', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        role: UserRole.admin,
+      });
+
       const error = await service
-        .updateUser(otherAdmin, 'user-1', { verified: true })
+        .updateAppUser('user-1', { verified: true })
         .catch((e: unknown) => e);
 
-      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(error).toBeInstanceOf(NotFoundException);
     });
 
+    it('updates an app user', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        role: UserRole.employee,
+      });
+      prisma.user.update.mockResolvedValue(
+        makeUser({ role: UserRole.employee, verified: false, email: null }),
+      );
+
+      const result = await service.updateAppUser('user-1', {
+        verified: false,
+      });
+
+      expect(result.user.id).toBe('user-1');
+    });
+  });
+
+  describe('updateEmployee', () => {
     it('404s for a missing user', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       const error = await service
-        .updateUser(superAdmin, 'missing', { verified: true })
+        .updateEmployee('missing', { verified: true })
         .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(NotFoundException);
@@ -219,7 +295,7 @@ describe('AdminService', () => {
       });
 
       const error = await service
-        .updateUser(superAdmin, 'super-1', { role: UserRole.admin })
+        .updateEmployee('super-1', { role: UserRole.admin })
         .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(ForbiddenException);
@@ -232,20 +308,20 @@ describe('AdminService', () => {
       });
 
       const error = await service
-        .updateUser(superAdmin, 'super-1', { suspended: true })
+        .updateEmployee('super-1', { suspended: true })
         .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(ForbiddenException);
     });
 
-    it('updates a user', async () => {
+    it('updates an employee', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
         role: UserRole.admin,
       });
       prisma.user.update.mockResolvedValue(makeUser({ verified: false }));
 
-      const result = await service.updateUser(superAdmin, 'user-1', {
+      const result = await service.updateEmployee('user-1', {
         verified: false,
       });
 
