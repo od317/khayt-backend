@@ -77,6 +77,7 @@ describe('AuthService', () => {
   let jwt: {
     signAsync: ReturnType<typeof vi.fn>;
     verifyAsync: ReturnType<typeof vi.fn>;
+    decode: ReturnType<typeof vi.fn>;
   };
   let service: AuthService;
 
@@ -111,6 +112,9 @@ describe('AuthService', () => {
           return payload.tokenId ? 'refresh-token' : 'access-token';
         }),
       verifyAsync: vi.fn(),
+      decode: vi.fn().mockReturnValue({
+        exp: Math.floor(Date.now() / 1000) + 900,
+      }),
     };
 
     const config = {
@@ -267,6 +271,9 @@ describe('AuthService', () => {
     expect(result.user.id).toBe(created.id);
     expect(result.accessToken).toBe('access-token');
     expect(result.refreshToken).toBe('refresh-token');
+    expect(result.accessTokenExpiresAt).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+    );
   });
 
   it('returns the existing user on second verify', async () => {

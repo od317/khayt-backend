@@ -54,7 +54,9 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  refresh(@Body() dto: RefreshDto): Promise<{ accessToken: string }> {
+  refresh(
+    @Body() dto: RefreshDto,
+  ): Promise<{ accessToken: string; accessTokenExpiresAt: string }> {
     return this.auth.refresh(dto.refreshToken);
   }
 

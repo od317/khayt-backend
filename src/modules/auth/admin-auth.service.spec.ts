@@ -60,6 +60,7 @@ describe('AdminAuthService', () => {
   let jwt: {
     signAsync: ReturnType<typeof vi.fn>;
     verifyAsync: ReturnType<typeof vi.fn>;
+    decode: ReturnType<typeof vi.fn>;
   };
   let service: AdminAuthService;
 
@@ -90,6 +91,9 @@ describe('AdminAuthService', () => {
           },
         ),
       verifyAsync: vi.fn(),
+      decode: vi.fn().mockReturnValue({
+        exp: Math.floor(Date.now() / 1000) + 900,
+      }),
     };
 
     const config = {
@@ -268,6 +272,9 @@ describe('AdminAuthService', () => {
 
       expect(result.accessToken).toBe('access-token');
       expect(result.refreshToken).toBe('refresh-token');
+      expect(result.accessTokenExpiresAt).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+      );
       expect(result.user.id).toBe('user-1');
     });
   });

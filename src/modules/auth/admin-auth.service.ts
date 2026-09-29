@@ -40,6 +40,7 @@ export type AdminLoginResponse = {
 export type AdminVerify2faResponse = {
   accessToken: string;
   refreshToken: string;
+  accessTokenExpiresAt: string;
   user: UserResponse;
 };
 
@@ -210,7 +211,11 @@ export class AdminAuthService {
 
   private async issueTokens(
     user: User,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpiresAt: string;
+  }> {
     const tokenId = randomUUID();
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(
@@ -229,7 +234,23 @@ export class AdminAuthService {
       this.refreshExpiresIn,
     );
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      accessTokenExpiresAt: this.accessTokenExpiresAt(accessToken),
+    };
+  }
+
+  private accessTokenExpiresAt(accessToken: string): string {
+    const payload = this.jwt.decode(accessToken);
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      typeof payload.exp === 'number'
+    ) {
+      return new Date(payload.exp * 1000).toISOString();
+    }
+    return new Date(Date.now() + this.accessExpiresIn * 1000).toISOString();
   }
 
   private codesMatch(stored: string, provided: string): boolean {

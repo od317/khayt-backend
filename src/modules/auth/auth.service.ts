@@ -47,6 +47,7 @@ type RefreshTokenPayload = {
 export type AuthTokens = {
   accessToken: string;
   refreshToken: string;
+  accessTokenExpiresAt: string;
 };
 
 export type VerifyResponse = AuthTokens & {
@@ -169,7 +170,9 @@ export class AuthService {
     };
   }
 
-  async refresh(refreshToken: string): Promise<{ accessToken: string }> {
+  async refresh(
+    refreshToken: string,
+  ): Promise<{ accessToken: string; accessTokenExpiresAt: string }> {
     const payload = await this.verifyRefreshToken(refreshToken);
     const exists = await this.redis.exists(
       refreshKey(payload.sub, payload.tokenId),
@@ -198,7 +201,10 @@ export class AuthService {
     }
 
     const accessToken = await this.signAccessToken(user);
-    return { accessToken };
+    return {
+      accessToken,
+      accessTokenExpiresAt: this.accessTokenExpiresAt(accessToken),
+    };
   }
 
   async logout(
@@ -444,7 +450,11 @@ export class AuthService {
       this.refreshTtlSeconds,
     );
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      accessTokenExpiresAt: this.accessTokenExpiresAt(accessToken),
+    };
   }
 
   private signAccessToken(user: Pick<User, 'id' | 'role'>): Promise<string> {
@@ -452,6 +462,18 @@ export class AuthService {
       { sub: user.id, role: user.role },
       { expiresIn: this.accessExpiresIn },
     );
+  }
+
+  private accessTokenExpiresAt(accessToken: string): string {
+    const payload = this.jwt.decode(accessToken);
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      typeof payload.exp === 'number'
+    ) {
+      return new Date(payload.exp * 1000).toISOString();
+    }
+    return new Date(Date.now() + this.accessExpiresIn * 1000).toISOString();
   }
 
   private async verifyRefreshToken(
