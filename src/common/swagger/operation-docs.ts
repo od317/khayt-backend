@@ -403,6 +403,68 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       ],
     }),
   },
+  'get /admin/categories': {
+    '200': ok({
+      items: [
+        { id: '', name: '', slug: '', appliesTo: 'both', sortOrder: 0 },
+      ],
+    }),
+  },
+  'post /admin/categories': {
+    '201': created({
+      category: {
+        id: '',
+        name: '',
+        slug: '',
+        appliesTo: 'both',
+        sortOrder: 0,
+      },
+    }),
+    '409': errors('Conflict', {
+      conflict: {
+        summary: 'Slug already exists',
+        value: errorBody(
+          409,
+          'conflict',
+          'A category with this slug already exists',
+        ),
+      },
+    }),
+  },
+  'patch /admin/categories/{id}': {
+    '200': ok({
+      category: {
+        id: '',
+        name: '',
+        slug: '',
+        appliesTo: 'both',
+        sortOrder: 0,
+      },
+    }),
+    '409': errors('Conflict', {
+      conflict: {
+        summary: 'Slug already exists',
+        value: errorBody(
+          409,
+          'conflict',
+          'A category with this slug already exists',
+        ),
+      },
+    }),
+  },
+  'delete /admin/categories/{id}': {
+    '200': ok({ success: true }),
+    '409': errors('Conflict', {
+      conflict: {
+        summary: 'Category is still used on posts',
+        value: errorBody(
+          409,
+          'conflict',
+          'Category is assigned to one or more posts',
+        ),
+      },
+    }),
+  },
 
   'get /businesses': {
     '200': ok(paginated(sampleBusiness)),

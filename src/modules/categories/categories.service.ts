@@ -1,7 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Category, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { CreateCategoryDto } from './dto/create-category.dto';
 import { QueryCategoriesDto } from './dto/query-categories.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 
 export type CategoryResponse = {
   id: string;
@@ -40,5 +46,90 @@ export class CategoriesService {
     });
 
     return { items: rows.map(toCategoryResponse) };
+  }
+
+  async create(
+    dto: CreateCategoryDto,
+  ): Promise<{ category: CategoryResponse }> {
+    try {
+      const category = await this.prisma.category.create({
+        data: {
+          name: dto.name,
+          slug: dto.slug,
+          appliesTo: dto.appliesTo,
+          sortOrder: dto.sortOrder ?? 0,
+        },
+      });
+      return { category: toCategoryResponse(category) };
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException({
+          error: 'conflict',
+          message: 'A category with this slug already exists',
+        });
+      }
+      throw error;
+    }
+  }
+
+  async update(
+    id: string,
+    dto: UpdateCategoryDto,
+  ): Promise<{ category: CategoryResponse }> {
+    const existing = await this.prisma.category.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Category not found',
+      });
+    }
+
+    const data: Prisma.CategoryUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.slug !== undefined) data.slug = dto.slug;
+    if (dto.appliesTo !== undefined) data.appliesTo = dto.appliesTo;
+    if (dto.sortOrder !== undefined) data.sortOrder = dto.sortOrder;
+
+    try {
+      const category = await this.prisma.category.update({ where: { id }, data });
+      return { category: toCategoryResponse(category) };
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException({
+          error: 'conflict',
+          message: 'A category with this slug already exists',
+        });
+      }
+      throw error;
+    }
+  }
+
+  async remove(id: string): Promise<{ success: true }> {
+    const existing = await this.prisma.category.findUnique({
+      where: { id },
+      include: { _count: { select: { posts: true } } },
+    });
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Category not found',
+      });
+    }
+
+    if (existing._count.posts > 0) {
+      throw new ConflictException({
+        error: 'conflict',
+        message: 'Category is assigned to one or more posts',
+      });
+    }
+
+    await this.prisma.category.delete({ where: { id } });
+    return { success: true };
   }
 }
