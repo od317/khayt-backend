@@ -3,7 +3,13 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { LocationsService } from './locations.service';
 
 type PrismaMock = {
-  location: { findMany: ReturnType<typeof vi.fn> };
+  location: {
+    findMany: ReturnType<typeof vi.fn>;
+    findUnique: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+  };
 };
 
 const makeCity = (overrides: Record<string, unknown> = {}) => ({
@@ -22,7 +28,15 @@ describe('LocationsService', () => {
   let service: LocationsService;
 
   beforeEach(() => {
-    prisma = { location: { findMany: vi.fn().mockResolvedValue([]) } };
+    prisma = {
+      location: {
+        findMany: vi.fn().mockResolvedValue([]),
+        findUnique: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+    };
     service = new LocationsService(prisma as unknown as PrismaService);
   });
 
@@ -93,5 +107,24 @@ describe('LocationsService', () => {
         }),
       }),
     );
+  });
+
+  it('creates a city when parentId is omitted', async () => {
+    const created = makeCity({ id: 'loc-homs', name: 'حمص' });
+    prisma.location.create.mockResolvedValue(created);
+
+    const result = await service.create({ name: 'حمص' });
+
+    expect(prisma.location.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: 'حمص',
+          parentId: null,
+          active: true,
+        }),
+      }),
+    );
+    expect(result.location.name).toBe('حمص');
+    expect(result.location.parentId).toBeNull();
   });
 });

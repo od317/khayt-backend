@@ -55,6 +55,7 @@ type RedisMock = {
   set: ReturnType<typeof vi.fn>;
   get: ReturnType<typeof vi.fn>;
   del: ReturnType<typeof vi.fn>;
+  deleteByPattern: ReturnType<typeof vi.fn>;
   exists: ReturnType<typeof vi.fn>;
   increment: ReturnType<typeof vi.fn>;
   expire: ReturnType<typeof vi.fn>;
@@ -86,6 +87,7 @@ describe('AuthService', () => {
       set: vi.fn().mockResolvedValue(undefined),
       get: vi.fn(),
       del: vi.fn().mockResolvedValue(undefined),
+      deleteByPattern: vi.fn().mockResolvedValue(undefined),
       exists: vi.fn(),
       increment: vi.fn().mockResolvedValue(1),
       expire: vi.fn().mockResolvedValue(undefined),

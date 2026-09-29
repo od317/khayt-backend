@@ -8,9 +8,9 @@ import {
   Post,
   Req,
   Res,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiOkResponse } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { RequireUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -18,9 +18,10 @@ import type { AuthenticatedUser } from '../../common/types/auth';
 import { AppConfig } from '../../config/configuration';
 import type { UserResponse } from './auth.mapper';
 import { AuthService } from './auth.service';
-import { LogoutDto } from './dto/logout.dto';
+import { LogoutResponseDto } from './dto/logout-response.dto';
 import { OnboardingDto } from './dto/onboarding.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { RefreshResponseDto } from './dto/refresh-response.dto';
 import { RequestCodeDto } from './dto/request-code.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { VerifyDto } from './dto/verify.dto';
@@ -54,34 +55,26 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  refresh(
-    @Body() dto: RefreshDto,
-  ): Promise<{ accessToken: string; accessTokenExpiresAt: string }> {
+  @ApiOkResponse({ type: RefreshResponseDto })
+  refresh(@Body() dto: RefreshDto): Promise<RefreshResponseDto> {
     return this.auth.refresh(dto.refreshToken);
   }
 
-  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: LogoutResponseDto })
   async logout(
-    @Body() dto: LogoutDto,
+    @RequireUser() user: AuthenticatedUser,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ success: true }> {
-    const refreshToken =
-      dto.refreshToken ??
-      (req.cookies?.['refreshToken'] as string | undefined);
-
-    if (!refreshToken) {
-      throw new UnauthorizedException({
-        error: 'invalid_token',
-        message: 'No refresh token provided',
-      });
-    }
-
-    await this.auth.logoutByToken(refreshToken);
+  ): Promise<LogoutResponseDto> {
+    const header = req.headers.authorization;
+    const accessToken = header?.startsWith('Bearer ')
+      ? header.slice('Bearer '.length)
+      : '';
+    const result = await this.auth.logout(user.id, accessToken);
     res.clearCookie('refreshToken', { path: '/api/auth' });
-    return { success: true };
+    return result;
   }
 
   @Get('me')

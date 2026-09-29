@@ -10,7 +10,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Location, Prisma, User, UserRole } from '@prisma/client';
-import { randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { AuthenticatedUser } from '../../common/types/auth';
@@ -21,10 +21,12 @@ import {
   OTP_RATE_LIMIT_MAX,
   OTP_RATE_WINDOW_SECONDS,
   OTP_TTL_SECONDS,
+  accessDenyKey,
   otpAttemptsKey,
   otpKey,
   otpLimitKey,
   refreshKey,
+  refreshKeysPattern,
 } from './auth.constants';
 import {
   BusinessResponse,
@@ -207,19 +209,19 @@ export class AuthService {
     };
   }
 
-  async logout(
-    userId: string,
-    refreshToken: string,
-  ): Promise<{ success: true }> {
-    const payload = await this.verifyRefreshToken(refreshToken);
-    if (payload.sub !== userId) {
-      throw new ForbiddenException({
-        error: 'forbidden',
-        message: 'Refresh token does not belong to this user',
-      });
-    }
+  async logout(userId: string, accessToken: string): Promise<{ success: true }> {
+    await this.redis.deleteByPattern(refreshKeysPattern(userId));
 
-    await this.redis.del(refreshKey(userId, payload.tokenId));
+    const payload = this.jwt.decode(accessToken);
+    const now = Math.floor(Date.now() / 1000);
+    const exp =
+      payload && typeof payload === 'object' && typeof payload.exp === 'number'
+        ? payload.exp
+        : now + this.accessExpiresIn;
+    const ttlSeconds = Math.max(1, exp - now);
+    const tokenHash = createHash('sha256').update(accessToken).digest('hex');
+    await this.redis.set(accessDenyKey(tokenHash), '1', ttlSeconds);
+
     return { success: true };
   }
 
@@ -312,11 +314,6 @@ export class AuthService {
     });
 
     return { user: toUserResponse(user) };
-  }
-
-  async logoutByToken(refreshToken: string): Promise<void> {
-    const payload = await this.verifyRefreshToken(refreshToken);
-    await this.redis.del(refreshKey(payload.sub, payload.tokenId));
   }
 
   async onboarding(
