@@ -308,6 +308,11 @@ export class AuthService {
     return { user: toUserResponse(user) };
   }
 
+  async logoutByToken(refreshToken: string): Promise<void> {
+    const payload = await this.verifyRefreshToken(refreshToken);
+    await this.redis.del(refreshKey(payload.sub, payload.tokenId));
+  }
+
   async onboarding(
     actor: AuthenticatedUser,
     dto: OnboardingDto,

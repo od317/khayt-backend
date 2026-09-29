@@ -26,6 +26,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { ProductsModule } from './modules/products/products.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { DebugModule } from './modules/debug/debug.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { RolesModule } from './modules/roles/roles.module';
     ProductsModule,
     CategoriesModule,
     PostsModule,
+    DebugModule,
     CommentsModule,
     LocationsModule,
     OrdersModule,

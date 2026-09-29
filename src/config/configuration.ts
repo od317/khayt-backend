@@ -21,6 +21,7 @@ export type AppConfig = {
     email: string | null;
     password: string | null;
   };
+  debugAllowInProduction: boolean;
   corsOrigins: string[];
 };
 
@@ -53,5 +54,6 @@ export default (): AppConfig => ({
     email: process.env.SUPER_ADMIN_EMAIL ?? null,
     password: process.env.SUPER_ADMIN_PASSWORD ?? null,
   },
+  debugAllowInProduction: process.env.DEBUG_ALLOW_IN_PRODUCTION === 'true',
   corsOrigins: ['http://localhost:3000', 'http://localhost:3001'],
 });

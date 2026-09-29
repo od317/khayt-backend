@@ -9,10 +9,12 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { flattenValidationErrors } from './common/filters/validation-errors';
 import { AppConfig } from './config/configuration';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService<AppConfig, true>);
+  app.use(cookieParser());
 
   mkdirSync('./uploads/products', { recursive: true });
 
@@ -43,7 +45,8 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  await app.listen(process.env.PORT ?? '3000');
+  const port = config.get('port', { infer: true });
+  await app.listen(port, '0.0.0.0');
 }
 
 void bootstrap();

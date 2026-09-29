@@ -9,3 +9,6 @@ export const otpAttemptsKey = (phone: string): string =>
   `otp:attempts:${phone}`;
 export const refreshKey = (userId: string, tokenId: string): string =>
   `refresh:${userId}:${tokenId}`;
+
+export const accessDenyKey = (tokenHash: string): string =>
+  `access:deny:${tokenHash}`;

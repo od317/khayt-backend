@@ -6,16 +6,19 @@ import {
   HttpStatus,
   Patch,
   Post,
+  Req,
   Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { RequireUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { AuthenticatedUser } from '../../common/types/auth';
 import { AppConfig } from '../../config/configuration';
 import type { UserResponse } from './auth.mapper';
 import { AuthService } from './auth.service';
+import { LogoutDto } from './dto/logout.dto';
 import { OnboardingDto } from './dto/onboarding.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RequestCodeDto } from './dto/request-code.dto';
@@ -55,16 +58,28 @@ export class AuthController {
     return this.auth.refresh(dto.refreshToken);
   }
 
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
-    @RequireUser() user: AuthenticatedUser,
-    @Body() dto: RefreshDto,
+    @Body() dto: LogoutDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ success: true }> {
-    const result = await this.auth.logout(user.id, dto.refreshToken);
+    const refreshToken =
+      dto.refreshToken ??
+      (req.cookies?.['refreshToken'] as string | undefined);
+
+    if (!refreshToken) {
+      throw new UnauthorizedException({
+        error: 'invalid_token',
+        message: 'No refresh token provided',
+      });
+    }
+
+    await this.auth.logoutByToken(refreshToken);
     res.clearCookie('refreshToken', { path: '/api/auth' });
-    return result;
+    return { success: true };
   }
 
   @Get('me')
