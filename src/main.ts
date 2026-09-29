@@ -9,6 +9,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { flattenValidationErrors } from './common/filters/validation-errors';
 import { AppConfig } from './config/configuration';
+import { setupSwagger } from './swagger';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap(): Promise<void> {
@@ -24,6 +25,10 @@ async function bootstrap(): Promise<void> {
   });
 
   app.setGlobalPrefix('api');
+
+  if (config.get('swaggerEnabled', { infer: true })) {
+    setupSwagger(app);
+  }
 
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',

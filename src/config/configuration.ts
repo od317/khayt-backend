@@ -22,6 +22,7 @@ export type AppConfig = {
     password: string | null;
   };
   debugAllowInProduction: boolean;
+  swaggerEnabled: boolean;
   corsOrigins: string[];
 };
 
@@ -55,5 +56,9 @@ export default (): AppConfig => ({
     password: process.env.SUPER_ADMIN_PASSWORD ?? null,
   },
   debugAllowInProduction: process.env.DEBUG_ALLOW_IN_PRODUCTION === 'true',
+  swaggerEnabled:
+    process.env.SWAGGER_ENABLED === 'true' ||
+    ((process.env.NODE_ENV as NodeEnv | undefined) ?? 'development') !==
+      'production',
   corsOrigins: ['http://localhost:3000', 'http://localhost:3001'],
 });

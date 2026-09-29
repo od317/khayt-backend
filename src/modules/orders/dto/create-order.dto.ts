@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -10,9 +11,11 @@ import {
 } from 'class-validator';
 
 export class CreateOrderLineDto {
+  @ApiProperty({ example: '' })
   @IsString()
   productId!: string;
 
+  @ApiProperty({ example: 1 })
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -20,6 +23,7 @@ export class CreateOrderLineDto {
 }
 
 export class CreateOrderDto {
+  @ApiProperty({ type: () => [CreateOrderLineDto] })
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(50)

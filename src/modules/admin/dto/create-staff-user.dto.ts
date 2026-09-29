@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import {
   IsEmail,
@@ -16,26 +17,29 @@ const CREATABLE_ROLES = [
 ] as const;
 
 export class CreateStaffUserDto {
+  @ApiProperty({ example: '' })
   @IsString()
   @MinLength(2)
   @MaxLength(100)
   name!: string;
 
+  @ApiProperty({ enum: CREATABLE_ROLES, example: UserRole.admin })
   @IsIn(CREATABLE_ROLES)
   role!: UserRole;
 
-  // For role = admin: required.
+  @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsEmail()
   email?: string;
 
+  @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()
   @MinLength(12)
   @MaxLength(200)
   password?: string;
 
-  // For role = inventory | delivery: required.
+  @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()
   @Matches(/^09\d{8}$/, {
