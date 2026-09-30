@@ -182,6 +182,33 @@ export class NotificationsService {
     return { updated: result.count > 0 };
   }
 
+  async remove(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ deleted: true }> {
+    const notification = await this.prisma.notification.findFirst({
+      where: { id, userId: actor.id },
+    });
+
+    if (!notification) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Notification not found',
+      });
+    }
+
+    await this.prisma.notification.delete({ where: { id } });
+    return { deleted: true };
+  }
+
+  async removeAll(actor: AuthenticatedUser): Promise<{ deleted: boolean }> {
+    const result = await this.prisma.notification.deleteMany({
+      where: { userId: actor.id },
+    });
+
+    return { deleted: result.count > 0 };
+  }
+
   private async publishNotification(notification: Notification): Promise<void> {
     const payload: NotificationResponse = toNotificationResponse(notification);
     await this.redis.publish(

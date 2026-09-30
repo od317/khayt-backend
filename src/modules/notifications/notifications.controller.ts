@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -46,5 +47,22 @@ export class NotificationsController {
     @RequireUser() user: AuthenticatedUser,
   ): Promise<{ notification: NotificationResponse }> {
     return this.notifications.markRead(id, user);
+  }
+
+  @Delete('all')
+  @HttpCode(HttpStatus.OK)
+  removeAll(
+    @RequireUser() user: AuthenticatedUser,
+  ): Promise<{ deleted: boolean }> {
+    return this.notifications.removeAll(user);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  remove(
+    @Param('id') id: string,
+    @RequireUser() user: AuthenticatedUser,
+  ): Promise<{ deleted: true }> {
+    return this.notifications.remove(id, user);
   }
 }

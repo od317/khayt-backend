@@ -32,6 +32,8 @@ type PrismaMock = {
     count: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     updateMany: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    deleteMany: ReturnType<typeof vi.fn>;
   };
   $transaction: ReturnType<typeof vi.fn>;
 };
@@ -49,6 +51,8 @@ describe('NotificationsService', () => {
         count: vi.fn().mockResolvedValue(0),
         update: vi.fn(),
         updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        delete: vi.fn().mockResolvedValue(undefined),
+        deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
       $transaction: vi.fn(),
     };
@@ -200,6 +204,51 @@ describe('NotificationsService', () => {
       const result = await service.markAllRead(actor);
 
       expect(result.updated).toBe(false);
+    });
+  });
+
+  describe('remove', () => {
+    it('404s for a notification the user does not own', async () => {
+      prisma.notification.findFirst.mockResolvedValue(null);
+
+      const error = await service
+        .remove('notif-1', actor)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(NotFoundException);
+      expect(prisma.notification.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the notification', async () => {
+      prisma.notification.findFirst.mockResolvedValue(makeNotification());
+
+      const result = await service.remove('notif-1', actor);
+
+      expect(result.deleted).toBe(true);
+      expect(prisma.notification.delete).toHaveBeenCalledWith({
+        where: { id: 'notif-1' },
+      });
+    });
+  });
+
+  describe('removeAll', () => {
+    it('deletes every notification for the user', async () => {
+      prisma.notification.deleteMany.mockResolvedValue({ count: 5 });
+
+      const result = await service.removeAll(actor);
+
+      expect(result.deleted).toBe(true);
+      expect(prisma.notification.deleteMany).toHaveBeenCalledWith({
+        where: { userId: actor.id },
+      });
+    });
+
+    it('returns false when the inbox is already empty', async () => {
+      prisma.notification.deleteMany.mockResolvedValue({ count: 0 });
+
+      const result = await service.removeAll(actor);
+
+      expect(result.deleted).toBe(false);
     });
   });
 });

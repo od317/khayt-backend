@@ -664,6 +664,12 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   'patch /notifications/{id}/read': {
     '200': ok({ notification: { ...sampleNotification, read: true } }),
   },
+  'delete /notifications/all': {
+    '200': ok({ deleted: true }),
+  },
+  'delete /notifications/{id}': {
+    '200': ok({ deleted: true }),
+  },
   'get /notifications/stream': {
     '200': {
       description: 'Server-sent notification events',
