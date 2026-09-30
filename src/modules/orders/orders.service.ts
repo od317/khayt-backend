@@ -28,6 +28,7 @@ import {
   canActorCancel,
   canActorTransition,
   isInternal,
+  ACTIVE_ORDER_STATUSES,
 } from './order-status';
 import {
   OrderDetailResponse,
@@ -43,13 +44,6 @@ import {
   ORDERS_FEED_CHANNEL,
   ORDERS_STORE_CHANNEL,
 } from '../notifications/notifications.pubsub';
-
-const OPEN_STATUSES: readonly OrderStatus[] = [
-  OrderStatus.review,
-  OrderStatus.preparing,
-  OrderStatus.ready,
-  OrderStatus.in_transit,
-];
 
 type OrderWithStore = Order & { store: User };
 
@@ -75,7 +69,11 @@ export class OrdersService {
       return paginate([], 0, query.page, query.limit);
     }
 
-    if (query.status) where.status = query.status;
+    if (query.status) {
+      where.status = query.status;
+    } else if (query.active) {
+      where.status = { in: [...ACTIVE_ORDER_STATUSES] };
+    }
 
     if (query.q) {
       where.OR = [{ number: { contains: query.q, mode: 'insensitive' } }];
@@ -240,7 +238,7 @@ export class OrdersService {
         const openReserved = await tx.orderLine.aggregate({
           where: {
             productId,
-            order: { status: { in: [...OPEN_STATUSES] } },
+            order: { status: { in: [...ACTIVE_ORDER_STATUSES] } },
           },
           _sum: { quantity: true },
         });

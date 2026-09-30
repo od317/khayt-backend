@@ -25,6 +25,14 @@ export function isInternal(role: UserRole): boolean {
   return INTERNAL_ROLES.includes(role);
 }
 
+/** In-progress orders: not delivered, cancelled, or failed. */
+export const ACTIVE_ORDER_STATUSES: readonly OrderStatus[] = [
+  OrderStatus.review,
+  OrderStatus.preparing,
+  OrderStatus.ready,
+  OrderStatus.in_transit,
+];
+
 /**
  * R3's transition graph. From a given status, the set of legal next
  * statuses. Cancellation is handled separately because it has its own

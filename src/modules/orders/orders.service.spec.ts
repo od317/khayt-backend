@@ -189,6 +189,37 @@ describe('OrdersService', () => {
     );
   });
 
+  describe('list', () => {
+    it('returns every order when active is omitted', async () => {
+      await service.list({ page: 1, limit: 20 }, inventory);
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {},
+        }),
+      );
+    });
+
+    it('limits to in-progress orders when active=true', async () => {
+      await service.list({ page: 1, limit: 20, active: true }, inventory);
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: {
+              in: [
+                OrderStatus.review,
+                OrderStatus.preparing,
+                OrderStatus.ready,
+                OrderStatus.in_transit,
+              ],
+            },
+          },
+        }),
+      );
+    });
+  });
+
   describe('create', () => {
     const dto = {
       lines: [{ productId: 'prod-1', quantity: 2 }],
