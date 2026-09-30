@@ -9,7 +9,6 @@ const valid = (overrides: Record<string, unknown> = {}) => ({
   category: 'قمصان',
   unit: 'قطعة',
   price: 5000,
-  images: [],
   ...overrides,
 });
 
@@ -27,8 +26,13 @@ const collect = (errors: ValidationError[]): string[] => {
 };
 
 const run = async (input: Record<string, unknown>) => {
-  const dto = plainToInstance(CreateProductDto, input);
-  const errors = await validate(dto);
+  const dto = plainToInstance(CreateProductDto, input, {
+    enableImplicitConversion: true,
+  });
+  const errors = await validate(dto, {
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  });
   return collect(errors);
 };
 
@@ -48,18 +52,57 @@ describe('CreateProductDto', () => {
     expect(messages.length).toBeGreaterThan(0);
   });
 
-  it('rejects more than 8 images', async () => {
+  it('rejects image URLs in the body', async () => {
     const messages = await run(
-      valid({ images: Array.from({ length: 9 }, (_, i) => `img-${i}`) }),
+      valid({ images: ['https://cdn.example/red.jpg'] }),
     );
     expect(messages.length).toBeGreaterThan(0);
+  });
+
+  it('rejects image URLs on variants', async () => {
+    const messages = await run(
+      valid({
+        variants: {
+          axes: [{ key: 'color', label: 'لون' }],
+          options: [{ name: 'أحمر', image: 'https://cdn.example/red.jpg' }],
+        },
+      }),
+    );
+    expect(messages.length).toBeGreaterThan(0);
+  });
+
+  it('accepts a one-level variants tree without image URLs', async () => {
+    const messages = await run(
+      valid({
+        variants: {
+          axes: [{ key: 'color', label: 'لون' }],
+          options: [{ name: 'أحمر' }],
+        },
+      }),
+    );
+    expect(messages).toEqual([]);
+  });
+
+  it('parses variants from a JSON form field', async () => {
+    const messages = await run(
+      valid({
+        variants: JSON.stringify({
+          axes: [{ key: 'color', label: 'لون' }],
+          options: [{ name: 'أحمر' }],
+        }),
+      }),
+    );
+    expect(messages).toEqual([]);
   });
 
   it('rejects a malformed variants tree', async () => {
     const messages = await run(
       valid({
         variants: {
-          axes: [{ key: 'color', label: 'لون' }],
+          axes: [
+            { key: 'color', label: 'لون' },
+            { key: 'size', label: 'قياس' },
+          ],
           options: [{ name: 'أحمر' }],
         },
       }),

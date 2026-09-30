@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform, plainToInstance } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -21,16 +21,32 @@ import {
 
 const ALLOWED_UNITS = ['قطعة', 'متر', 'طقم', 'دورة'] as const;
 
+export function parseJsonIfString({ value }: { value: unknown }): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (trimmed === '') {
+    return undefined;
+  }
+  return JSON.parse(trimmed) as unknown;
+}
+
+export function nestedJson<T extends object>(cls: new () => T) {
+  return ({ value }: { value: unknown }): T | undefined => {
+    const parsed = parseJsonIfString({ value });
+    if (parsed === undefined || parsed === null) {
+      return undefined;
+    }
+    return plainToInstance(cls, parsed);
+  };
+}
+
 export class ProductVariantLeafDto {
   @ApiProperty({ example: 'M' })
   @IsString()
   @IsNotEmpty()
   name!: string;
-
-  @ApiProperty({ example: '/uploads/products/size-m.jpg' })
-  @IsString()
-  @IsNotEmpty()
-  image!: string;
 
   @ApiPropertyOptional({ example: '#FFFFFF' })
   @IsOptional()
@@ -43,11 +59,6 @@ export class ProductVariantOptionDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
-
-  @ApiProperty({ example: '/uploads/products/red.jpg' })
-  @IsString()
-  @IsNotEmpty()
-  image!: string;
 
   @ApiPropertyOptional({ example: '#FF0000' })
   @IsOptional()
@@ -181,27 +192,23 @@ export class CreateProductDto {
   @Min(0)
   price!: number;
 
-  @ApiPropertyOptional({ type: [String], example: [''] })
-  @IsOptional()
-  @IsArray()
-  @ArrayMaxSize(8)
-  @IsString({ each: true })
-  images?: string[];
-
   @ApiPropertyOptional({ type: () => ProductVariantsDto })
   @IsOptional()
+  @Transform(nestedJson(ProductVariantsDto))
   @ValidateNested()
   @Type(() => ProductVariantsDto)
   variants?: ProductVariantsDto;
 
   @ApiPropertyOptional({ type: () => ProductPackagingDto })
   @IsOptional()
+  @Transform(nestedJson(ProductPackagingDto))
   @ValidateNested()
   @Type(() => ProductPackagingDto)
   packaging?: ProductPackagingDto;
 
   @ApiPropertyOptional({ type: () => ProductDiscountDto })
   @IsOptional()
+  @Transform(nestedJson(ProductDiscountDto))
   @ValidateNested()
   @Type(() => ProductDiscountDto)
   discount?: ProductDiscountDto;

@@ -12,7 +12,8 @@ import {
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes } from '@nestjs/swagger';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { diskStorage } from 'multer';
@@ -34,9 +35,9 @@ const productImagesStorage = diskStorage({
   },
 });
 
-const ProductImagesInterceptor = FilesInterceptor('images', 8, {
+const ProductFilesInterceptor = AnyFilesInterceptor({
   storage: productImagesStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024, files: 48 },
 });
 
 @Controller('products')
@@ -56,7 +57,8 @@ export class ProductsController {
   }
 
   @Post()
-  @UseInterceptors(ProductImagesInterceptor)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(ProductFilesInterceptor)
   create(
     @RequireUser() user: AuthenticatedUser,
     @Body() dto: CreateProductDto,
@@ -66,7 +68,8 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  @UseInterceptors(ProductImagesInterceptor)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(ProductFilesInterceptor)
   update(
     @Param('id') id: string,
     @RequireUser() user: AuthenticatedUser,

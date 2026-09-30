@@ -16,6 +16,10 @@ import {
   toProductResponse,
   withBusiness,
 } from './products.mapper';
+import {
+  applyVariantImageFiles,
+  galleryPaths,
+} from './product-uploads';
 
 export type ProductDetailResponse = {
   product: ProductResponse;
@@ -38,10 +42,6 @@ export type ProductDetailResponse = {
 // instances inside arrays (e.g. variants.options[]).
 function toJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-}
-
-function filePaths(files: Express.Multer.File[] | undefined): string[] {
-  return (files ?? []).map((f) => `/uploads/products/${f.filename}`);
 }
 
 @Injectable()
@@ -139,7 +139,8 @@ export class ProductsService {
   ): Promise<{ product: ProductResponse }> {
     await this.assertBusinessOwner(actor, dto.businessId);
 
-    const uploaded = filePaths(files);
+    const uploaded = galleryPaths(files ?? []);
+    const variants = applyVariantImageFiles(dto.variants, files ?? []);
 
     const product = await this.prisma.product.create({
       data: {
@@ -149,9 +150,9 @@ export class ProductsService {
         description: dto.description ?? null,
         unit: dto.unit,
         price: dto.price,
-        images: uploaded.length > 0 ? uploaded : (dto.images ?? []),
+        images: uploaded,
         inWarehouse: false,
-        variants: dto.variants ? toJson(dto.variants) : Prisma.JsonNull,
+        variants: variants ? toJson(variants) : Prisma.JsonNull,
         packaging: dto.packaging ? toJson(dto.packaging) : Prisma.JsonNull,
         discount: dto.discount ? toJson(dto.discount) : Prisma.JsonNull,
         offer: dto.offer ?? null,
@@ -169,7 +170,7 @@ export class ProductsService {
   ): Promise<{ product: ProductResponse }> {
     const existing = await this.prisma.product.findFirst({
       where: { id, deletedAt: null },
-      select: { businessId: true },
+      select: { businessId: true, variants: true },
     });
     if (!existing) {
       throw new NotFoundException({
@@ -179,7 +180,12 @@ export class ProductsService {
     }
     await this.assertBusinessOwner(actor, existing.businessId);
 
-    const uploaded = filePaths(files);
+    const uploaded = galleryPaths(files ?? []);
+    const variants = applyVariantImageFiles(
+      dto.variants,
+      files ?? [],
+      existing.variants,
+    );
 
     const data: Prisma.ProductUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
@@ -187,12 +193,8 @@ export class ProductsService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.unit !== undefined) data.unit = dto.unit;
     if (dto.price !== undefined) data.price = dto.price;
-    if (uploaded.length > 0) {
-      data.images = uploaded;
-    } else if (dto.images !== undefined) {
-      data.images = dto.images;
-    }
-    if (dto.variants !== undefined) data.variants = toJson(dto.variants);
+    if (uploaded.length > 0) data.images = uploaded;
+    if (dto.variants !== undefined) data.variants = toJson(variants);
     if (dto.packaging !== undefined) data.packaging = toJson(dto.packaging);
     if (dto.discount !== undefined) data.discount = toJson(dto.discount);
     if (dto.offer !== undefined) data.offer = dto.offer;

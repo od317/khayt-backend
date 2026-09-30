@@ -1,8 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
-  ArrayMaxSize,
-  IsArray,
   IsIn,
   IsInt,
   IsOptional,
@@ -12,6 +10,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
+  nestedJson,
   ProductDiscountDto,
   ProductPackagingDto,
   ProductVariantsDto,
@@ -50,27 +49,23 @@ export class UpdateProductDto {
   @Min(0)
   price?: number;
 
-  @ApiPropertyOptional({ type: [String], example: [''] })
-  @IsOptional()
-  @IsArray()
-  @ArrayMaxSize(8)
-  @IsString({ each: true })
-  images?: string[];
-
   @ApiPropertyOptional({ type: () => ProductVariantsDto })
   @IsOptional()
+  @Transform(nestedJson(ProductVariantsDto))
   @ValidateNested()
   @Type(() => ProductVariantsDto)
   variants?: ProductVariantsDto;
 
   @ApiPropertyOptional({ type: () => ProductPackagingDto })
   @IsOptional()
+  @Transform(nestedJson(ProductPackagingDto))
   @ValidateNested()
   @Type(() => ProductPackagingDto)
   packaging?: ProductPackagingDto;
 
   @ApiPropertyOptional({ type: () => ProductDiscountDto })
   @IsOptional()
+  @Transform(nestedJson(ProductDiscountDto))
   @ValidateNested()
   @Type(() => ProductDiscountDto)
   discount?: ProductDiscountDto;

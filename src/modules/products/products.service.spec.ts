@@ -101,7 +101,6 @@ describe('ProductsService', () => {
       category: 'قمصان',
       unit: 'قطعة',
       price: 5000,
-      images: [],
     });
 
     expect(prisma.product.create).toHaveBeenCalledWith({
@@ -111,6 +110,46 @@ describe('ProductsService', () => {
       }),
     });
     expect(result.product.inWarehouse).toBe(false);
+  });
+
+  it('stores uploaded variant images instead of URLs', async () => {
+    prisma.business.findUnique.mockResolvedValue({ ownerId: actor.id });
+    prisma.product.create.mockResolvedValue(makeProduct());
+
+    await service.create(
+      actor,
+      {
+        businessId: 'biz-1',
+        name: 'قميص',
+        category: 'قمصان',
+        unit: 'قطعة',
+        price: 5000,
+        variants: {
+          axes: [{ key: 'color', label: 'لون' }],
+          options: [{ name: 'أحمر' }],
+        },
+      },
+      [
+        {
+          fieldname: 'images',
+          filename: 'gallery.jpg',
+        } as Express.Multer.File,
+        {
+          fieldname: 'variant_0',
+          filename: 'red.jpg',
+        } as Express.Multer.File,
+      ],
+    );
+
+    expect(prisma.product.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        images: ['/uploads/products/gallery.jpg'],
+        variants: {
+          axes: [{ key: 'color', label: 'لون' }],
+          options: [{ name: 'أحمر', image: '/uploads/products/red.jpg' }],
+        },
+      }),
+    });
   });
 
   it('rejects creation by a non-owner', async () => {
@@ -123,7 +162,6 @@ describe('ProductsService', () => {
         category: 'قمصان',
         unit: 'قطعة',
         price: 5000,
-        images: [],
       })
       .catch((err: unknown) => err);
 
