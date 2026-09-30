@@ -169,6 +169,28 @@ describe('ProductsService', () => {
     expect(prisma.product.create).not.toHaveBeenCalled();
   });
 
+  it('lets an admin create a product for any business', async () => {
+    const admin: AuthenticatedUser = {
+      id: 'admin-1',
+      role: UserRole.admin,
+      phone: '0994000001',
+    };
+    prisma.business.findUnique.mockResolvedValue({ ownerId: 'someone-else' });
+    prisma.product.create.mockResolvedValue(makeProduct());
+
+    await service.create(admin, {
+      businessId: 'biz-1',
+      name: 'قميص',
+      category: 'قمصان',
+      unit: 'قطعة',
+      price: 5000,
+    });
+
+    expect(prisma.product.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ businessId: 'biz-1' }),
+    });
+  });
+
   it('soft-deletes a product that has not been ordered', async () => {
     const existing = makeProduct();
     prisma.product.findFirst.mockResolvedValue(existing);

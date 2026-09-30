@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
@@ -137,7 +137,7 @@ export class ProductsService {
     dto: CreateProductDto,
     files?: Express.Multer.File[],
   ): Promise<{ product: ProductResponse }> {
-    await this.assertBusinessOwner(actor, dto.businessId);
+    await this.assertCanManageBusiness(actor, dto.businessId);
 
     const uploaded = galleryPaths(files ?? []);
     const variants = applyVariantImageFiles(dto.variants, files ?? []);
@@ -178,7 +178,7 @@ export class ProductsService {
         message: 'Product not found',
       });
     }
-    await this.assertBusinessOwner(actor, existing.businessId);
+    await this.assertCanManageBusiness(actor, existing.businessId);
 
     const uploaded = galleryPaths(files ?? []);
     const variants = applyVariantImageFiles(
@@ -221,7 +221,7 @@ export class ProductsService {
         message: 'Product not found',
       });
     }
-    await this.assertBusinessOwner(actor, existing.businessId);
+    await this.assertCanManageBusiness(actor, existing.businessId);
 
     const orderLineCount = await this.prisma.orderLine.count({
       where: { productId: id },
@@ -242,13 +242,10 @@ export class ProductsService {
     return { product: toProductResponse(product), softDeleted: true };
   }
 
-  private async assertBusinessOwner(
+  private async assertCanManageBusiness(
     actor: AuthenticatedUser,
     businessId: string,
   ): Promise<void> {
-    // Ownership lives in the body for POST /products, so BusinessOwnerGuard
-    // cannot read it from route params there — the check must live in the
-    // service. PATCH and DELETE reuse this helper for consistency.
     const business = await this.prisma.business.findUnique({
       where: { id: businessId },
       select: { ownerId: true },
@@ -259,6 +256,13 @@ export class ProductsService {
         error: 'not_found',
         message: 'Business not found',
       });
+    }
+
+    if (
+      actor.role === UserRole.admin ||
+      actor.role === UserRole.super_admin
+    ) {
+      return;
     }
 
     if (business.ownerId !== actor.id) {
