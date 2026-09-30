@@ -38,6 +38,8 @@ const makeUser = (
   role: UserRole.employee,
   name: PHONE,
   phone: PHONE,
+  email: null,
+  passwordHash: null,
   bio: null,
   avatarUrl: null,
   availableForWork: true,
@@ -70,9 +72,19 @@ describe('AuthService', () => {
       update: ReturnType<typeof vi.fn>;
     };
     business: { findUnique: ReturnType<typeof vi.fn> };
-    notification: { count: ReturnType<typeof vi.fn> };
+    notification: {
+      count: ReturnType<typeof vi.fn>;
+      deleteMany: ReturnType<typeof vi.fn>;
+    };
     location: { findFirst: ReturnType<typeof vi.fn> };
     role: { findFirst: ReturnType<typeof vi.fn> };
+    deviceToken: { deleteMany: ReturnType<typeof vi.fn> };
+    like: { deleteMany: ReturnType<typeof vi.fn> };
+    savedPost: { deleteMany: ReturnType<typeof vi.fn> };
+    savedBusiness: { deleteMany: ReturnType<typeof vi.fn> };
+    savedMarketer: { deleteMany: ReturnType<typeof vi.fn> };
+    post: { updateMany: ReturnType<typeof vi.fn> };
+    $transaction: ReturnType<typeof vi.fn>;
   };
   let sms: { send: ReturnType<typeof vi.fn> };
   let jwt: {
@@ -101,10 +113,24 @@ describe('AuthService', () => {
         update: vi.fn(),
       },
       business: { findUnique: vi.fn() },
-      notification: { count: vi.fn() },
+      notification: { count: vi.fn(), deleteMany: vi.fn() },
       location: { findFirst: vi.fn() },
       role: { findFirst: vi.fn() },
+      deviceToken: { deleteMany: vi.fn() },
+      like: { deleteMany: vi.fn() },
+      savedPost: { deleteMany: vi.fn() },
+      savedBusiness: { deleteMany: vi.fn() },
+      savedMarketer: { deleteMany: vi.fn() },
+      post: { updateMany: vi.fn() },
+      $transaction: vi.fn(),
     };
+
+    prisma.$transaction.mockImplementation(async (arg: unknown) => {
+      if (typeof arg === 'function') {
+        return (arg as (tx: unknown) => unknown)(prisma);
+      }
+      return undefined;
+    });
 
     sms = { send: vi.fn().mockResolvedValue(undefined) };
 
@@ -406,6 +432,50 @@ describe('AuthService', () => {
       expect(error).toBeInstanceOf(ConflictException);
       expect((error as ConflictException).getResponse()).toMatchObject({
         error: 'already_onboarded',
+      });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteAccount', () => {
+    it('anonymizes the user, hides posts, and revokes tokens', async () => {
+      prisma.user.findUnique.mockResolvedValue(makeUser());
+      prisma.role.findFirst.mockResolvedValue({ value: UserRole.employee });
+
+      const result = await service.deleteAccount(actor.id, 'access-token');
+
+      expect(result.success).toBe(true);
+      expect(prisma.deviceToken.deleteMany).toHaveBeenCalledWith({
+        where: { userId: actor.id },
+      });
+      expect(prisma.post.updateMany).toHaveBeenCalledWith({
+        where: { authorId: actor.id, deletedAt: null },
+        data: expect.objectContaining({ active: false }),
+      });
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: actor.id },
+        data: expect.objectContaining({
+          name: 'حساب محذوف',
+          phone: null,
+          suspended: true,
+        }),
+      });
+      expect(redis.deleteByPattern).toHaveBeenCalled();
+    });
+
+    it('rejects staff accounts', async () => {
+      prisma.user.findUnique.mockResolvedValue(
+        makeUser({ role: UserRole.admin }),
+      );
+      prisma.role.findFirst.mockResolvedValue(null);
+
+      const error = await service
+        .deleteAccount(actor.id, 'access-token')
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getResponse()).toMatchObject({
+        error: 'cannot_delete_account',
       });
       expect(prisma.user.update).not.toHaveBeenCalled();
     });

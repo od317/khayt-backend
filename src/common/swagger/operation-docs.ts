@@ -226,6 +226,20 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     }),
   },
 
+  'delete /auth/me': {
+    '200': ok({ success: true }),
+    '403': errors('Forbidden', {
+      cannot_delete_account: {
+        summary: 'Staff cannot delete from the app',
+        value: errorBody(
+          403,
+          'cannot_delete_account',
+          'Staff accounts cannot be deleted from the app',
+        ),
+      },
+    }),
+  },
+
   'patch /auth/me': {
     '200': ok({ user: sampleUser }),
     '400': errors('Validation failed', {

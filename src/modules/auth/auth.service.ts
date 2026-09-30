@@ -234,6 +234,58 @@ export class AuthService {
     return { success: true };
   }
 
+  async deleteAccount(
+    userId: string,
+    accessToken: string,
+  ): Promise<{ success: true }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException({
+        error: 'unauthorized',
+        message: 'User not found',
+      });
+    }
+
+    const appRole = await this.prisma.role.findFirst({
+      where: { value: user.role, selectable: true },
+    });
+    if (!appRole) {
+      throw new ForbiddenException({
+        error: 'cannot_delete_account',
+        message: 'Staff accounts cannot be deleted from the app',
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.deviceToken.deleteMany({ where: { userId } });
+      await tx.notification.deleteMany({ where: { userId } });
+      await tx.like.deleteMany({ where: { userId } });
+      await tx.savedPost.deleteMany({ where: { userId } });
+      await tx.savedBusiness.deleteMany({ where: { userId } });
+      await tx.savedMarketer.deleteMany({ where: { userId } });
+      await tx.post.updateMany({
+        where: { authorId: userId, deletedAt: null },
+        data: { deletedAt: new Date(), active: false },
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          name: 'حساب محذوف',
+          phone: null,
+          email: null,
+          passwordHash: null,
+          bio: null,
+          avatarUrl: null,
+          suspended: true,
+          availableForWork: false,
+        },
+      });
+    });
+
+    await this.logout(userId, accessToken);
+    return { success: true };
+  }
+
   async getMe(userId: string): Promise<MeResponse> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

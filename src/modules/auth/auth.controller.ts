@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -85,6 +86,23 @@ export class AuthController {
   @Patch('me')
   updateMe(@RequireUser() user: AuthenticatedUser, @Body() dto: UpdateMeDto) {
     return this.auth.updateMe(user, dto);
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: LogoutResponseDto })
+  async deleteAccount(
+    @RequireUser() user: AuthenticatedUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<LogoutResponseDto> {
+    const header = req.headers.authorization;
+    const accessToken = header?.startsWith('Bearer ')
+      ? header.slice('Bearer '.length)
+      : '';
+    const result = await this.auth.deleteAccount(user.id, accessToken);
+    res.clearCookie('refreshToken', { path: '/api/auth' });
+    return result;
   }
 
   @Post('onboarding')
