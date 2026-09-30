@@ -403,6 +403,44 @@ describe('OrdersService', () => {
       expect(result.order.status).toBe(OrderStatus.cancelled);
     });
 
+    it('allows ready → in_transit for inventory', async () => {
+      const existing = makeOrder({ status: OrderStatus.ready });
+      prisma.order.findUnique
+        .mockResolvedValueOnce(existing)
+        .mockResolvedValueOnce({ ...existing, status: OrderStatus.in_transit });
+      prisma.orderLine.findMany.mockResolvedValue([{ picked: true }]);
+      prisma.order.update.mockResolvedValue({
+        ...existing,
+        status: OrderStatus.in_transit,
+      });
+
+      const result = await service.updateStatus('order-1', inventory, {
+        status: OrderStatus.in_transit,
+      });
+
+      expect(result.order.status).toBe(OrderStatus.in_transit);
+    });
+
+    it('allows ready → delivered for inventory', async () => {
+      const existing = makeOrder({ status: OrderStatus.ready });
+      prisma.order.findUnique
+        .mockResolvedValueOnce(existing)
+        .mockResolvedValueOnce({ ...existing, status: OrderStatus.delivered });
+      prisma.orderLine.findMany.mockResolvedValue([
+        { productId: 'prod-1', businessId: 'biz-1', quantity: 2, picked: true },
+      ]);
+      prisma.order.update.mockResolvedValue({
+        ...existing,
+        status: OrderStatus.delivered,
+      });
+
+      const result = await service.updateStatus('order-1', inventory, {
+        status: OrderStatus.delivered,
+      });
+
+      expect(result.order.status).toBe(OrderStatus.delivered);
+    });
+
     it('rejects preparing → ready when a line is unpicked', async () => {
       prisma.order.findUnique.mockResolvedValue(
         makeOrder({ status: OrderStatus.preparing }),
@@ -516,6 +554,38 @@ describe('OrdersService', () => {
         payload,
       );
       expect(redis.publish).toHaveBeenCalledWith('orders:feed', payload);
+    });
+  });
+
+  describe('forceAdvance', () => {
+    it('moves preparing → ready even when a line is unpicked', async () => {
+      const existing = makeOrder({ status: OrderStatus.preparing });
+      prisma.order.findUnique
+        .mockResolvedValueOnce(existing)
+        .mockResolvedValueOnce({ ...existing, status: OrderStatus.ready });
+      prisma.order.update.mockResolvedValue({
+        ...existing,
+        status: OrderStatus.ready,
+      });
+
+      const result = await service.forceAdvance('order-1', inventory);
+
+      expect(result.from).toBe(OrderStatus.preparing);
+      expect(result.to).toBe(OrderStatus.ready);
+      expect(result.order.status).toBe(OrderStatus.ready);
+      expect(redis.publish).toHaveBeenCalledWith(
+        'order:order-1',
+        expect.stringContaining('"status":"ready"'),
+      );
+    });
+
+    it('rejects a store caller', async () => {
+      const error = await service
+        .forceAdvance('order-1', store)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(prisma.order.update).not.toHaveBeenCalled();
     });
   });
 

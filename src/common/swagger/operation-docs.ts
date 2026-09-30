@@ -80,6 +80,23 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '200': ok({ status: 'ok', timestamp: AT, uptime: 0 }),
   },
 
+  'post /debug/orders/{id}/advance': {
+    '200': ok({
+      order: sampleOrderListItem,
+      from: 'ready',
+      to: 'in_transit',
+    }),
+    '400': errors('Already terminal', {
+      invalid_transition: {
+        summary: 'Order cannot advance further',
+        value: errorBody(
+          400,
+          'invalid_transition',
+          'Order is already in a terminal status',
+        ),
+      },
+    }),
+  },
   'post /debug/expire-token': {
     '200': ok({ expired: true, accessToken: '' }),
     '401': errors('Unauthorized', {

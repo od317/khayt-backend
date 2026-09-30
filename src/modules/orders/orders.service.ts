@@ -29,6 +29,7 @@ import {
   canActorTransition,
   isInternal,
   ACTIVE_ORDER_STATUSES,
+  nextForcedStatus,
 } from './order-status';
 import {
   OrderDetailResponse,
@@ -372,23 +373,69 @@ export class OrdersService {
       );
     }
 
+    return this.commitStatusChange(existing, dto.status);
+  }
+
+  async forceAdvance(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ order: OrderListItemResponse; from: OrderStatus; to: OrderStatus }> {
+    if (!isInternal(actor.role)) {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'Only staff can force-advance an order',
+      });
+    }
+
+    const existing = await this.prisma.order.findUnique({
+      where: { id },
+      include: { store: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Order not found',
+      });
+    }
+
+    const to = nextForcedStatus(existing.status);
+    if (!to) {
+      throw new HttpException(
+        {
+          error: 'invalid_transition',
+          message: 'Order is already in a terminal status',
+          from: existing.status,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const result = await this.commitStatusChange(existing, to);
+    return { ...result, from: existing.status, to };
+  }
+
+  private async commitStatusChange(
+    existing: OrderWithStore,
+    status: OrderStatus,
+  ): Promise<{ order: OrderListItemResponse }> {
     await this.prisma.$transaction(async (tx) => {
-      if (dto.status === OrderStatus.delivered) {
-        await this.decrementStockForOrder(tx, id, existing.number);
+      if (status === OrderStatus.delivered) {
+        await this.decrementStockForOrder(tx, existing.id, existing.number);
       }
 
-      if (dto.status === OrderStatus.cancelled) {
-        await tx.deliveryOrder.deleteMany({ where: { orderId: id } });
+      if (status === OrderStatus.cancelled) {
+        await tx.deliveryOrder.deleteMany({ where: { orderId: existing.id } });
       }
 
       await tx.order.update({
-        where: { id },
-        data: { status: dto.status },
+        where: { id: existing.id },
+        data: { status },
       });
     });
 
     const updated = await this.prisma.order.findUnique({
-      where: { id },
+      where: { id: existing.id },
       include: { store: true },
     });
 
@@ -399,8 +446,7 @@ export class OrdersService {
       });
     }
 
-    // Notify the store — after the transaction commits.
-    if (dto.status === OrderStatus.cancelled) {
+    if (status === OrderStatus.cancelled) {
       await this.notifications.notify({
         userId: updated.storeId,
         type: NotificationType.order_cancelled,
@@ -413,7 +459,7 @@ export class OrdersService {
         userId: updated.storeId,
         type: NotificationType.order_status,
         title: 'تحديث حالة الطلب',
-        body: `طلبك ${updated.number} أصبح ${ORDER_STATUS_LABELS[dto.status]}`,
+        body: `طلبك ${updated.number} أصبح ${ORDER_STATUS_LABELS[status]}`,
         linkTo: `/orders/${updated.id}`,
       });
     }

@@ -4,18 +4,26 @@ import {
   HttpStatus,
   Logger,
   NotFoundException,
+  Param,
+  ParseUUIDPipe,
   Post,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { OrderStatus, UserRole } from '@prisma/client';
 import type { Request } from 'express';
 import { createHash } from 'node:crypto';
 import { Public } from '../../common/decorators/public.decorator';
+import { RequireUser } from '../../common/decorators/current-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import type { AuthenticatedUser } from '../../common/types/auth';
 import { RedisService } from '../../common/redis/redis.service';
 import { AppConfig } from '../../config/configuration';
 import { accessDenyKey } from '../auth/auth.constants';
+import { OrderListItemResponse } from '../orders/orders.mapper';
+import { OrdersService } from '../orders/orders.service';
 
 type AuthenticatedPayload = {
   sub: string;
@@ -31,7 +39,28 @@ export class DebugController {
     private readonly jwt: JwtService,
     private readonly config: ConfigService<AppConfig, true>,
     private readonly redis: RedisService,
+    private readonly orders: OrdersService,
   ) {}
+
+  @Post('orders/:id/advance')
+  @Roles(
+    UserRole.super_admin,
+    UserRole.admin,
+    UserRole.inventory,
+    UserRole.delivery,
+  )
+  @HttpCode(HttpStatus.OK)
+  advanceOrder(
+    @Param('id', ParseUUIDPipe) id: string,
+    @RequireUser() user: AuthenticatedUser,
+  ): Promise<{
+    order: OrderListItemResponse;
+    from: OrderStatus;
+    to: OrderStatus;
+  }> {
+    this.logger.warn(`[DEBUG] force-advance order=${id} by=${user.id}`);
+    return this.orders.forceAdvance(id, user);
+  }
 
   @Public()
   @Post('expire-token')

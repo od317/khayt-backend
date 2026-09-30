@@ -33,6 +33,22 @@ export const ACTIVE_ORDER_STATUSES: readonly OrderStatus[] = [
   OrderStatus.in_transit,
 ];
 
+/** Happy-path next status for the debug advance button. */
+export function nextForcedStatus(from: OrderStatus): OrderStatus | null {
+  switch (from) {
+    case OrderStatus.review:
+      return OrderStatus.preparing;
+    case OrderStatus.preparing:
+      return OrderStatus.ready;
+    case OrderStatus.ready:
+      return OrderStatus.in_transit;
+    case OrderStatus.in_transit:
+      return OrderStatus.delivered;
+    default:
+      return null;
+  }
+}
+
 /**
  * R3's transition graph. From a given status, the set of legal next
  * statuses. Cancellation is handled separately because it has its own
@@ -41,7 +57,11 @@ export const ACTIVE_ORDER_STATUSES: readonly OrderStatus[] = [
 const LEGAL_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   review: [OrderStatus.preparing, OrderStatus.cancelled],
   preparing: [OrderStatus.ready, OrderStatus.cancelled],
-  ready: [OrderStatus.cancelled],
+  ready: [
+    OrderStatus.in_transit,
+    OrderStatus.delivered,
+    OrderStatus.cancelled,
+  ],
   in_transit: [OrderStatus.delivered, OrderStatus.failed],
   delivered: [],
   cancelled: [],
@@ -103,10 +123,19 @@ export function canActorTransition(
       );
 
     case OrderStatus.ready:
-      return false;
+      return (
+        actor.role === UserRole.inventory ||
+        actor.role === UserRole.admin ||
+        actor.role === UserRole.super_admin ||
+        actor.role === UserRole.delivery
+      );
 
     case OrderStatus.in_transit:
-      return actor.role === UserRole.delivery || actor.role === UserRole.admin;
+      return (
+        actor.role === UserRole.delivery ||
+        actor.role === UserRole.admin ||
+        actor.role === UserRole.super_admin
+      );
 
     case OrderStatus.delivered:
     case OrderStatus.cancelled:
