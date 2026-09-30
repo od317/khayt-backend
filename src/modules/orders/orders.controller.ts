@@ -4,11 +4,15 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  MessageEvent,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  Sse,
 } from '@nestjs/common';
+import { interval, map, merge, Observable } from 'rxjs';
 import { RequireUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import type { AuthenticatedUser } from '../../common/types/auth';
@@ -24,10 +28,17 @@ import {
   OrderListItemResponse,
 } from './orders.mapper';
 import { OrdersService } from './orders.service';
+import {
+  ORDER_CHANNEL,
+  NotificationsPubSub,
+} from '../notifications/notifications.pubsub';
 
 @Controller('orders')
 export class OrdersController {
-  constructor(private readonly orders: OrdersService) {}
+  constructor(
+    private readonly orders: OrdersService,
+    private readonly pubsub: NotificationsPubSub,
+  ) {}
 
   @Get()
   list(
@@ -37,9 +48,18 @@ export class OrdersController {
     return this.orders.list(query, user);
   }
 
+  @Sse(':id/stream')
+  async streamOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @RequireUser() user: AuthenticatedUser,
+  ): Promise<Observable<MessageEvent>> {
+    await this.orders.assertCanReadById(id, user);
+    return this.mergeWithHeartbeat(this.statusEvents(ORDER_CHANNEL(id)));
+  }
+
   @Get(':id')
   detail(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @RequireUser() user: AuthenticatedUser,
   ): Promise<OrderDetailResponse> {
     return this.orders.detail(id, user);
@@ -58,7 +78,7 @@ export class OrdersController {
   @Patch(':id/status')
   @HttpCode(HttpStatus.OK)
   updateStatus(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @RequireUser() user: AuthenticatedUser,
     @Body() dto: UpdateOrderStatusDto,
   ): Promise<{ order: OrderListItemResponse }> {
@@ -68,11 +88,40 @@ export class OrdersController {
   @Patch(':id/lines/:lineId')
   @HttpCode(HttpStatus.OK)
   updateLine(
-    @Param('id') id: string,
-    @Param('lineId') lineId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('lineId', ParseUUIDPipe) lineId: string,
     @RequireUser() user: AuthenticatedUser,
     @Body() dto: UpdateOrderLineDto,
   ): Promise<{ line: OrderLineResponse }> {
     return this.orders.updateLine(id, lineId, user, dto);
+  }
+
+  private statusEvents(channel: string): Observable<MessageEvent> {
+    return this.pubsub.streamChannel(channel).pipe(
+      map((raw): MessageEvent => {
+        let data: string | object;
+        try {
+          data = JSON.parse(raw) as object;
+        } catch {
+          data = { parseError: true };
+        }
+        return {
+          type: 'status',
+          data,
+        };
+      }),
+    );
+  }
+
+  private mergeWithHeartbeat(
+    events$: Observable<MessageEvent>,
+  ): Observable<MessageEvent> {
+    const heartbeat$ = interval(30000).pipe(
+      map((): MessageEvent => ({
+        type: 'ping',
+        data: 'ping',
+      })),
+    );
+    return merge(events$, heartbeat$);
   }
 }

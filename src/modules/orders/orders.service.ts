@@ -38,7 +38,11 @@ import {
   toOrderListItem,
 } from './orders.mapper';
 import { RedisService } from '../../common/redis/redis.service';
-import { ORDER_CHANNEL } from '../notifications/notifications.pubsub';
+import {
+  ORDER_CHANNEL,
+  ORDERS_FEED_CHANNEL,
+  ORDERS_STORE_CHANNEL,
+} from '../notifications/notifications.pubsub';
 
 const OPEN_STATUSES: readonly OrderStatus[] = [
   OrderStatus.review,
@@ -85,7 +89,7 @@ export class OrdersService {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
-        include: { store: true },
+        include: { store: true, lines: { select: { quantity: true } } },
       }),
       this.prisma.order.count({ where }),
     ]);
@@ -322,6 +326,7 @@ export class OrdersService {
       });
     }
 
+    await this.publishOrderLive(order);
     return response;
   }
 
@@ -414,13 +419,7 @@ export class OrdersService {
         linkTo: `/orders/${updated.id}`,
       });
     }
-    await this.redis.publish(
-      ORDER_CHANNEL(id),
-      JSON.stringify({
-        status: updated.status,
-        updatedAt: updated.updatedAt.toISOString(),
-      }),
-    );
+    await this.publishOrderLive(updated);
     return { order: toOrderListItem(updated) };
   }
 
@@ -540,6 +539,16 @@ export class OrdersService {
     });
   }
 
+  ordersFeedChannel(actor: AuthenticatedUser): string | null {
+    if (actor.role === UserRole.store) {
+      return ORDERS_STORE_CHANNEL(actor.id);
+    }
+    if (isInternal(actor.role)) {
+      return ORDERS_FEED_CHANNEL;
+    }
+    return null;
+  }
+
   async assertCanReadById(id: string, actor: AuthenticatedUser): Promise<void> {
     const order = await this.prisma.order.findUnique({
       where: { id },
@@ -566,5 +575,21 @@ export class OrdersService {
       error: 'order_not_accessible',
       message: 'Order not found',
     });
+  }
+
+  private async publishOrderLive(
+    order: Pick<Order, 'id' | 'storeId' | 'status' | 'pieces' | 'updatedAt'>,
+  ): Promise<void> {
+    const payload = JSON.stringify({
+      id: order.id,
+      status: order.status,
+      pieces: order.pieces,
+      updatedAt: order.updatedAt.toISOString(),
+    });
+    await Promise.all([
+      this.redis.publish(ORDER_CHANNEL(order.id), payload),
+      this.redis.publish(ORDERS_STORE_CHANNEL(order.storeId), payload),
+      this.redis.publish(ORDERS_FEED_CHANNEL, payload),
+    ]);
   }
 }

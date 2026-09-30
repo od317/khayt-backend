@@ -478,10 +478,13 @@ describe('OrdersService', () => {
         status: OrderStatus.preparing,
       });
 
+      const payload = expect.stringContaining('"status":"preparing"');
+      expect(redis.publish).toHaveBeenCalledWith('order:order-1', payload);
       expect(redis.publish).toHaveBeenCalledWith(
-        'order:order-1',
-        expect.stringContaining('"status":"preparing"'),
+        'orders:store:user-store',
+        payload,
       );
+      expect(redis.publish).toHaveBeenCalledWith('orders:feed', payload);
     });
   });
 

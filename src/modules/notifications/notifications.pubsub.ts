@@ -5,15 +5,22 @@ import { RedisService } from '../../common/redis/redis.service';
 /**
  * Bridges Redis pub/sub to RxJS Observables for SSE streams.
  *
- * Two channels:
- *   notify:user:${userId}  — notifications for one user
- *   order:${orderId}       — status changes for one order
+ * Channels:
+ *   notify:user:${userId}     — notifications for one user
+ *   order:${orderId}          — status changes for one order
+ *   orders:store:${storeId}   — all order updates for one store
+ *   orders:feed               — all order updates for internal staff
  */
 
 export const NOTIFY_USER_CHANNEL = (userId: string): string =>
   `notify:user:${userId}`;
 
 export const ORDER_CHANNEL = (orderId: string): string => `order:${orderId}`;
+
+export const ORDERS_STORE_CHANNEL = (storeId: string): string =>
+  `orders:store:${storeId}`;
+
+export const ORDERS_FEED_CHANNEL = 'orders:feed';
 
 @Injectable()
 export class NotificationsPubSub {

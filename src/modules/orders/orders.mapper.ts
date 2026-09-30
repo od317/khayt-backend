@@ -55,7 +55,19 @@ export type OrderDetailResponse = {
   delivery: OrderDeliveryResponse | null;
 };
 
-type OrderWithStore = Order & { store: User };
+type OrderWithStore = Order & {
+  store: User;
+  lines?: { quantity: number }[];
+};
+
+export function orderPieces(
+  order: Pick<Order, 'pieces'> & { lines?: { quantity: number }[] },
+): number {
+  if (order.lines && order.lines.length > 0) {
+    return order.lines.reduce((sum, line) => sum + line.quantity, 0);
+  }
+  return order.pieces;
+}
 
 type OrderLineWithRelations = {
   id: string;
@@ -75,7 +87,7 @@ export function toOrderListItem(order: OrderWithStore): OrderListItemResponse {
     number: order.number,
     status: order.status,
     total: order.total,
-    pieces: order.pieces,
+    pieces: orderPieces(order),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     store: { id: order.store.id, name: order.store.name },
@@ -109,7 +121,10 @@ export function toOrderDetailResponse(
       number: order.number,
       status: order.status,
       total: order.total,
-      pieces: order.pieces,
+      pieces: orderPieces({
+        pieces: order.pieces,
+        lines: lines.map((line) => ({ quantity: line.quantity })),
+      }),
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
       canCancel: flags.canCancel,

@@ -646,6 +646,26 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       },
     }),
   },
+  'get /orders/stream': {
+    '200': {
+      description:
+        'Server-sent status events for every order this caller can list',
+      contentType: 'text/event-stream',
+      examples: {
+        status: {
+          summary: 'Status event',
+          value:
+            'event: status\ndata: {"id":"73ea3750-0add-4839-85f2-b902099ddaa9","status":"review","pieces":4,"updatedAt":"' +
+            AT +
+            '"}\n\n',
+        },
+        ping: {
+          summary: 'Heartbeat',
+          value: 'event: ping\ndata: ping\n\n',
+        },
+      },
+    },
+  },
   'get /orders/{id}/stream': {
     '200': {
       description: 'Server-sent order status events',
@@ -653,7 +673,10 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       examples: {
         status: {
           summary: 'Status event',
-          value: 'event: status\ndata: {"status":"review","updatedAt":"' + AT + '"}\n\n',
+          value:
+            'event: status\ndata: {"id":"73ea3750-0add-4839-85f2-b902099ddaa9","status":"review","pieces":4,"updatedAt":"' +
+            AT +
+            '"}\n\n',
         },
         ping: {
           summary: 'Heartbeat',
