@@ -6,8 +6,10 @@ import { AuthService } from './auth.service';
 import { EmailService } from './email.service';
 import { JwtStrategy } from './jwt.strategy';
 import { SmsService } from './sms.service';
+import { FcmModule } from '../notifications/fcm.module';
 
 @Module({
+  imports: [FcmModule],
   controllers: [AuthController, AdminAuthController],
   providers: [
     AuthService,

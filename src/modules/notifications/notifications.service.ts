@@ -3,13 +3,13 @@ import { Notification, NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { AuthenticatedUser } from '../../common/types/auth';
-import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
 import {
   NotificationResponse,
   toNotificationResponse,
 } from './notifications.mapper';
 import { NOTIFY_USER_CHANNEL } from './notifications.pubsub';
+import { FcmService } from './fcm.service';
 
 export type NotifyInput = {
   userId: string;
@@ -27,6 +27,7 @@ export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly fcm: FcmService,
   ) {}
 
   /**
@@ -110,7 +111,13 @@ export class NotificationsService {
   async list(
     query: QueryNotificationsDto,
     actor: AuthenticatedUser,
-  ): Promise<Paginated<NotificationResponse> & { unreadCount: number }> {
+  ): Promise<{
+    items: NotificationResponse[];
+    totalCount: number;
+    skipCount: number;
+    maxResultCount: number;
+    unreadCount: number;
+  }> {
     const baseWhere: Prisma.NotificationWhereInput = { userId: actor.id };
 
     const where: Prisma.NotificationWhereInput = { ...baseWhere };
@@ -118,14 +125,15 @@ export class NotificationsService {
       where.read = false;
     }
 
-    const { skip, take } = skipTake(query.page, query.limit);
+    const skipCount = query.SkipCount;
+    const maxResultCount = query.MaxResultCount;
 
-    const [rows, total, unreadCount] = await this.prisma.$transaction([
+    const [rows, totalCount, unreadCount] = await this.prisma.$transaction([
       this.prisma.notification.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip,
-        take,
+        skip: skipCount,
+        take: maxResultCount,
       }),
       this.prisma.notification.count({ where }),
       this.prisma.notification.count({
@@ -133,14 +141,13 @@ export class NotificationsService {
       }),
     ]);
 
-    const page = paginate(
-      rows.map(toNotificationResponse),
-      total,
-      query.page,
-      query.limit,
-    );
-
-    return { ...page, unreadCount };
+    return {
+      items: rows.map(toNotificationResponse),
+      totalCount,
+      skipCount,
+      maxResultCount,
+      unreadCount,
+    };
   }
 
   async markRead(
@@ -181,5 +188,11 @@ export class NotificationsService {
       NOTIFY_USER_CHANNEL(notification.userId),
       JSON.stringify(payload),
     );
+    await this.fcm.sendToUser(notification.userId, {
+      title: notification.title,
+      body: notification.body,
+      type: notification.type,
+      linkTo: notification.linkTo,
+    });
   }
 }

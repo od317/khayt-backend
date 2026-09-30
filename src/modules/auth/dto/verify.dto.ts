@@ -1,6 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsString, Matches } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { normalizePhone, SYRIAN_PHONE_PATTERN } from '../phone';
 
 export class VerifyDto {
@@ -18,4 +24,17 @@ export class VerifyDto {
   @IsString()
   @Matches(/^\d{6}$/, { message: 'must be a 6-digit code' })
   code!: string;
+
+  @ApiPropertyOptional({
+    example: '',
+    description: 'Firebase Cloud Messaging device token from the Android app',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && value.trim() === '' ? undefined : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(4096)
+  fcmToken?: string;
 }

@@ -650,7 +650,13 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
 
   'get /notifications': {
-    '200': ok({ ...paginated(sampleNotification), unreadCount: 1 }),
+    '200': ok({
+      items: [sampleNotification],
+      totalCount: 1,
+      skipCount: 0,
+      maxResultCount: 20,
+      unreadCount: 1,
+    }),
   },
   'patch /notifications/read-all': {
     '200': ok({ updated: true }),

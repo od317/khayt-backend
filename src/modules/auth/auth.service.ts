@@ -38,6 +38,7 @@ import { OnboardingDto } from './dto/onboarding.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { normalizePhone } from './phone';
 import { SmsService } from './sms.service';
+import { FcmService } from '../notifications/fcm.service';
 
 const DEV_CODE = '000000';
 
@@ -76,6 +77,7 @@ export class AuthService {
     private readonly sms: SmsService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService<AppConfig, true>,
+    private readonly fcm: FcmService,
   ) {
     this.accessExpiresIn = durationToSeconds(
       config.get('jwt.accessExpires', { infer: true }),
@@ -120,7 +122,11 @@ export class AuthService {
     return { sent: true };
   }
 
-  async verify(rawPhone: string, code: string): Promise<VerifyResponse> {
+  async verify(
+    rawPhone: string,
+    code: string,
+    fcmToken?: string,
+  ): Promise<VerifyResponse> {
     const phone = normalizePhone(rawPhone);
     const stored = await this.redis.get(otpKey(phone));
 
@@ -166,6 +172,9 @@ export class AuthService {
     }
 
     const tokens = await this.issueTokens(user);
+    if (fcmToken) {
+      await this.fcm.registerToken(user.id, fcmToken);
+    }
     return {
       ...tokens,
       user: toUserResponse(user),

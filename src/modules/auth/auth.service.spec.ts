@@ -80,6 +80,7 @@ describe('AuthService', () => {
     verifyAsync: ReturnType<typeof vi.fn>;
     decode: ReturnType<typeof vi.fn>;
   };
+  let fcm: { registerToken: ReturnType<typeof vi.fn> };
   let service: AuthService;
 
   beforeEach(() => {
@@ -119,6 +120,8 @@ describe('AuthService', () => {
       }),
     };
 
+    fcm = { registerToken: vi.fn().mockResolvedValue(undefined) };
+
     const config = {
       get: vi.fn((key: string) => {
         if (key === 'jwt.accessExpires') {
@@ -140,6 +143,7 @@ describe('AuthService', () => {
       sms as unknown as SmsService,
       jwt as unknown as JwtService,
       config as unknown as ConfigService<AppConfig, true>,
+      { registerToken: fcm.registerToken } as never,
     );
   });
 
@@ -243,6 +247,7 @@ describe('AuthService', () => {
       sms as unknown as SmsService,
       jwt as unknown as JwtService,
       config as unknown as ConfigService<AppConfig, true>,
+      { registerToken: fcm.registerToken } as never,
     );
 
     await devService.requestCode(PHONE);
@@ -288,6 +293,19 @@ describe('AuthService', () => {
     expect(prisma.user.create).not.toHaveBeenCalled();
     expect(result.user.id).toBe('existing-user');
     expect(result.user.name).toBe('أحمد');
+  });
+
+  it('stores an FCM token when verify includes fcmToken', async () => {
+    const existing = makeUser();
+    redis.get.mockResolvedValue('123456');
+    prisma.user.findUnique.mockResolvedValue(existing);
+
+    await service.verify(PHONE, '123456', 'sample-fcm-token');
+
+    expect(fcm.registerToken).toHaveBeenCalledWith(
+      existing.id,
+      'sample-fcm-token',
+    );
   });
 
   it('rejects a suspended user', async () => {

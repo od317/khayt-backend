@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { RequireUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/types/auth';
-import { Paginated } from '../../common/utils/pagination';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
 import { NotificationResponse } from './notifications.mapper';
 import { NotificationsService } from './notifications.service';
@@ -22,7 +21,13 @@ export class NotificationsController {
   list(
     @Query() query: QueryNotificationsDto,
     @RequireUser() user: AuthenticatedUser,
-  ): Promise<Paginated<NotificationResponse> & { unreadCount: number }> {
+  ): Promise<{
+    items: NotificationResponse[];
+    totalCount: number;
+    skipCount: number;
+    maxResultCount: number;
+    unreadCount: number;
+  }> {
     return this.notifications.list(query, user);
   }
 

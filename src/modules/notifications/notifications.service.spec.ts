@@ -61,7 +61,11 @@ describe('NotificationsService', () => {
       return undefined;
     });
 
-    service = new NotificationsService(prisma as unknown as PrismaService);
+    service = new NotificationsService(
+      prisma as unknown as PrismaService,
+      { publish: vi.fn().mockResolvedValue(undefined) } as never,
+      { sendToUser: vi.fn().mockResolvedValue(undefined) } as never,
+    );
   });
 
   describe('notify', () => {

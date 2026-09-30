@@ -47,7 +47,7 @@ export class AuthController {
     @Body() dto: VerifyDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.auth.verify(dto.phone, dto.code);
+    const result = await this.auth.verify(dto.phone, dto.code, dto.fcmToken);
     this.setRefreshCookie(res, result.refreshToken);
     return result;
   }

@@ -24,6 +24,11 @@ export type AppConfig = {
   debugAllowInProduction: boolean;
   swaggerEnabled: boolean;
   corsOrigins: string[];
+  firebase: {
+    projectId: string;
+    clientEmail: string;
+    privateKey: string;
+  } | null;
 };
 
 const required = (key: string): string => {
@@ -32,6 +37,28 @@ const required = (key: string): string => {
     throw new Error(`Missing required environment variable: ${key}`);
   }
   return value;
+};
+
+const firebaseFromEnv = (): AppConfig['firebase'] => {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (projectId && clientEmail && privateKey) {
+    return {
+      projectId,
+      clientEmail,
+      privateKey: privateKey.replace(/\\n/g, '\n'),
+    };
+  }
+
+  const nodeEnv = (process.env.NODE_ENV as NodeEnv) ?? 'development';
+  if (nodeEnv === 'production') {
+    throw new Error(
+      'Missing FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, or FIREBASE_PRIVATE_KEY',
+    );
+  }
+
+  return null;
 };
 
 export default (): AppConfig => ({
@@ -61,4 +88,5 @@ export default (): AppConfig => ({
     ((process.env.NODE_ENV as NodeEnv | undefined) ?? 'development') !==
       'production',
   corsOrigins: ['http://localhost:3000', 'http://localhost:3001'],
+  firebase: firebaseFromEnv(),
 });
