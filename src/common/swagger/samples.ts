@@ -43,8 +43,23 @@ export const sampleProduct = {
   price: 0,
   inWarehouse: false,
   available: true,
-  colors: null as unknown,
-  sizes: [] as string[],
+  variants: {
+    axes: [
+      { key: 'color', label: 'لون' },
+      { key: 'size', label: 'قياس' },
+    ],
+    options: [
+      {
+        name: 'أحمر',
+        hex: '#FF0000',
+        image: '/uploads/products/red.jpg',
+        children: [
+          { name: 'M', image: '/uploads/products/red.jpg' },
+          { name: 'L', image: '/uploads/products/red.jpg' },
+        ],
+      },
+    ],
+  } as unknown,
   packaging: null as unknown,
   discount: null as unknown,
   offer: null as string | null,

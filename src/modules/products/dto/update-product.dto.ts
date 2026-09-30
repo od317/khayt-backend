@@ -12,9 +12,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
-  ProductColorDto,
   ProductDiscountDto,
   ProductPackagingDto,
+  ProductVariantsDto,
 } from './create-product.dto';
 
 const ALLOWED_UNITS = ['قطعة', 'متر', 'طقم', 'دورة'] as const;
@@ -57,18 +57,11 @@ export class UpdateProductDto {
   @IsString({ each: true })
   images?: string[];
 
-  @ApiPropertyOptional({ type: () => [ProductColorDto] })
+  @ApiPropertyOptional({ type: () => ProductVariantsDto })
   @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ProductColorDto)
-  colors?: ProductColorDto[];
-
-  @ApiPropertyOptional({ type: [String], example: [''] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  sizes?: string[];
+  @ValidateNested()
+  @Type(() => ProductVariantsDto)
+  variants?: ProductVariantsDto;
 
   @ApiPropertyOptional({ type: () => ProductPackagingDto })
   @IsOptional()

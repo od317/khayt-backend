@@ -35,7 +35,7 @@ export type ProductDetailResponse = {
 // DTO instances are structurally valid JSON, but class instances lack the
 // index signature Prisma's InputJsonValue requires. A round-trip through
 // JSON produces a plain object Prisma accepts, and normalizes nested DTO
-// instances inside arrays (e.g. colors[]).
+// instances inside arrays (e.g. variants.options[]).
 function toJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
@@ -151,8 +151,7 @@ export class ProductsService {
         price: dto.price,
         images: uploaded.length > 0 ? uploaded : (dto.images ?? []),
         inWarehouse: false,
-        colors: dto.colors ? toJson(dto.colors) : Prisma.JsonNull,
-        sizes: dto.sizes ?? [],
+        variants: dto.variants ? toJson(dto.variants) : Prisma.JsonNull,
         packaging: dto.packaging ? toJson(dto.packaging) : Prisma.JsonNull,
         discount: dto.discount ? toJson(dto.discount) : Prisma.JsonNull,
         offer: dto.offer ?? null,
@@ -193,8 +192,7 @@ export class ProductsService {
     } else if (dto.images !== undefined) {
       data.images = dto.images;
     }
-    if (dto.colors !== undefined) data.colors = toJson(dto.colors);
-    if (dto.sizes !== undefined) data.sizes = dto.sizes;
+    if (dto.variants !== undefined) data.variants = toJson(dto.variants);
     if (dto.packaging !== undefined) data.packaging = toJson(dto.packaging);
     if (dto.discount !== undefined) data.discount = toJson(dto.discount);
     if (dto.offer !== undefined) data.offer = dto.offer;

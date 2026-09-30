@@ -55,8 +55,15 @@ describe('CreateProductDto', () => {
     expect(messages.length).toBeGreaterThan(0);
   });
 
-  it('rejects a malformed colors entry', async () => {
-    const messages = await run(valid({ colors: [{ name: 'أحمر' }] }));
+  it('rejects a malformed variants tree', async () => {
+    const messages = await run(
+      valid({
+        variants: {
+          axes: [{ key: 'color', label: 'لون' }],
+          options: [{ name: 'أحمر' }],
+        },
+      }),
+    );
     expect(messages.length).toBeGreaterThan(0);
   });
 

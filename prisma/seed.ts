@@ -822,21 +822,35 @@ async function main(): Promise<void> {
       price: 45000,
       inWarehouse: true,
       available: true,
-      colors: [
-        {
-          name: 'أبيض',
-          hex: '#FFFFFF',
-          image: 'https://placehold.co/600x400?text=White',
-          sizes: ['S', 'M', 'L', 'XL'],
-        },
-        {
-          name: 'أزرق',
-          hex: '#1E3A8A',
-          image: 'https://placehold.co/600x400?text=Blue',
-          sizes: ['M', 'L', 'XL'],
-        },
-      ],
-      sizes: [],
+      variants: {
+        axes: [
+          { key: 'color', label: 'لون' },
+          { key: 'size', label: 'قياس' },
+        ],
+        options: [
+          {
+            name: 'أبيض',
+            hex: '#FFFFFF',
+            image: 'https://placehold.co/600x400?text=White',
+            children: [
+              { name: 'S', image: 'https://placehold.co/600x400?text=White' },
+              { name: 'M', image: 'https://placehold.co/600x400?text=White' },
+              { name: 'L', image: 'https://placehold.co/600x400?text=White' },
+              { name: 'XL', image: 'https://placehold.co/600x400?text=White' },
+            ],
+          },
+          {
+            name: 'أزرق',
+            hex: '#1E3A8A',
+            image: 'https://placehold.co/600x400?text=Blue',
+            children: [
+              { name: 'M', image: 'https://placehold.co/600x400?text=Blue' },
+              { name: 'L', image: 'https://placehold.co/600x400?text=Blue' },
+              { name: 'XL', image: 'https://placehold.co/600x400?text=Blue' },
+            ],
+          },
+        ],
+      },
       packaging: { onlyPackage: false, unitsPerPackage: 10, label: 'علبة 10' },
       discount: { percent: 10, originalPrice: 50000 },
       offer: 'عرض خاص',
@@ -864,7 +878,15 @@ async function main(): Promise<void> {
       price: 65000,
       inWarehouse: true,
       available: true,
-      sizes: ['30', '32', '34', '36'],
+      variants: {
+        axes: [{ key: 'size', label: 'قياس' }],
+        options: [
+          { name: '30', image: 'https://placehold.co/600x400?text=Jeans' },
+          { name: '32', image: 'https://placehold.co/600x400?text=Jeans' },
+          { name: '34', image: 'https://placehold.co/600x400?text=Jeans' },
+          { name: '36', image: 'https://placehold.co/600x400?text=Jeans' },
+        ],
+      },
     },
   ];
 

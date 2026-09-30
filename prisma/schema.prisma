@@ -228,9 +228,10 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // variants — jsonb, not entities
-  colors    Json?   // [{ name, hex, image, sizes: [] }]
-  sizes     String[]
+  // variants — jsonb tree, not entities.
+  // { axes: [{ key, label }], options: [{ name, image, hex?, children? }] }
+  // axes length 1 (e.g. flavor) or 2 (e.g. color → size). Each option has an image.
+  variants  Json?
   packaging Json?   // { onlyPackage, unitsPerPackage, label }
   discount  Json?   // { percent, originalPrice }
   offer     String?
