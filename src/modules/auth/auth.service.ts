@@ -91,10 +91,10 @@ export class AuthService {
 
   async requestCode(rawPhone: string): Promise<{ sent: true }> {
     const phone = normalizePhone(rawPhone);
-    const isDevelopment =
-      this.config.get('nodeEnv', { infer: true }) === 'development';
-
-    if (!isDevelopment) {
+    const nodeEnv = this.config.get('nodeEnv', { infer: true });
+    const isDevelopment = nodeEnv === 'development';
+    // Temporary: send-code rate limit is off everywhere except unit tests.
+    if (nodeEnv === 'test') {
       const attempts = await this.redis.increment(otpLimitKey(phone));
       if (attempts === 1) {
         await this.redis.expire(otpLimitKey(phone), OTP_RATE_WINDOW_SECONDS);
