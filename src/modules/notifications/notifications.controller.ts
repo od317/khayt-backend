@@ -30,7 +30,7 @@ export class NotificationsController {
   @HttpCode(HttpStatus.OK)
   markAllRead(
     @RequireUser() user: AuthenticatedUser,
-  ): Promise<{ updated: number }> {
+  ): Promise<{ updated: boolean }> {
     return this.notifications.markAllRead(user);
   }
 

@@ -166,13 +166,13 @@ export class NotificationsService {
     return { notification: toNotificationResponse(updated) };
   }
 
-  async markAllRead(actor: AuthenticatedUser): Promise<{ updated: number }> {
+  async markAllRead(actor: AuthenticatedUser): Promise<{ updated: boolean }> {
     const result = await this.prisma.notification.updateMany({
       where: { userId: actor.id, read: false },
       data: { read: true },
     });
 
-    return { updated: result.count };
+    return { updated: result.count > 0 };
   }
 
   private async publishNotification(notification: Notification): Promise<void> {

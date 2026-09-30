@@ -183,11 +183,19 @@ describe('NotificationsService', () => {
 
       const result = await service.markAllRead(actor);
 
-      expect(result.updated).toBe(3);
+      expect(result.updated).toBe(true);
       expect(prisma.notification.updateMany).toHaveBeenCalledWith({
         where: { userId: actor.id, read: false },
         data: { read: true },
       });
+    });
+
+    it('returns false when nothing was unread', async () => {
+      prisma.notification.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await service.markAllRead(actor);
+
+      expect(result.updated).toBe(false);
     });
   });
 });

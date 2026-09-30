@@ -653,7 +653,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '200': ok({ ...paginated(sampleNotification), unreadCount: 1 }),
   },
   'patch /notifications/read-all': {
-    '200': ok({ updated: 1 }),
+    '200': ok({ updated: true }),
   },
   'patch /notifications/{id}/read': {
     '200': ok({ notification: { ...sampleNotification, read: true } }),

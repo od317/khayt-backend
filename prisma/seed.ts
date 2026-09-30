@@ -12,6 +12,7 @@ import {
   BusinessType,
   CategoryApplies,
   MediaType,
+  NotificationType,
   PostType,
   PrismaClient,
   UserRole,
@@ -1137,6 +1138,140 @@ async function main(): Promise<void> {
     });
   }
   console.log(`  comments: ${comments.length}`);
+
+  // ------------------------------------------------------------
+  // Notifications — 15 per seeded user
+  // ------------------------------------------------------------
+  const notificationUserIds = users.map((u) => u.id);
+  if (superEmail) {
+    const superAdmin = await prisma.user.findUnique({
+      where: { email: superEmail },
+      select: { id: true },
+    });
+    if (superAdmin) {
+      notificationUserIds.push(superAdmin.id);
+    }
+  }
+
+  const notificationTemplates = [
+    {
+      type: NotificationType.order_placed,
+      title: 'طلب جديد',
+      body: 'طلب جديد ORD-1001 من متجر الأزياء',
+      linkTo: '/orders',
+    },
+    {
+      type: NotificationType.order_status,
+      title: 'طلبك في الطريق',
+      body: 'طلبك ORD-1002 في الطريق إليك',
+      linkTo: '/orders',
+    },
+    {
+      type: NotificationType.order_delivered,
+      title: 'تم التسليم',
+      body: 'تم تسليم طلبك ORD-1003',
+      linkTo: '/orders',
+    },
+    {
+      type: NotificationType.order_cancelled,
+      title: 'تم إلغاء الطلب',
+      body: 'تم إلغاء طلب ORD-1004',
+      linkTo: '/orders',
+    },
+    {
+      type: NotificationType.new_comment,
+      title: 'تعليق جديد',
+      body: 'متجر الأزياء علّق على منشورك',
+      linkTo: '/posts/post-job-offer-1',
+    },
+    {
+      type: NotificationType.new_like,
+      title: 'إعجاب جديد',
+      body: 'أحمد الخياط أعجب بمنشورك',
+      linkTo: '/posts/post-product-offer-1',
+    },
+    {
+      type: NotificationType.receiving_confirmed,
+      title: 'تم استلام شحنتك',
+      body: 'تم استلام RCV-1001 بقيمة 250000 ل.س',
+      linkTo: '/supply',
+    },
+    {
+      type: NotificationType.order_placed,
+      title: 'طلب جديد',
+      body: 'طلب جديد ORD-1005 من متجر الأزياء',
+      linkTo: '/orders',
+    },
+    {
+      type: NotificationType.order_status,
+      title: 'جاري التجهيز',
+      body: 'طلبك ORD-1006 قيد التجهيز',
+      linkTo: '/orders',
+    },
+    {
+      type: NotificationType.order_delivered,
+      title: 'تم التسليم',
+      body: 'تم تسليم طلبك ORD-1007',
+      linkTo: '/orders',
+    },
+    {
+      type: NotificationType.new_comment,
+      title: 'تعليق جديد',
+      body: 'معمل النسيج الدمشقي علّق على منشورك',
+      linkTo: '/posts/post-service-offer-1',
+    },
+    {
+      type: NotificationType.new_like,
+      title: 'إعجاب جديد',
+      body: '3 أشخاص أعجبوا بمنشورك',
+      linkTo: '/posts/post-job-seek-1',
+    },
+    {
+      type: NotificationType.receiving_confirmed,
+      title: 'تم استلام شحنتك',
+      body: 'تم استلام RCV-1002 بقيمة 80000 ل.س',
+      linkTo: '/supply',
+    },
+    {
+      type: NotificationType.order_cancelled,
+      title: 'تم إلغاء الطلب',
+      body: 'تم إلغاء طلب ORD-1008',
+      linkTo: '/orders',
+    },
+    {
+      type: NotificationType.order_status,
+      title: 'طلبك في الطريق',
+      body: 'طلبك ORD-1009 في الطريق إليك',
+      linkTo: '/orders',
+    },
+  ];
+
+  let notificationCount = 0;
+  for (const userId of notificationUserIds) {
+    for (let i = 0; i < notificationTemplates.length; i++) {
+      const template = notificationTemplates[i]!;
+      const id = `notif-${userId}-${String(i + 1).padStart(2, '0')}`;
+      const data = {
+        userId,
+        actorId: i % 2 === 0 ? 'user-store' : 'user-employee',
+        type: template.type,
+        title: template.title,
+        body: template.body,
+        linkTo: template.linkTo,
+        read: i < 5,
+        createdAt: hoursAgo(i + 1),
+      };
+      await prisma.notification.upsert({
+        where: { id },
+        create: { id, ...data },
+        update: data,
+      });
+      notificationCount += 1;
+    }
+  }
+  console.log(
+    `  notifications: ${notificationCount} (${notificationTemplates.length} each for ${notificationUserIds.length} users)`,
+  );
 
   console.log('Done.');
 }
