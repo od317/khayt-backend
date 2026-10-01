@@ -274,6 +274,17 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
           'Location does not exist or is inactive',
         ),
       },
+      delivery_location: {
+        summary: 'Store drop-off pin is incomplete',
+        value: validationFailed(
+          {
+            deliveryAddress: 'required',
+            deliveryLat: 'required',
+            deliveryLng: 'required',
+          },
+          'Map pin and address are required together',
+        ),
+      },
     }),
   },
 
@@ -615,6 +626,12 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
 
   'get /orders': {
     '200': ok(paginated(sampleOrderListItem)),
+    '401': errors('Unauthorized', {
+      unauthorized: {
+        summary: 'Missing or expired access token',
+        value: ERRORS.unauthorized,
+      },
+    }),
   },
   'get /orders/{id}': {
     '200': ok(sampleOrderDetail),
@@ -629,13 +646,59 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   'post /orders': {
     '201': created(sampleOrderDetail),
     '400': errors('Validation failed', {
+      first_order_location: {
+        summary: 'First order needs a map pin and address',
+        value: validationFailed(
+          {
+            address: 'required',
+            lat: 'required',
+            lng: 'required',
+          },
+          'Pick your delivery location on the map for the first order',
+        ),
+      },
+      map_pin_incomplete: {
+        summary: 'Address, lat, and lng must be sent together',
+        value: validationFailed(
+          {
+            address: 'required',
+            lat: 'required',
+            lng: 'required',
+          },
+          'Map pin and address are required together',
+        ),
+      },
       not_in_warehouse: {
         summary: 'Product is not in the warehouse',
-        value: errorBody(400, 'not_in_warehouse', 'Product is not in the warehouse'),
+        value: errorBody(
+          400,
+          'not_in_warehouse',
+          'Product is not available for ordering',
+          { productId: '' },
+        ),
       },
+    }),
+    '403': errors('Forbidden', {
+      forbidden: {
+        summary: 'Only stores can place orders',
+        value: errorBody(403, 'forbidden', 'Only stores can place orders'),
+      },
+    }),
+    '404': errors('Not found', {
+      not_found: {
+        summary: 'Unknown product',
+        value: errorBody(404, 'not_found', 'Product not found'),
+      },
+    }),
+    '409': errors('Conflict', {
       insufficient_stock: {
         summary: 'Not enough remaining stock',
-        value: errorBody(400, 'insufficient_stock', 'Insufficient stock'),
+        value: errorBody(
+          409,
+          'insufficient_stock',
+          'Not enough stock available',
+          { productId: '', available: 0 },
+        ),
       },
     }),
   },
@@ -833,6 +896,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
           id: '',
           number: '',
           status: 'review',
+          statusColor: '#F59E0B',
           storeName: '',
           pieces: 0,
           total: 0,

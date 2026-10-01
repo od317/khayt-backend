@@ -125,6 +125,7 @@ describe('OrdersService', () => {
   let prisma: PrismaMock;
   let redis: RedisMock;
   let service: OrdersService;
+  let notify: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     prisma = {
@@ -177,8 +178,9 @@ describe('OrdersService', () => {
       return undefined;
     });
 
+    notify = vi.fn().mockResolvedValue(undefined);
     const notifications = {
-      notify: vi.fn().mockResolvedValue(undefined),
+      notify,
       notifyLike: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -588,6 +590,8 @@ describe('OrdersService', () => {
       });
 
       expect(result.order.status).toBe(OrderStatus.in_transit);
+      expect(result.order.statusColor).toBe('#8B5CF6');
+      expect(notify).not.toHaveBeenCalled();
     });
 
     it('allows ready → delivered for inventory', async () => {

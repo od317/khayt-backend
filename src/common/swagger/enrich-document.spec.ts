@@ -60,6 +60,22 @@ describe('enrichOpenApiDocument', () => {
     expect(op.responses['200']?.content?.['application/json']?.examples.success).toBeTruthy();
   });
 
+  it('documents first-order map pin errors on POST /orders', () => {
+    expect(
+      OPERATION_DOCS['post /orders']?.['400']?.examples?.first_order_location
+        ?.value,
+    ).toMatchObject({
+      error: 'validation_failed',
+      message: 'Pick your delivery location on the map for the first order',
+      statusCode: 400,
+      fields: {
+        address: 'required',
+        lat: 'required',
+        lng: 'required',
+      },
+    });
+  });
+
   it('covers every documented operation key', () => {
     expect(Object.keys(OPERATION_DOCS).length).toBeGreaterThan(40);
   });

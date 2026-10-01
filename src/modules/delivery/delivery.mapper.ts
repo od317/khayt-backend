@@ -1,4 +1,5 @@
-import { Delivery, DeliveryStatus, User } from '@prisma/client';
+import { Delivery, DeliveryStatus, OrderStatus, User } from '@prisma/client';
+import { orderStatusColor } from '../../common/order-status-labels';
 
 export type DriverResponse = {
   id: string;
@@ -24,6 +25,7 @@ export type OrderSummary = {
   id: string;
   number: string;
   status: string;
+  statusColor: string;
   storeName: string;
   pieces: number;
   total: number;
@@ -66,7 +68,7 @@ export function toDeliveryResponse(
 export function toOrderSummary(order: {
   id: string;
   number: string;
-  status: string;
+  status: OrderStatus;
   pieces: number;
   total: number;
   address: string;
@@ -78,6 +80,7 @@ export function toOrderSummary(order: {
     id: order.id,
     number: order.number,
     status: order.status,
+    statusColor: orderStatusColor(order.status),
     storeName: order.store.name,
     pieces: order.pieces,
     total: order.total,

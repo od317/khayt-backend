@@ -350,18 +350,6 @@ export class DeliveryService {
         select: { id: true, number: true, storeId: true },
       });
 
-      if (dto.status === DeliveryStatus.in_transit) {
-        for (const order of orderRows) {
-          await this.notifications.notify({
-            userId: order.storeId,
-            type: NotificationType.order_status,
-            title: 'طلبك في الطريق',
-            body: `طلبك ${order.number} في الطريق إليك`,
-            linkTo: `/orders/${order.id}`,
-          });
-        }
-      }
-
       if (dto.status === DeliveryStatus.delivered) {
         // Notify each store.
         for (const order of orderRows) {

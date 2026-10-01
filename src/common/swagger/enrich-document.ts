@@ -55,10 +55,11 @@ function defaultErrors(opts: {
   hasRoles: boolean;
   hasBody: boolean;
   hasPathParam: boolean;
+  hasParameters: boolean;
 }): Record<string, StatusDoc> {
   const errors: Record<string, StatusDoc> = {};
 
-  if (opts.hasBody) {
+  if (opts.hasBody || opts.hasParameters) {
     errors['400'] = asExamples('Validation failed', {
       validation_failed: {
         summary: 'Request body or query failed validation',
@@ -132,6 +133,7 @@ export function enrichOpenApiDocument(document: OpenAPIObject): OpenAPIObject {
         );
       const hasBody = Boolean(op.requestBody);
       const hasPathParam = path.includes('{');
+      const hasParameters = Array.isArray(op.parameters) && op.parameters.length > 0;
       const key = operationKey(method, path);
       const documented = OPERATION_DOCS[key] ?? {};
 
@@ -144,6 +146,7 @@ export function enrichOpenApiDocument(document: OpenAPIObject): OpenAPIObject {
         hasRoles,
         hasBody,
         hasPathParam,
+        hasParameters,
       });
 
       const statuses = new Set([

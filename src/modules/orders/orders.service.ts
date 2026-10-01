@@ -17,7 +17,7 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
-import { ORDER_STATUS_LABELS } from '../../common/order-status-labels';
+import { ORDER_STATUS_LABELS, orderStatusColor } from '../../common/order-status-labels';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto, parseActiveQueryFlag } from './dto/query-orders.dto';
@@ -492,7 +492,7 @@ export class OrdersService {
         body: `تم إلغاء الطلب ${updated.number}`,
         linkTo: `/orders/${updated.id}`,
       });
-    } else {
+    } else if (status !== OrderStatus.in_transit) {
       await this.notifications.notify({
         userId: updated.storeId,
         type: NotificationType.order_status,
@@ -665,6 +665,7 @@ export class OrdersService {
     const payload = JSON.stringify({
       id: order.id,
       status: order.status,
+      statusColor: orderStatusColor(order.status),
       pieces: order.pieces,
       updatedAt: order.updatedAt.toISOString(),
     });

@@ -8,11 +8,13 @@ import {
   PostType,
   User,
 } from '@prisma/client';
+import { orderStatusColor } from '../../common/order-status-labels';
 
 export type OrderListItemResponse = {
   id: string;
   number: string;
   status: OrderStatus;
+  statusColor: string;
   total: number;
   pieces: number;
   address: string;
@@ -46,6 +48,7 @@ export type OrderDetailResponse = {
     id: string;
     number: string;
     status: OrderStatus;
+    statusColor: string;
     total: number;
     pieces: number;
     address: string;
@@ -92,6 +95,7 @@ export function toOrderListItem(order: OrderWithStore): OrderListItemResponse {
     id: order.id,
     number: order.number,
     status: order.status,
+    statusColor: orderStatusColor(order.status),
     total: order.total,
     pieces: orderPieces(order),
     address: order.address,
@@ -129,6 +133,7 @@ export function toOrderDetailResponse(
       id: order.id,
       number: order.number,
       status: order.status,
+      statusColor: orderStatusColor(order.status),
       total: order.total,
       pieces: orderPieces({
         pieces: order.pieces,
