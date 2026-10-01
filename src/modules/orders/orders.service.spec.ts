@@ -201,12 +201,21 @@ describe('OrdersService', () => {
   });
 
   describe('list', () => {
-    it('returns every order when active is omitted', async () => {
+    it('hides delivered orders by default', async () => {
       await service.list({ page: 1, limit: 20 }, inventory);
 
       expect(prisma.order.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {},
+          where: {
+            status: {
+              in: [
+                OrderStatus.review,
+                OrderStatus.preparing,
+                OrderStatus.ready,
+                OrderStatus.in_transit,
+              ],
+            },
+          },
         }),
       );
     });

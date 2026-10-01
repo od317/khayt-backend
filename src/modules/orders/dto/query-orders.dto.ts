@@ -1,10 +1,17 @@
 import { OrderStatus } from '@prisma/client';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
-function queryFlag({ value }: { value: unknown }): boolean | undefined {
+export function parseActiveQueryFlag(active: unknown): boolean | undefined {
+  const value = Array.isArray(active) ? active[0] : active;
   if (value === undefined || value === null || value === '') {
     return undefined;
   }
@@ -30,11 +37,11 @@ export class QueryOrdersDto extends PaginationDto {
   @ApiPropertyOptional({
     type: Boolean,
     description:
-      'true = in progress (review, preparing, ready, in_transit). false = completed (delivered, cancelled, failed). Omit to list all.',
+      'true (default) = hide delivered/cancelled/failed. false = only those completed orders.',
     example: true,
   })
   @IsOptional()
-  @Transform(queryFlag)
+  @Transform(({ value }: { value: unknown }) => parseActiveQueryFlag(value))
   @IsBoolean()
   active?: boolean;
 

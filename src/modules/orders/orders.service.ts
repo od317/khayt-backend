@@ -20,7 +20,7 @@ import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
 import { ORDER_STATUS_LABELS } from '../../common/order-status-labels';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { QueryOrdersDto } from './dto/query-orders.dto';
+import { QueryOrdersDto, parseActiveQueryFlag } from './dto/query-orders.dto';
 import { UpdateOrderLineDto } from './dto/update-order-line.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { resolveOrderDropoff } from './order-location';
@@ -74,10 +74,13 @@ export class OrdersService {
 
     if (query.status) {
       where.status = query.status;
-    } else if (query.active === true) {
-      where.status = { in: [...ACTIVE_ORDER_STATUSES] };
-    } else if (query.active === false) {
-      where.status = { in: [...COMPLETED_ORDER_STATUSES] };
+    } else {
+      const active = parseActiveQueryFlag(query.active);
+      if (active === false) {
+        where.status = { in: [...COMPLETED_ORDER_STATUSES] };
+      } else {
+        where.status = { in: [...ACTIVE_ORDER_STATUSES] };
+      }
     }
 
     if (query.q) {
