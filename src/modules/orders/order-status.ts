@@ -14,7 +14,7 @@ type TransitionContext = {
   allLinesPicked: boolean;
 };
 
-const INTERNAL_ROLES: readonly UserRole[] = [
+export const INTERNAL_ROLES: readonly UserRole[] = [
   UserRole.super_admin,
   UserRole.admin,
   UserRole.inventory,

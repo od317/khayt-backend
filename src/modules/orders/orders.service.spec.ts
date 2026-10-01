@@ -322,6 +322,62 @@ describe('OrdersService', () => {
       expect(result.order.number).toBe('ORD-1001');
     });
 
+    it('notifies dashboard staff when an order is placed', async () => {
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: 'prod-1',
+          name: 'قميص',
+          businessId: 'biz-1',
+          price: 5000,
+          inWarehouse: true,
+          deletedAt: null,
+        },
+      ]);
+      prisma.supply.findUnique.mockResolvedValue({ remaining: 10 });
+      prisma.orderLine.aggregate.mockResolvedValue({ _sum: { quantity: 0 } });
+      prisma.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ nextval: 1001n }]);
+      const created = makeOrder({ total: 10000, pieces: 2 });
+      prisma.order.create.mockResolvedValue(created);
+      prisma.order.findUnique.mockResolvedValue(created);
+      prisma.orderLine.findMany.mockResolvedValue([makeLine()]);
+      prisma.user.findMany.mockResolvedValue([
+        { id: 'admin-1' },
+        { id: 'delivery-1' },
+      ]);
+
+      await service.create(store, dto);
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: {
+          role: {
+            in: [
+              UserRole.super_admin,
+              UserRole.admin,
+              UserRole.inventory,
+              UserRole.delivery,
+            ],
+          },
+          suspended: false,
+        },
+        select: { id: true },
+      });
+      expect(notify).toHaveBeenCalledTimes(2);
+      expect(notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'admin-1',
+          type: 'order_placed',
+        }),
+      );
+      expect(notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'delivery-1',
+          type: 'order_placed',
+        }),
+      );
+    });
+
     it('saves the map pin on the first order and on the store', async () => {
       prisma.user.findUnique.mockResolvedValue({
         deliveryAddress: null,

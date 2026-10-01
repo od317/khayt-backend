@@ -29,6 +29,7 @@ import {
   canActorCancel,
   canActorTransition,
   isInternal,
+  INTERNAL_ROLES,
   ACTIVE_ORDER_STATUSES,
   COMPLETED_ORDER_STATUSES,
   nextForcedStatus,
@@ -347,15 +348,18 @@ export class OrdersService {
     // it would send notifications about an order the caller can't read.
     const response = await this.detail(order.id, actor);
 
-    // Notify every inventory user — after the transaction commits.
-    const inventoryUsers = await this.prisma.user.findMany({
-      where: { role: UserRole.inventory, suspended: false },
+    // Notify dashboard staff (admin, inventory, delivery, super_admin).
+    const staff = await this.prisma.user.findMany({
+      where: {
+        role: { in: [...INTERNAL_ROLES] },
+        suspended: false,
+      },
       select: { id: true },
     });
 
-    for (const inv of inventoryUsers) {
+    for (const user of staff) {
       await this.notifications.notify({
-        userId: inv.id,
+        userId: user.id,
         type: NotificationType.order_placed,
         title: 'طلب جديد',
         body: `طلب جديد ${order.number} من ${order.store.name}`,
