@@ -29,6 +29,7 @@ import {
   canActorTransition,
   isInternal,
   ACTIVE_ORDER_STATUSES,
+  COMPLETED_ORDER_STATUSES,
   nextForcedStatus,
 } from './order-status';
 import {
@@ -72,8 +73,10 @@ export class OrdersService {
 
     if (query.status) {
       where.status = query.status;
-    } else if (query.active) {
+    } else if (query.active === true) {
       where.status = { in: [...ACTIVE_ORDER_STATUSES] };
+    } else if (query.active === false) {
+      where.status = { in: [...COMPLETED_ORDER_STATUSES] };
     }
 
     if (query.q) {

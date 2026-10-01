@@ -33,6 +33,13 @@ export const ACTIVE_ORDER_STATUSES: readonly OrderStatus[] = [
   OrderStatus.in_transit,
 ];
 
+/** Finished orders: opposite of active=true. */
+export const COMPLETED_ORDER_STATUSES: readonly OrderStatus[] = [
+  OrderStatus.delivered,
+  OrderStatus.cancelled,
+  OrderStatus.failed,
+];
+
 /** Happy-path next status for the debug advance button. */
 export function nextForcedStatus(from: OrderStatus): OrderStatus | null {
   switch (from) {

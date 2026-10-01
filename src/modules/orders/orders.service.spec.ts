@@ -219,6 +219,24 @@ describe('OrdersService', () => {
       );
     });
 
+    it('limits to completed orders when active=false', async () => {
+      await service.list({ page: 1, limit: 20, active: false }, inventory);
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: {
+              in: [
+                OrderStatus.delivered,
+                OrderStatus.cancelled,
+                OrderStatus.failed,
+              ],
+            },
+          },
+        }),
+      );
+    });
+
     it('hides completed orders for a store when active=true', async () => {
       await service.list({ page: 1, limit: 20, active: true }, store);
 

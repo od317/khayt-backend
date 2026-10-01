@@ -1,4 +1,5 @@
 import { OrderStatus } from '@prisma/client';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
@@ -21,10 +22,17 @@ function queryFlag({ value }: { value: unknown }): boolean | undefined {
 }
 
 export class QueryOrdersDto extends PaginationDto {
+  @ApiPropertyOptional({ enum: OrderStatus })
   @IsOptional()
   @IsEnum(OrderStatus)
   status?: OrderStatus;
 
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'true = in progress (review, preparing, ready, in_transit). false = completed (delivered, cancelled, failed). Omit to list all.',
+    example: true,
+  })
   @IsOptional()
   @Transform(queryFlag)
   @IsBoolean()

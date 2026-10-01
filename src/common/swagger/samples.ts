@@ -247,6 +247,109 @@ export const sampleTokens = {
   accessTokenExpiresAt: AT,
 };
 
+export const createPostSwaggerExamples = {
+  job_offering: {
+    summary: 'ابحث عن موظف',
+    value: {
+      type: 'job_offering',
+      title: 'مطلوب خياط ماهر',
+      body: 'نبحث عن خياط للعمل في المعمل',
+      location: 'دمشق',
+      categoryIds: ['cat-wazaif'],
+      specialty: 'خياطة',
+      skills: ['خياطة'],
+      experience: '3 سنوات',
+      workType: ['دوام كامل'],
+      salary: 'حسب الاتفاق',
+    },
+  },
+  service_offering: {
+    summary: 'عرض خدمة',
+    value: {
+      type: 'service_offering',
+      title: 'خدمة تطريز',
+      body: 'أقدم تطريز يدوي',
+      location: 'دمشق',
+      categoryIds: ['cat-tatriz', 'cat-khadamat'],
+      specialty: 'تطريز',
+      pricing: 'حسب القطعة',
+    },
+  },
+  product_offering: {
+    summary: 'عرض منتج',
+    value: {
+      type: 'product_offering',
+      title: 'قمصان قطن',
+      body: 'قمصان جاهزة للبيع',
+      location: 'دمشق',
+      categoryIds: ['cat-qumsan'],
+      price: '45000',
+      media: 'image',
+      imageUrls: ['https://placehold.co/600x400'],
+    },
+  },
+  material_offering: {
+    summary: 'عرض مواد ومكنات',
+    value: {
+      type: 'material_offering',
+      title: 'قماش قطن للبيع',
+      body: 'قماش قطن، ماكينة خياطة',
+      location: 'دمشق',
+      categoryIds: ['cat-qumsan'],
+      specialty: 'أقمشة',
+      condition: 'جديدة',
+      price: '2500000',
+    },
+  },
+  reel: {
+    summary: 'ريل',
+    value: {
+      type: 'reel',
+      title: 'تشكيلة صيفية جديدة',
+      body: 'جولة في المشغل',
+      location: 'دمشق',
+      categoryIds: ['cat-qumsan'],
+      videoUrl: 'https://example.com/reel.mp4',
+    },
+  },
+  material_requesting: {
+    summary: 'أبحث عن مواد ومكنات',
+    value: {
+      type: 'material_requesting',
+      title: 'أبحث عن قماش كتان',
+      body: 'قماش كتان، مقص كهربائي',
+      location: 'دمشق',
+      categoryIds: ['cat-bantal'],
+      specialty: 'أقمشة',
+      condition: 'أي حالة',
+    },
+  },
+  job_seeking: {
+    summary: 'أبحث عن عمل',
+    value: {
+      type: 'job_seeking',
+      title: 'خياط يبحث عن عمل',
+      body: 'خبرة 10 سنوات في خياطة القمصان',
+      location: 'دمشق',
+      categoryIds: ['cat-wazaif'],
+      specialty: 'خياطة',
+      workType: ['دوام كامل', 'دوام جزئي'],
+      experience: '10 سنوات',
+    },
+  },
+  service_requesting: {
+    summary: 'أحتاج شخصاً',
+    value: {
+      type: 'service_requesting',
+      title: 'أحتاج خياط',
+      body: 'أبحث عن خياط لإنهاء طلب',
+      location: 'دمشق',
+      categoryIds: ['cat-khadamat'],
+      specialty: 'خياطة',
+    },
+  },
+};
+
 export function paginated<T>(item: T) {
   return { items: [item], total: 1, page: 1, limit: 20 };
 }

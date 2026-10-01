@@ -10,6 +10,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { ApiBody } from '@nestjs/swagger';
 import {
   CurrentUser,
   RequireUser,
@@ -18,6 +19,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import type { AuthenticatedUser } from '../../common/types/auth';
 import { Paginated } from '../../common/utils/pagination';
+import { createPostSwaggerExamples } from '../../common/swagger/samples';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
@@ -48,6 +50,10 @@ export class PostsController {
   }
 
   @Post()
+  @ApiBody({
+    type: CreatePostDto,
+    examples: createPostSwaggerExamples,
+  })
   create(
     @RequireUser() user: AuthenticatedUser,
     @Body() dto: CreatePostDto,
