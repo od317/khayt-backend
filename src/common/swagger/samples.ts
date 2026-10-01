@@ -247,9 +247,16 @@ export const sampleTokens = {
   accessTokenExpiresAt: AT,
 };
 
+const postMultipartHint =
+  'multipart/form-data. Use the `images` file picker (repeat, max 8). Arrays such as categoryIds can be JSON strings. Do not send image URLs.';
+
+const reelMultipartHint =
+  'multipart/form-data. Upload the reel with `video`, and optional photos with `images` (repeat, max 8). Arrays such as categoryIds can be JSON strings.';
+
 export const createPostSwaggerExamples = {
   job_offering: {
     summary: 'ابحث عن موظف',
+    description: postMultipartHint,
     value: {
       type: 'job_offering',
       title: 'مطلوب خياط ماهر',
@@ -265,6 +272,7 @@ export const createPostSwaggerExamples = {
   },
   service_offering: {
     summary: 'عرض خدمة',
+    description: postMultipartHint,
     value: {
       type: 'service_offering',
       title: 'خدمة تطريز',
@@ -277,6 +285,7 @@ export const createPostSwaggerExamples = {
   },
   product_offering: {
     summary: 'عرض منتج',
+    description: postMultipartHint,
     value: {
       type: 'product_offering',
       title: 'قمصان قطن',
@@ -284,12 +293,11 @@ export const createPostSwaggerExamples = {
       location: 'دمشق',
       categoryIds: ['cat-qumsan'],
       price: '45000',
-      media: 'image',
-      imageUrls: ['https://placehold.co/600x400'],
     },
   },
   material_offering: {
     summary: 'عرض مواد ومكنات',
+    description: postMultipartHint,
     value: {
       type: 'material_offering',
       title: 'قماش قطن للبيع',
@@ -303,17 +311,18 @@ export const createPostSwaggerExamples = {
   },
   reel: {
     summary: 'ريل',
+    description: reelMultipartHint,
     value: {
       type: 'reel',
       title: 'تشكيلة صيفية جديدة',
       body: 'جولة في المشغل',
       location: 'دمشق',
       categoryIds: ['cat-qumsan'],
-      videoUrl: 'https://example.com/reel.mp4',
     },
   },
   material_requesting: {
     summary: 'أبحث عن مواد ومكنات',
+    description: postMultipartHint,
     value: {
       type: 'material_requesting',
       title: 'أبحث عن قماش كتان',
@@ -326,6 +335,7 @@ export const createPostSwaggerExamples = {
   },
   job_seeking: {
     summary: 'أبحث عن عمل',
+    description: postMultipartHint,
     value: {
       type: 'job_seeking',
       title: 'خياط يبحث عن عمل',
@@ -339,6 +349,7 @@ export const createPostSwaggerExamples = {
   },
   service_requesting: {
     summary: 'أحتاج شخصاً',
+    description: postMultipartHint,
     value: {
       type: 'service_requesting',
       title: 'أحتاج خياط',

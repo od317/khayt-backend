@@ -9,8 +9,14 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBody } from '@nestjs/swagger';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path';
+import { diskStorage } from 'multer';
 import {
   CurrentUser,
   RequireUser,
@@ -26,6 +32,36 @@ import { QueryPostsDto } from './dto/query-posts.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { CommentResponse, PostResponse } from './posts.mapper';
 import { PostsService } from './posts.service';
+
+const postFilesStorage = diskStorage({
+  destination: './uploads/posts',
+  filename: (_req, file, cb) => {
+    const ext = extname(file.originalname) || '.jpg';
+    cb(null, `${randomUUID()}${ext}`);
+  },
+});
+
+const PostFilesInterceptor = FileFieldsInterceptor(
+  [
+    { name: 'images', maxCount: 8 },
+    { name: 'video', maxCount: 1 },
+  ],
+  {
+    storage: postFilesStorage,
+    limits: { fileSize: 20 * 1024 * 1024, files: 9 },
+  },
+);
+
+function flattenPostFiles(
+  grouped:
+    | {
+        images?: Express.Multer.File[];
+        video?: Express.Multer.File[];
+      }
+    | undefined,
+): Express.Multer.File[] {
+  return [...(grouped?.images ?? []), ...(grouped?.video ?? [])];
+}
 
 @Controller('posts')
 export class PostsController {
@@ -50,24 +86,45 @@ export class PostsController {
   }
 
   @Post()
+  @ApiConsumes('multipart/form-data')
   @ApiBody({
+    description:
+      'multipart/form-data. Attach photos with `images` (repeat, max 8). Reels also accept `video`.',
     type: CreatePostDto,
     examples: createPostSwaggerExamples,
   })
+  @UseInterceptors(PostFilesInterceptor)
   create(
     @RequireUser() user: AuthenticatedUser,
     @Body() dto: CreatePostDto,
+    @UploadedFiles()
+    files?: {
+      images?: Express.Multer.File[];
+      video?: Express.Multer.File[];
+    },
   ): Promise<{ post: PostResponse }> {
-    return this.posts.create(user, dto);
+    return this.posts.create(user, dto, flattenPostFiles(files));
   }
 
   @Patch(':id')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description:
+      'multipart/form-data. Replace photos with `images` (repeat, max 8) or the reel with `video`.',
+    type: UpdatePostDto,
+  })
+  @UseInterceptors(PostFilesInterceptor)
   update(
     @Param('id') id: string,
     @RequireUser() user: AuthenticatedUser,
     @Body() dto: UpdatePostDto,
+    @UploadedFiles()
+    files?: {
+      images?: Express.Multer.File[];
+      video?: Express.Multer.File[];
+    },
   ): Promise<{ post: PostResponse }> {
-    return this.posts.update(id, user, dto);
+    return this.posts.update(id, user, dto, flattenPostFiles(files));
   }
 
   @Delete(':id')

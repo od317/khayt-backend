@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MediaType, PostType } from '@prisma/client';
+import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -11,6 +12,20 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+
+export function parseJsonIfString({ value }: { value: unknown }): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (trimmed === '') {
+    return undefined;
+  }
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    return JSON.parse(trimmed) as unknown;
+  }
+  return value;
+}
 
 export class CreatePostDto {
   @ApiProperty({ enum: PostType, example: PostType.job_seeking })
@@ -40,20 +55,48 @@ export class CreatePostDto {
   @IsEnum(MediaType)
   media?: MediaType;
 
-  @ApiPropertyOptional({ type: [String], example: [''] })
+  @ApiPropertyOptional({
+    type: [String],
+    deprecated: true,
+    description:
+      'Use the images file field instead. Ignored when files are uploaded.',
+  })
   @IsOptional()
+  @Transform(parseJsonIfString)
   @IsArray()
   @ArrayMaxSize(8)
   @IsString({ each: true })
   imageUrls?: string[];
 
-  @ApiPropertyOptional({ example: '' })
+  @ApiPropertyOptional({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Post photos. Repeat this field, up to 8 files.',
+  })
+  @IsOptional()
+  images?: unknown;
+
+  @ApiPropertyOptional({
+    example: '',
+    deprecated: true,
+    description:
+      'Use the video file field instead. Ignored when a video file is uploaded.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   videoUrl?: string;
 
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Video file for a reel (field name: video).',
+  })
+  @IsOptional()
+  video?: unknown;
+
   @ApiProperty({ type: [String], example: [''] })
+  @Transform(parseJsonIfString)
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(20)
@@ -73,12 +116,14 @@ export class CreatePostDto {
 
   @ApiPropertyOptional({ type: [String], example: [''] })
   @IsOptional()
+  @Transform(parseJsonIfString)
   @IsArray()
   @IsString({ each: true })
   skills?: string[];
 
   @ApiPropertyOptional({ type: [String], example: [''] })
   @IsOptional()
+  @Transform(parseJsonIfString)
   @IsArray()
   @IsString({ each: true })
   workType?: string[];

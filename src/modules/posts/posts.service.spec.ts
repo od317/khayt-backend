@@ -210,6 +210,78 @@ describe('PostsService', () => {
       });
     });
 
+    it('stores uploaded images and sets media to image', async () => {
+      prisma.post.create.mockResolvedValue(
+        makePost({
+          media: MediaType.image,
+          imageUrls: ['/uploads/posts/a.jpg'],
+        }),
+      );
+
+      await service.create(
+        actor,
+        {
+          type: PostType.job_offering,
+          title: 'مطلوب خياط',
+          body: 'نبحث عن خياط ماهر',
+          location: 'دمشق',
+          specialty: 'خياطة',
+          workType: ['دوام كامل'],
+          categoryIds: ['cat-1'],
+        },
+        [
+          {
+            fieldname: 'images',
+            filename: 'a.jpg',
+          } as Express.Multer.File,
+        ],
+      );
+
+      expect(prisma.post.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          media: MediaType.image,
+          imageUrls: ['/uploads/posts/a.jpg'],
+        }),
+        include: expect.any(Object),
+      });
+    });
+
+    it('stores an uploaded reel video', async () => {
+      prisma.post.create.mockResolvedValue(
+        makePost({
+          type: PostType.reel,
+          media: MediaType.video,
+          videoUrl: '/uploads/posts/r.mp4',
+        }),
+      );
+
+      await service.create(
+        actor,
+        {
+          type: PostType.reel,
+          title: 'تشكيلة صيفية',
+          body: 'جولة في المشغل',
+          location: 'دمشق',
+          categoryIds: ['cat-1'],
+        },
+        [
+          {
+            fieldname: 'video',
+            filename: 'r.mp4',
+          } as Express.Multer.File,
+        ],
+      );
+
+      expect(prisma.post.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: PostType.reel,
+          media: MediaType.video,
+          videoUrl: '/uploads/posts/r.mp4',
+        }),
+        include: expect.any(Object),
+      });
+    });
+
     it('rejects a post without categories', async () => {
       const error = await service
         .create(actor, {

@@ -33,6 +33,7 @@ import {
   toPostResponse,
 } from './posts.mapper';
 import { POST_TYPE_REQUIRED_FIELDS } from './post-type-rules';
+import { postImagePaths, postVideoPath } from './post-uploads';
 
 type PostWithRelations = Post & {
   author: User & { location: Location | null };
@@ -160,9 +161,24 @@ export class PostsService {
   async create(
     actor: AuthenticatedUser,
     dto: CreatePostDto,
+    files: Express.Multer.File[] = [],
   ): Promise<{ post: PostResponse }> {
-    this.assertTypeRequirements(dto);
-    this.assertMediaRequirements(dto);
+    const uploadedImages = postImagePaths(files);
+    const uploadedVideo = postVideoPath(files);
+    const imageUrls =
+      uploadedImages.length > 0 ? uploadedImages : (dto.imageUrls ?? []);
+    const videoUrl = uploadedVideo ?? dto.videoUrl ?? null;
+    const media =
+      dto.type === PostType.reel
+        ? MediaType.video
+        : uploadedImages.length > 0
+          ? MediaType.image
+          : (dto.media ??
+            (imageUrls.length > 0 ? MediaType.image : MediaType.none));
+
+    const resolved = { ...dto, imageUrls, videoUrl, media };
+    this.assertTypeRequirements(resolved);
+    this.assertMediaRequirements(resolved);
 
     if (dto.businessId) {
       const business = await this.prisma.business.findUnique({
@@ -189,12 +205,9 @@ export class PostsService {
         title: dto.title,
         body: dto.body,
         location: dto.location,
-        media:
-          dto.type === PostType.reel
-            ? MediaType.video
-            : (dto.media ?? MediaType.none),
-        imageUrls: dto.imageUrls ?? [],
-        videoUrl: dto.videoUrl ?? null,
+        media,
+        imageUrls,
+        videoUrl,
         specialty: dto.specialty ?? null,
         skills: dto.skills ?? [],
         workType: dto.workType ?? [],
@@ -224,6 +237,7 @@ export class PostsService {
     id: string,
     actor: AuthenticatedUser,
     dto: UpdatePostDto,
+    files: Express.Multer.File[] = [],
   ): Promise<{ post: PostResponse }> {
     const existing = await this.prisma.post.findFirst({
       where: { id, deletedAt: null },
@@ -246,15 +260,32 @@ export class PostsService {
       await this.assertAssignableCategories(dto.categoryIds);
     }
 
+    const uploadedImages = postImagePaths(files);
+    const uploadedVideo = postVideoPath(files);
+
     const post = await this.prisma.$transaction(
       async (tx): Promise<PostWithRelations> => {
         const data: Prisma.PostUpdateInput = {};
         if (dto.title !== undefined) data.title = dto.title;
         if (dto.body !== undefined) data.body = dto.body;
         if (dto.location !== undefined) data.location = dto.location;
-        if (dto.media !== undefined) data.media = dto.media;
-        if (dto.imageUrls !== undefined) data.imageUrls = dto.imageUrls;
-        if (dto.videoUrl !== undefined) data.videoUrl = dto.videoUrl;
+        if (uploadedImages.length > 0) {
+          data.imageUrls = uploadedImages;
+          if (existing.type !== PostType.reel) {
+            data.media = MediaType.image;
+          }
+        } else if (dto.imageUrls !== undefined) {
+          data.imageUrls = dto.imageUrls;
+        }
+        if (uploadedVideo) {
+          data.videoUrl = uploadedVideo;
+          data.media = MediaType.video;
+        } else if (dto.videoUrl !== undefined) {
+          data.videoUrl = dto.videoUrl;
+        }
+        if (dto.media !== undefined && uploadedImages.length === 0 && !uploadedVideo) {
+          data.media = dto.media;
+        }
         if (dto.specialty !== undefined) data.specialty = dto.specialty;
         if (dto.skills !== undefined) data.skills = dto.skills;
         if (dto.workType !== undefined) data.workType = dto.workType;
