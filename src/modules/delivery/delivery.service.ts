@@ -134,7 +134,14 @@ export class DeliveryService {
 
     const orders = await this.prisma.order.findMany({
       where: { id: { in: uniqueOrderIds } },
-      select: { id: true, number: true, status: true },
+      select: {
+        id: true,
+        number: true,
+        status: true,
+        address: true,
+        lat: true,
+        lng: true,
+      },
     });
 
     const foundIds = new Set(orders.map((o) => o.id));
@@ -178,10 +185,18 @@ export class DeliveryService {
       `;
       const number = `DLV-${nextval.toString()}`;
 
+      const area = Array.from(
+        new Set(
+          orders
+            .map((order) => order.address.trim())
+            .filter((address) => address.length > 0),
+        ),
+      ).join(' · ');
+
       const delivery = await tx.delivery.create({
         data: {
           number,
-          area: dto.area,
+          area: area || '—',
           status: DeliveryStatus.unassigned,
           orders: {
             create: uniqueOrderIds.map((orderId) => ({ orderId })),

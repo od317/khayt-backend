@@ -27,6 +27,17 @@ describe('CreateOrderDto', () => {
     ).toEqual([]);
   });
 
+  it('accepts a drop-off pin', async () => {
+    expect(
+      await run({
+        lines: [{ productId: 'prod-1', quantity: 2 }],
+        address: 'شارع بغداد',
+        lat: 33.51,
+        lng: 36.27,
+      }),
+    ).toEqual([]);
+  });
+
   it('rejects an empty lines array', async () => {
     expect((await run({ lines: [] })).length).toBeGreaterThan(0);
   });

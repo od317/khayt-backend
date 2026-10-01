@@ -117,6 +117,13 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  // Store drop-off for warehouse orders. Set on the first order (map pin
+  // + address string) and reused for later orders. Delivery staff last
+  // reported position uses the same columns.
+  deliveryAddress String?
+  deliveryLat     Float?
+  deliveryLng     Float?
+
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id])
 
@@ -416,6 +423,9 @@ model Order {
   status    OrderStatus @default(review)
   total     Int         @default(0)
   pieces    Int         @default(0)
+  address   String      @default("")
+  lat       Float?
+  lng       Float?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 

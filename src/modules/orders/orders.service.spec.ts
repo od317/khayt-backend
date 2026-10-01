@@ -38,6 +38,9 @@ const makeOrder = (overrides: Record<string, unknown> = {}) => ({
   status: OrderStatus.review,
   total: 0,
   pieces: 0,
+  address: 'شارع بغداد',
+  lat: 33.5138,
+  lng: 36.2765,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   store: {
@@ -100,6 +103,8 @@ type PrismaMock = {
   };
   user: {
     findMany: ReturnType<typeof vi.fn>;
+    findUnique: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
   };
   $transaction: ReturnType<typeof vi.fn>;
   $queryRaw: ReturnType<typeof vi.fn>;
@@ -151,6 +156,12 @@ describe('OrdersService', () => {
       },
       user: {
         findMany: vi.fn().mockResolvedValue([]),
+        findUnique: vi.fn().mockResolvedValue({
+          deliveryAddress: 'شارع بغداد',
+          deliveryLat: 33.5138,
+          deliveryLng: 36.2765,
+        }),
+        update: vi.fn().mockResolvedValue({}),
       },
       $transaction: vi.fn(),
       $queryRaw: vi.fn().mockResolvedValue([{ nextval: 1001n }]),
@@ -298,6 +309,83 @@ describe('OrdersService', () => {
         }),
       );
       expect(result.order.number).toBe('ORD-1001');
+    });
+
+    it('saves the map pin on the first order and on the store', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        deliveryAddress: null,
+        deliveryLat: null,
+        deliveryLng: null,
+      });
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: 'prod-1',
+          name: 'قميص',
+          businessId: 'biz-1',
+          price: 5000,
+          inWarehouse: true,
+          deletedAt: null,
+        },
+      ]);
+      prisma.supply.findUnique.mockResolvedValue({ remaining: 10 });
+      prisma.orderLine.aggregate.mockResolvedValue({ _sum: { quantity: 0 } });
+      prisma.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ nextval: 1001n }]);
+      prisma.order.create.mockResolvedValue(
+        makeOrder({ total: 10000, pieces: 2 }),
+      );
+      prisma.order.findUnique.mockResolvedValue(
+        makeOrder({ total: 10000, pieces: 2 }),
+      );
+      prisma.orderLine.findMany.mockResolvedValue([makeLine()]);
+
+      await service.create(store, {
+        ...dto,
+        address: 'شارع بغداد، بناء 12',
+        lat: 33.51,
+        lng: 36.27,
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            deliveryAddress: 'شارع بغداد، بناء 12',
+            deliveryLat: 33.51,
+            deliveryLng: 36.27,
+          },
+        }),
+      );
+      expect(prisma.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            address: 'شارع بغداد، بناء 12',
+            lat: 33.51,
+            lng: 36.27,
+          }),
+        }),
+      );
+    });
+
+    it('rejects the first order without a map pin', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        deliveryAddress: null,
+        deliveryLat: null,
+        deliveryLng: null,
+      });
+
+      const error = await service.create(store, dto).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+        fields: {
+          address: 'required',
+          lat: 'required',
+          lng: 'required',
+        },
+      });
+      expect(prisma.order.create).not.toHaveBeenCalled();
     });
 
     it('rejects a product not in the warehouse', async () => {

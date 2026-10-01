@@ -14,6 +14,9 @@ export type UserResponse = {
   phone: string | null;
   email: string | null;
   location: string | null;
+  deliveryAddress: string | null;
+  deliveryLat: number | null;
+  deliveryLng: number | null;
   bio: string | null;
   avatarUrl: string | null;
   availableForWork: boolean;
@@ -31,6 +34,9 @@ export function toUserResponse(
     phone: user.phone,
     email: user.email,
     location: user.location?.name ?? null,
+    deliveryAddress: user.deliveryAddress,
+    deliveryLat: user.deliveryLat,
+    deliveryLng: user.deliveryLng,
     bio: user.bio,
     avatarUrl: user.avatarUrl,
     availableForWork: user.availableForWork,

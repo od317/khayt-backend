@@ -15,6 +15,9 @@ export type OrderListItemResponse = {
   status: OrderStatus;
   total: number;
   pieces: number;
+  address: string;
+  lat: number | null;
+  lng: number | null;
   createdAt: string;
   updatedAt: string;
   store: { id: string; name: string };
@@ -45,6 +48,9 @@ export type OrderDetailResponse = {
     status: OrderStatus;
     total: number;
     pieces: number;
+    address: string;
+    lat: number | null;
+    lng: number | null;
     createdAt: string;
     updatedAt: string;
     canCancel: boolean;
@@ -88,6 +94,9 @@ export function toOrderListItem(order: OrderWithStore): OrderListItemResponse {
     status: order.status,
     total: order.total,
     pieces: orderPieces(order),
+    address: order.address,
+    lat: order.lat,
+    lng: order.lng,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     store: { id: order.store.id, name: order.store.name },
@@ -125,6 +134,9 @@ export function toOrderDetailResponse(
         pieces: order.pieces,
         lines: lines.map((line) => ({ quantity: line.quantity })),
       }),
+      address: order.address,
+      lat: order.lat,
+      lng: order.lng,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
       canCancel: flags.canCancel,

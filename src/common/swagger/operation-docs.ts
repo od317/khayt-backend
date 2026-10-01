@@ -836,6 +836,9 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
           storeName: '',
           pieces: 0,
           total: 0,
+          address: '',
+          lat: 33.5138,
+          lng: 36.2765,
         },
       ],
       driver: null,
@@ -871,7 +874,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     }),
   },
   'get /drivers': {
-    '200': ok({ items: [{ id: '', name: '', phone: null }] }),
+    '200': ok({ items: [{ id: '', name: '', phone: null, lat: null, lng: null }] }),
   },
 
   'post /admin/employees': {

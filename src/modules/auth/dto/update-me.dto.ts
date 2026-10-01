@@ -2,12 +2,15 @@
 // POST /auth/onboarding today; admins will need a way to change it later.
 
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -43,4 +46,31 @@ export class UpdateMeDto {
   @IsOptional()
   @IsString()
   locationId?: string;
+
+  @ApiPropertyOptional({
+    example: 'شارع بغداد، بناء 12',
+    description:
+      'Drop-off address for stores. Delivery staff may omit this and send only lat/lng.',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(500)
+  deliveryAddress?: string;
+
+  @ApiPropertyOptional({ example: 33.5138 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  deliveryLat?: number;
+
+  @ApiPropertyOptional({ example: 36.2765 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  deliveryLng?: number;
 }

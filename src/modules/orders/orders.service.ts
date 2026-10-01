@@ -23,6 +23,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
 import { UpdateOrderLineDto } from './dto/update-order-line.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { resolveOrderDropoff } from './order-location';
 import {
   canActorAdvance,
   canActorCancel,
@@ -184,6 +185,23 @@ export class OrdersService {
     ).sort();
 
     const order = await this.prisma.$transaction(async (tx) => {
+      const storeUser = await tx.user.findUnique({
+        where: { id: actor.id },
+        select: {
+          deliveryAddress: true,
+          deliveryLat: true,
+          deliveryLng: true,
+        },
+      });
+      if (!storeUser) {
+        throw new NotFoundException({
+          error: 'not_found',
+          message: 'User not found',
+        });
+      }
+
+      const { dropoff, persist } = resolveOrderDropoff(dto, storeUser);
+
       const products = await tx.product.findMany({
         where: { id: { in: productIds }, deletedAt: null },
       });
@@ -268,6 +286,17 @@ export class OrdersService {
       `;
       const number = `ORD-${nextval.toString()}`;
 
+      if (persist) {
+        await tx.user.update({
+          where: { id: actor.id },
+          data: {
+            deliveryAddress: dropoff.address,
+            deliveryLat: dropoff.lat,
+            deliveryLng: dropoff.lng,
+          },
+        });
+      }
+
       let total = 0;
       let pieces = 0;
       for (const line of dto.lines) {
@@ -284,6 +313,9 @@ export class OrdersService {
           status: OrderStatus.review,
           total,
           pieces,
+          address: dropoff.address,
+          lat: dropoff.lat,
+          lng: dropoff.lng,
           lines: {
             create: dto.lines.map((line) => {
               const product = productById.get(line.productId);

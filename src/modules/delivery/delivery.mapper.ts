@@ -4,6 +4,8 @@ export type DriverResponse = {
   id: string;
   name: string;
   phone: string | null;
+  lat: number | null;
+  lng: number | null;
 };
 
 export type DeliveryResponse = {
@@ -25,6 +27,9 @@ export type OrderSummary = {
   storeName: string;
   pieces: number;
   total: number;
+  address: string;
+  lat: number | null;
+  lng: number | null;
 };
 
 export function toDriverResponse(user: User): DriverResponse {
@@ -32,6 +37,8 @@ export function toDriverResponse(user: User): DriverResponse {
     id: user.id,
     name: user.name,
     phone: user.phone,
+    lat: user.deliveryLat,
+    lng: user.deliveryLng,
   };
 }
 
@@ -62,6 +69,9 @@ export function toOrderSummary(order: {
   status: string;
   pieces: number;
   total: number;
+  address: string;
+  lat: number | null;
+  lng: number | null;
   store: { name: string };
 }): OrderSummary {
   return {
@@ -71,5 +81,8 @@ export function toOrderSummary(order: {
     storeName: order.store.name,
     pieces: order.pieces,
     total: order.total,
+    address: order.address,
+    lat: order.lat,
+    lng: order.lng,
   };
 }

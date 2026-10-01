@@ -3,9 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
-  IsNotEmpty,
   IsString,
-  MaxLength,
 } from 'class-validator';
 
 export class CreateDeliveryDto {
@@ -15,10 +13,4 @@ export class CreateDeliveryDto {
   @ArrayMaxSize(100)
   @IsString({ each: true })
   orderIds!: string[];
-
-  @ApiProperty({ example: '' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(200)
-  area!: string;
 }

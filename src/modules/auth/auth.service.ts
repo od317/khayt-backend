@@ -368,6 +368,60 @@ export class AuthService {
       data.location = { connect: { id: dto.locationId } };
     }
 
+    if (
+      dto.deliveryAddress !== undefined ||
+      dto.deliveryLat !== undefined ||
+      dto.deliveryLng !== undefined
+    ) {
+      if (actor.role === UserRole.delivery) {
+        if (dto.deliveryLat === undefined || dto.deliveryLng === undefined) {
+          throw new HttpException(
+            {
+              error: 'validation_failed',
+              message: 'Delivery staff must send deliveryLat and deliveryLng',
+              fields: {
+                deliveryLat:
+                  dto.deliveryLat === undefined ? 'required' : undefined,
+                deliveryLng:
+                  dto.deliveryLng === undefined ? 'required' : undefined,
+              },
+            },
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        data.deliveryLat = dto.deliveryLat;
+        data.deliveryLng = dto.deliveryLng;
+        if (dto.deliveryAddress !== undefined) {
+          data.deliveryAddress = dto.deliveryAddress;
+        }
+      } else {
+        const address = dto.deliveryAddress?.trim() ?? '';
+        if (
+          address.length < 3 ||
+          dto.deliveryLat === undefined ||
+          dto.deliveryLng === undefined
+        ) {
+          throw new HttpException(
+            {
+              error: 'validation_failed',
+              message: 'Map pin and address are required together',
+              fields: {
+                deliveryAddress: address.length < 3 ? 'required' : undefined,
+                deliveryLat:
+                  dto.deliveryLat === undefined ? 'required' : undefined,
+                deliveryLng:
+                  dto.deliveryLng === undefined ? 'required' : undefined,
+              },
+            },
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        data.deliveryAddress = address;
+        data.deliveryLat = dto.deliveryLat;
+        data.deliveryLng = dto.deliveryLng;
+      }
+    }
+
     const user = await this.prisma.user.update({
       where: { id: actor.id },
       data,
