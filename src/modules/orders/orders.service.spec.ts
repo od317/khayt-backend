@@ -218,6 +218,26 @@ describe('OrdersService', () => {
         }),
       );
     });
+
+    it('hides completed orders for a store when active=true', async () => {
+      await service.list({ page: 1, limit: 20, active: true }, store);
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            storeId: store.id,
+            status: {
+              in: [
+                OrderStatus.review,
+                OrderStatus.preparing,
+                OrderStatus.ready,
+                OrderStatus.in_transit,
+              ],
+            },
+          },
+        }),
+      );
+    });
   });
 
   describe('create', () => {
@@ -401,6 +421,40 @@ describe('OrdersService', () => {
       });
 
       expect(result.order.status).toBe(OrderStatus.cancelled);
+    });
+
+    it('allows preparing → cancelled for the store that owns the order', async () => {
+      const existing = makeOrder({ status: OrderStatus.preparing });
+      prisma.order.findUnique
+        .mockResolvedValueOnce(existing)
+        .mockResolvedValueOnce({ ...existing, status: OrderStatus.cancelled });
+      prisma.orderLine.findMany.mockResolvedValue([]);
+      prisma.order.update.mockResolvedValue({
+        ...existing,
+        status: OrderStatus.cancelled,
+      });
+
+      const result = await service.updateStatus('order-1', store, {
+        status: OrderStatus.cancelled,
+      });
+
+      expect(result.order.status).toBe(OrderStatus.cancelled);
+    });
+
+    it('rejects cancellation by a different store', async () => {
+      prisma.order.findUnique.mockResolvedValue(
+        makeOrder({ status: OrderStatus.review }),
+      );
+      prisma.orderLine.findMany.mockResolvedValue([]);
+
+      const error = await service
+        .updateStatus('order-1', otherStore, { status: OrderStatus.cancelled })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'invalid_transition',
+      });
     });
 
     it('allows ready → in_transit for inventory', async () => {

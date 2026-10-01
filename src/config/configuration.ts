@@ -68,7 +68,7 @@ export default (): AppConfig => ({
   redisUrl: required('REDIS_URL'),
   jwt: {
     secret: required('JWT_SECRET'),
-    accessExpires: process.env.JWT_ACCESS_EXPIRES ?? '30d',
+    accessExpires: process.env.JWT_ACCESS_EXPIRES ?? '7d',
     refreshExpires: process.env.JWT_REFRESH_EXPIRES ?? '30d',
   },
   smtp: {

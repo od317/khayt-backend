@@ -7,10 +7,14 @@ function queryFlag({ value }: { value: unknown }): boolean | undefined {
   if (value === undefined || value === null || value === '') {
     return undefined;
   }
-  if (value === true || value === 'true' || value === '1') {
+  if (value === true || value === false) {
+    return value;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1') {
     return true;
   }
-  if (value === false || value === 'false' || value === '0') {
+  if (normalized === 'false' || normalized === '0') {
     return false;
   }
   return undefined;

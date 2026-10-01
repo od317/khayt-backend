@@ -78,8 +78,8 @@ export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
 
 /**
  * Who can perform a given transition.
- * Cancellation has its own rules: the store can cancel only from review;
- * internal staff can cancel from review or preparing.
+ * The store that placed the order can cancel until it is in transit.
+ * Internal staff can cancel from review, preparing, or ready.
  */
 export function canActorTransition(
   ctx: TransitionContext,
@@ -94,7 +94,12 @@ export function canActorTransition(
 
   if (to === OrderStatus.cancelled) {
     if (actor.role === UserRole.store) {
-      return actor.id === order.storeId && from === OrderStatus.review;
+      return (
+        actor.id === order.storeId &&
+        (from === OrderStatus.review ||
+          from === OrderStatus.preparing ||
+          from === OrderStatus.ready)
+      );
     }
     if (isInternal(actor.role)) {
       return (
