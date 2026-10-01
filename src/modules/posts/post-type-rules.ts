@@ -13,4 +13,5 @@ export const POST_TYPE_REQUIRED_FIELDS: Record<PostType, readonly string[]> = {
   product_offering: ['price'],
   material_offering: ['specialty', 'condition'],
   material_requesting: ['specialty'],
+  reel: [],
 };

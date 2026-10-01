@@ -67,6 +67,7 @@ const makePost = (overrides: Record<string, unknown> = {}) => ({
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   author: makeAuthor(),
   business: null,
+  categories: [],
   ...overrides,
 });
 
@@ -79,7 +80,7 @@ type PrismaMock = {
     count: ReturnType<typeof vi.fn>;
   };
   business: { findUnique: ReturnType<typeof vi.fn> };
-  category: { count: ReturnType<typeof vi.fn> };
+  category: { findMany: ReturnType<typeof vi.fn> };
   like: {
     upsert: ReturnType<typeof vi.fn>;
     deleteMany: ReturnType<typeof vi.fn>;
@@ -124,7 +125,10 @@ describe('PostsService', () => {
         count: vi.fn().mockResolvedValue(0),
       },
       business: { findUnique: vi.fn() },
-      category: { count: vi.fn().mockResolvedValue(0) },
+      category: { findMany: vi.fn().mockImplementation(async (args: { where?: { id?: { in?: string[] } } }) => {
+        const ids = args.where?.id?.in ?? [];
+        return ids.map((id) => ({ id, appliesTo: 'both' }));
+      }) },
       like: {
         upsert: vi.fn().mockResolvedValue(undefined),
         deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
@@ -186,6 +190,7 @@ describe('PostsService', () => {
         location: 'دمشق',
         specialty: 'خياطة',
         workType: ['دوام كامل'],
+        categoryIds: ['cat-1'],
       });
 
       expect(result.post.id).toBe('post-1');
@@ -194,11 +199,80 @@ describe('PostsService', () => {
           authorId: actor.id,
           type: PostType.job_offering,
           specialty: 'خياطة',
+          categories: {
+            create: [{ categoryId: 'cat-1' }],
+          },
         }),
-        include: {
+        include: expect.objectContaining({
           author: { include: { location: true } },
           business: true,
-        },
+        }),
+      });
+    });
+
+    it('rejects a post without categories', async () => {
+      const error = await service
+        .create(actor, {
+          type: PostType.job_offering,
+          title: 'مطلوب خياط',
+          body: 'نبحث عن خياط ماهر',
+          location: 'دمشق',
+          specialty: 'خياطة',
+          workType: ['دوام كامل'],
+          categoryIds: [],
+        })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+        fields: { categoryIds: 'required' },
+      });
+      expect(prisma.post.create).not.toHaveBeenCalled();
+    });
+
+    it('creates a reel with video and categories', async () => {
+      prisma.post.create.mockResolvedValue(
+        makePost({
+          type: PostType.reel,
+          media: MediaType.video,
+          videoUrl: '/uploads/reels/a.mp4',
+        }),
+      );
+
+      await service.create(actor, {
+        type: PostType.reel,
+        title: 'تشكيلة صيفية',
+        body: 'جولة في المشغل',
+        location: 'دمشق',
+        videoUrl: '/uploads/reels/a.mp4',
+        categoryIds: ['cat-1', 'cat-2'],
+      });
+
+      expect(prisma.post.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: PostType.reel,
+          media: MediaType.video,
+          videoUrl: '/uploads/reels/a.mp4',
+        }),
+        include: expect.anything(),
+      });
+    });
+
+    it('rejects a reel without videoUrl', async () => {
+      const error = await service
+        .create(actor, {
+          type: PostType.reel,
+          title: 'تشكيلة صيفية',
+          body: 'جولة في المشغل',
+          location: 'دمشق',
+          categoryIds: ['cat-1'],
+        })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        fields: { videoUrl: expect.any(String) },
       });
     });
 
@@ -325,6 +399,7 @@ describe('PostsService', () => {
           specialty: 'خياطة',
           workType: ['دوام كامل'],
           businessId: 'biz-1',
+          categoryIds: ['cat-1'],
         })
         .catch((err: unknown) => err);
 
@@ -375,10 +450,10 @@ describe('PostsService', () => {
       expect(prisma.post.update).toHaveBeenCalledWith({
         where: { id: 'post-1' },
         data: { deletedAt: expect.any(Date) },
-        include: {
+        include: expect.objectContaining({
           author: { include: { location: true } },
           business: true,
-        },
+        }),
       });
       expect(result.deleted).toBe(true);
     });

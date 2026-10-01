@@ -9,9 +9,11 @@ import {
 import {
   Business,
   Location,
+  CategoryApplies,
   MediaType,
   NotificationType,
   Post,
+  PostType,
   Prisma,
   User,
 } from '@prisma/client';
@@ -35,7 +37,18 @@ import { POST_TYPE_REQUIRED_FIELDS } from './post-type-rules';
 type PostWithRelations = Post & {
   author: User & { location: Location | null };
   business: Business | null;
+  categories?: { category: { id: string; name: string; slug: string } }[];
 };
+
+const POST_INCLUDE = {
+  author: { include: { location: true } },
+  business: true,
+  categories: {
+    include: {
+      category: { select: { id: true, name: true, slug: true } },
+    },
+  },
+} as const;
 
 @Injectable()
 export class PostsService {
@@ -101,10 +114,7 @@ export class PostsService {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
-        include: {
-          author: { include: { location: true } },
-          business: true,
-        },
+        include: POST_INCLUDE,
       }),
       this.prisma.post.count({ where }),
     ]);
@@ -119,10 +129,7 @@ export class PostsService {
   ): Promise<{ post: PostResponse }> {
     const post = await this.prisma.post.findFirst({
       where: { id, deletedAt: null },
-      include: {
-        author: { include: { location: true } },
-        business: true,
-      },
+      include: POST_INCLUDE,
     });
 
     if (!post) {
@@ -170,21 +177,9 @@ export class PostsService {
       }
     }
 
-    if (dto.categoryIds && dto.categoryIds.length > 0) {
-      const found = await this.prisma.category.count({
-        where: { id: { in: dto.categoryIds } },
-      });
-      if (found !== dto.categoryIds.length) {
-        throw new HttpException(
-          {
-            error: 'validation_failed',
-            message: 'One or more categories do not exist',
-            fields: { categoryIds: 'contains an unknown id' },
-          },
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-    }
+    await this.assertAssignableCategories(dto.categoryIds);
+
+    const categoryIds = [...new Set(dto.categoryIds)];
 
     const post = await this.prisma.post.create({
       data: {
@@ -194,7 +189,10 @@ export class PostsService {
         title: dto.title,
         body: dto.body,
         location: dto.location,
-        media: dto.media ?? MediaType.none,
+        media:
+          dto.type === PostType.reel
+            ? MediaType.video
+            : (dto.media ?? MediaType.none),
         imageUrls: dto.imageUrls ?? [],
         videoUrl: dto.videoUrl ?? null,
         specialty: dto.specialty ?? null,
@@ -205,17 +203,11 @@ export class PostsService {
         pricing: dto.pricing ?? null,
         condition: dto.condition ?? null,
         price: dto.price ?? null,
-        categories:
-          dto.categoryIds && dto.categoryIds.length > 0
-            ? {
-                create: dto.categoryIds.map((categoryId) => ({ categoryId })),
-              }
-            : undefined,
+        categories: {
+          create: categoryIds.map((categoryId) => ({ categoryId })),
+        },
       },
-      include: {
-        author: { include: { location: true } },
-        business: true,
-      },
+      include: POST_INCLUDE,
     });
 
     const [response] = await this.attachCounts([post], actor);
@@ -250,20 +242,8 @@ export class PostsService {
       });
     }
 
-    if (dto.categoryIds) {
-      const found = await this.prisma.category.count({
-        where: { id: { in: dto.categoryIds } },
-      });
-      if (found !== dto.categoryIds.length) {
-        throw new HttpException(
-          {
-            error: 'validation_failed',
-            message: 'One or more categories do not exist',
-            fields: { categoryIds: 'contains an unknown id' },
-          },
-          HttpStatus.BAD_REQUEST,
-        );
-      }
+    if (dto.categoryIds !== undefined) {
+      await this.assertAssignableCategories(dto.categoryIds);
     }
 
     const post = await this.prisma.$transaction(
@@ -289,7 +269,7 @@ export class PostsService {
           await tx.postCategory.deleteMany({ where: { postId: id } });
           if (dto.categoryIds.length > 0) {
             await tx.postCategory.createMany({
-              data: dto.categoryIds.map((categoryId) => ({
+              data: [...new Set(dto.categoryIds)].map((categoryId) => ({
                 postId: id,
                 categoryId,
               })),
@@ -300,10 +280,7 @@ export class PostsService {
         return tx.post.update({
           where: { id },
           data,
-          include: {
-            author: { include: { location: true } },
-            business: true,
-          },
+          include: POST_INCLUDE,
         });
       },
     );
@@ -342,10 +319,7 @@ export class PostsService {
     const post = await this.prisma.post.update({
       where: { id },
       data: { deletedAt: new Date() },
-      include: {
-        author: { include: { location: true } },
-        business: true,
-      },
+      include: POST_INCLUDE,
     });
 
     const [response] = await this.attachCounts([post], actor);
@@ -543,6 +517,50 @@ export class PostsService {
     }
   }
 
+  private async assertAssignableCategories(ids: string[]): Promise<void> {
+    const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+    if (unique.length === 0) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'At least one category is required',
+          fields: { categoryIds: 'required' },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const rows = await this.prisma.category.findMany({
+      where: { id: { in: unique } },
+      select: { id: true, appliesTo: true },
+    });
+
+    if (rows.length !== unique.length) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'One or more categories do not exist',
+          fields: { categoryIds: 'contains an unknown id' },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const productOnly = rows.filter(
+      (row) => row.appliesTo === CategoryApplies.product,
+    );
+    if (productOnly.length > 0) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'One or more categories cannot be used on posts',
+          fields: { categoryIds: 'must apply to posts' },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
   private assertTypeRequirements(dto: CreatePostDto): void {
     const required = POST_TYPE_REQUIRED_FIELDS[dto.type];
     const fields: Record<string, string> = {};
@@ -572,18 +590,19 @@ export class PostsService {
   }
 
   private assertMediaRequirements(dto: CreatePostDto): void {
-    const media = dto.media ?? MediaType.none;
+    const media =
+      dto.type === PostType.reel ? MediaType.video : (dto.media ?? MediaType.none);
     const fields: Record<string, string> = {};
+
+    if (dto.type === PostType.reel || media === MediaType.video) {
+      if (!dto.videoUrl || dto.videoUrl.trim() === '') {
+        fields.videoUrl = 'videoUrl is required when media is video';
+      }
+    }
 
     if (media === MediaType.image) {
       if (!dto.imageUrls || dto.imageUrls.length === 0) {
         fields.imageUrls = 'imageUrls is required when media is image';
-      }
-    }
-
-    if (media === MediaType.video) {
-      if (!dto.videoUrl || dto.videoUrl.trim() === '') {
-        fields.videoUrl = 'videoUrl is required when media is video';
       }
     }
 

@@ -44,6 +44,7 @@ enum PostType {
   product_offering    // عرض منتج
   material_offering   // عرض مواد ومكنات
   material_requesting // أبحث عن مواد ومكنات
+  reel                // ريل
 }
 
 enum MediaType {

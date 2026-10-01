@@ -88,6 +88,7 @@ export const samplePost = {
   pricing: null as string | null,
   condition: null as string | null,
   price: null as string | null,
+  categories: [] as { id: string; name: string; slug: string }[],
   author: {
     id: '',
     name: '',

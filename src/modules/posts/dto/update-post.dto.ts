@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { MediaType } from '@prisma/client';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -53,6 +54,8 @@ export class UpdatePostDto {
   @ApiPropertyOptional({ type: [String], example: [''] })
   @IsOptional()
   @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(20)
   @IsString({ each: true })
   categoryIds?: string[];
 

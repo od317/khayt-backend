@@ -25,6 +25,12 @@ export type PostBusinessResponse = {
   verified: boolean;
 };
 
+export type PostCategoryResponse = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 export type PostResponse = {
   id: string;
   type: PostType;
@@ -45,6 +51,7 @@ export type PostResponse = {
   pricing: string | null;
   condition: string | null;
   price: string | null;
+  categories: PostCategoryResponse[];
   author: PostAuthorResponse;
   business: PostBusinessResponse | null;
   likes: number;
@@ -101,6 +108,7 @@ export function toPostResponse(
   post: Post & {
     author: User & { location: Location | null };
     business: Business | null;
+    categories?: { category: { id: string; name: string; slug: string } }[];
   },
   counts: PostCounts,
 ): PostResponse {
@@ -124,6 +132,11 @@ export function toPostResponse(
     pricing: post.pricing,
     condition: post.condition,
     price: post.price,
+    categories: (post.categories ?? []).map((row) => ({
+      id: row.category.id,
+      name: row.category.name,
+      slug: row.category.slug,
+    })),
     author: toPostAuthorResponse(post.author),
     business: post.business ? toPostBusinessResponse(post.business) : null,
     likes: counts.likes,

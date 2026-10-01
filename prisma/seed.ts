@@ -1054,6 +1054,19 @@ async function main(): Promise<void> {
       deletedAt: hoursAgo(8),
       createdAt: hoursAgo(8),
     },
+    {
+      id: 'post-reel-1',
+      authorId: 'user-workshop',
+      businessId: 'biz-workshop',
+      type: PostType.reel,
+      title: 'تشكيلة صيفية جديدة',
+      body: 'جولة في المشغل',
+      location: 'دمشق',
+      media: MediaType.video,
+      videoUrl: 'https://placehold.co/reel.mp4',
+      active: true,
+      createdAt: hoursAgo(1),
+    },
   ];
 
   for (const p of posts) {
@@ -1077,6 +1090,8 @@ async function main(): Promise<void> {
     { postId: 'post-product-offer-1', categoryId: 'cat-qumsan' },
     { postId: 'post-material-offer-1', categoryId: 'cat-aqmsha' },
     { postId: 'post-material-req-1', categoryId: 'cat-aqmsha' },
+    { postId: 'post-reel-1', categoryId: 'cat-qumsan' },
+    { postId: 'post-reel-1', categoryId: 'cat-khadamat' },
   ];
 
   for (const { postId, categoryId } of postCategories) {

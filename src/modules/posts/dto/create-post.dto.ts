@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MediaType, PostType } from '@prisma/client';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsEnum,
   IsNotEmpty,
@@ -52,11 +53,12 @@ export class CreatePostDto {
   @MaxLength(500)
   videoUrl?: string;
 
-  @ApiPropertyOptional({ type: [String], example: [''] })
-  @IsOptional()
+  @ApiProperty({ type: [String], example: [''] })
   @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(20)
   @IsString({ each: true })
-  categoryIds?: string[];
+  categoryIds!: string[];
 
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
