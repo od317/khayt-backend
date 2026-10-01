@@ -167,7 +167,7 @@ export class PostsService {
     const uploadedVideo = postVideoPath(files);
     const imageUrls =
       uploadedImages.length > 0 ? uploadedImages : (dto.imageUrls ?? []);
-    const videoUrl = uploadedVideo ?? dto.videoUrl ?? null;
+    const videoUrl = uploadedVideo ?? dto.videoUrl ?? undefined;
     const media =
       dto.type === PostType.reel
         ? MediaType.video
@@ -207,7 +207,7 @@ export class PostsService {
         location: dto.location,
         media,
         imageUrls,
-        videoUrl,
+        videoUrl: videoUrl ?? null,
         specialty: dto.specialty ?? null,
         skills: dto.skills ?? [],
         workType: dto.workType ?? [],
