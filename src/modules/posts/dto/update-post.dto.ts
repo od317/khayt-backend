@@ -109,8 +109,16 @@ export class UpdatePostDto {
   @IsString({ each: true })
   workType?: string[];
 
-  @ApiPropertyOptional({ example: '' })
+  @ApiPropertyOptional({
+    example: '3 سنوات',
+    description:
+      'Free-form experience text from the client (any format, e.g. "3", "3 سنوات", "1-2 years").',
+  })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    return String(value);
+  })
   @IsString()
   @MaxLength(200)
   experience?: string;
