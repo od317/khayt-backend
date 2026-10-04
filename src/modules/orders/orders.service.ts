@@ -128,7 +128,7 @@ export class OrdersService {
     const lines = await this.prisma.orderLine.findMany({
       where: { orderId: id },
       include: {
-        product: { select: { name: true } },
+        product: { select: { name: true, images: true } },
         business: { select: { name: true } },
       },
       orderBy: { id: 'asc' },
@@ -533,7 +533,7 @@ export class OrdersService {
     const line = await this.prisma.orderLine.findFirst({
       where: { id: lineId, orderId },
       include: {
-        product: { select: { name: true } },
+        product: { select: { name: true, images: true } },
         business: { select: { name: true } },
         order: true,
       },
@@ -560,7 +560,7 @@ export class OrdersService {
       where: { id: lineId },
       data: { picked: dto.picked },
       include: {
-        product: { select: { name: true } },
+        product: { select: { name: true, images: true } },
         business: { select: { name: true } },
       },
     });

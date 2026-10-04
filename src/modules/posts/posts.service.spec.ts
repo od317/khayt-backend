@@ -54,12 +54,16 @@ const makePost = (overrides: Record<string, unknown> = {}) => ({
   videoUrl: null,
   location: 'دمشق',
   active: true,
-  specialty: 'خياطة',
-  skills: [],
-  workType: ['دوام كامل'],
+  specialty: 'إنتاج/صناعة',
+  skills: ['خياطة'],
+  workType: ['كامل'],
   experience: null,
   salary: null,
+  salaryType: 'حسب الاتفاق',
   pricing: null,
+  servicePlace: null,
+  sellMethod: null,
+  priceMethod: null,
   condition: null,
   price: null,
   deletedAt: null,
@@ -175,6 +179,9 @@ describe('PostsService', () => {
     service = new PostsService(
       prisma as unknown as PrismaService,
       notifications as unknown as NotificationsService,
+      {
+        validateSelections: vi.fn().mockResolvedValue({}),
+      } as never,
     );
   });
 
@@ -188,8 +195,10 @@ describe('PostsService', () => {
         title: 'مطلوب خياط',
         body: 'نبحث عن خياط ماهر',
         location: 'دمشق',
-        specialty: 'خياطة',
-        workType: ['دوام كامل'],
+        specialty: 'إنتاج/صناعة',
+        skills: ['خياطة'],
+        workType: ['كامل'],
+        salaryType: 'حسب الاتفاق',
         categoryIds: ['cat-1'],
       });
 
@@ -198,7 +207,8 @@ describe('PostsService', () => {
         data: expect.objectContaining({
           authorId: actor.id,
           type: PostType.job_offering,
-          specialty: 'خياطة',
+          specialty: 'إنتاج/صناعة',
+          salaryType: 'حسب الاتفاق',
           categories: {
             create: [{ categoryId: 'cat-1' }],
           },
@@ -225,8 +235,10 @@ describe('PostsService', () => {
           title: 'مطلوب خياط',
           body: 'نبحث عن خياط ماهر',
           location: 'دمشق',
-          specialty: 'خياطة',
-          workType: ['دوام كامل'],
+          specialty: 'إنتاج/صناعة',
+          skills: ['خياطة'],
+          workType: ['كامل'],
+          salaryType: 'حسب الاتفاق',
           categoryIds: ['cat-1'],
         },
         [
@@ -289,8 +301,10 @@ describe('PostsService', () => {
           title: 'مطلوب خياط',
           body: 'نبحث عن خياط ماهر',
           location: 'دمشق',
-          specialty: 'خياطة',
-          workType: ['دوام كامل'],
+          specialty: 'إنتاج/صناعة',
+          skills: ['خياطة'],
+          workType: ['كامل'],
+          salaryType: 'حسب الاتفاق',
           categoryIds: [],
         })
         .catch((err: unknown) => err);
@@ -355,7 +369,10 @@ describe('PostsService', () => {
           title: 'مطلوب خياط',
           body: 'نبحث عن خياط ماهر',
           location: 'دمشق',
-          workType: ['دوام كامل'],
+          skills: ['خياطة'],
+          workType: ['كامل'],
+          salaryType: 'حسب الاتفاق',
+          categoryIds: ['cat-1'],
         })
         .catch((err: unknown) => err);
 
@@ -375,7 +392,10 @@ describe('PostsService', () => {
           title: 'مطلوب خياط',
           body: 'نبحث عن خياط ماهر',
           location: 'دمشق',
-          specialty: 'خياطة',
+          specialty: 'إنتاج/صناعة',
+          skills: ['خياطة'],
+          salaryType: 'حسب الاتفاق',
+          categoryIds: ['cat-1'],
         })
         .catch((err: unknown) => err);
 
@@ -383,6 +403,29 @@ describe('PostsService', () => {
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'validation_failed',
         fields: { workType: expect.any(String) },
+      });
+    });
+
+    it('rejects a job_offering without skills or salaryType', async () => {
+      const error = await service
+        .create(actor, {
+          type: PostType.job_offering,
+          title: 'مطلوب خياط',
+          body: 'نبحث عن خياط ماهر',
+          location: 'دمشق',
+          specialty: 'إنتاج/صناعة',
+          workType: ['كامل'],
+          categoryIds: ['cat-1'],
+        })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+        fields: {
+          skills: expect.any(String),
+          salaryType: expect.any(String),
+        },
       });
     });
 
@@ -394,6 +437,7 @@ describe('PostsService', () => {
           body: 'قماش قطن',
           location: 'دمشق',
           specialty: 'أقمشة',
+          categoryIds: ['cat-1'],
         })
         .catch((err: unknown) => err);
 
@@ -404,20 +448,47 @@ describe('PostsService', () => {
       });
     });
 
-    it('rejects a product_offering without price', async () => {
+    it('rejects a product_offering without sell/price methods', async () => {
       const error = await service
         .create(actor, {
           type: PostType.product_offering,
           title: 'منتج للبيع',
           body: 'قميص',
           location: 'دمشق',
+          specialty: 'ألبسة رجالية',
+          categoryIds: ['cat-1'],
         })
         .catch((err: unknown) => err);
 
       expect(error).toBeInstanceOf(HttpException);
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'validation_failed',
-        fields: { price: expect.any(String) },
+        fields: {
+          sellMethod: expect.any(String),
+          priceMethod: expect.any(String),
+        },
+      });
+    });
+
+    it('rejects a service_offering without servicePlace or pricing', async () => {
+      const error = await service
+        .create(actor, {
+          type: PostType.service_offering,
+          title: 'خدمة خياطة',
+          body: 'أقدم خدمة خياطة',
+          location: 'دمشق',
+          specialty: 'خياطة',
+          categoryIds: ['cat-1'],
+        })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+        fields: {
+          servicePlace: expect.any(String),
+          pricing: expect.any(String),
+        },
       });
     });
 
@@ -429,7 +500,10 @@ describe('PostsService', () => {
           body: 'أقدم خدمة خياطة',
           location: 'دمشق',
           specialty: 'خياطة',
+          servicePlace: 'في المشغل',
+          pricing: 'بالقطعة',
           media: MediaType.image,
+          categoryIds: ['cat-1'],
         })
         .catch((err: unknown) => err);
 
@@ -448,7 +522,10 @@ describe('PostsService', () => {
           body: 'أقدم خدمة خياطة',
           location: 'دمشق',
           specialty: 'خياطة',
+          servicePlace: 'في المشغل',
+          pricing: 'بالقطعة',
           media: MediaType.video,
+          categoryIds: ['cat-1'],
         })
         .catch((err: unknown) => err);
 
@@ -468,8 +545,10 @@ describe('PostsService', () => {
           title: 'مطلوب خياط',
           body: 'نبحث',
           location: 'دمشق',
-          specialty: 'خياطة',
-          workType: ['دوام كامل'],
+          specialty: 'إنتاج/صناعة',
+          skills: ['خياطة'],
+          workType: ['كامل'],
+          salaryType: 'حسب الاتفاق',
           businessId: 'biz-1',
           categoryIds: ['cat-1'],
         })

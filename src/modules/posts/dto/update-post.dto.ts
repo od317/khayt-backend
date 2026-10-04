@@ -121,11 +121,35 @@ export class UpdatePostDto {
   @MaxLength(200)
   salary?: string;
 
+  @ApiPropertyOptional({ example: 'شهري' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  salaryType?: string;
+
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   pricing?: string;
+
+  @ApiPropertyOptional({ example: 'في المشغل' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  servicePlace?: string;
+
+  @ApiPropertyOptional({ example: 'جملة' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  sellMethod?: string;
+
+  @ApiPropertyOptional({ example: 'سعر ثابت' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  priceMethod?: string;
 
   @ApiPropertyOptional({ example: '' })
   @IsOptional()

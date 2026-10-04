@@ -23,6 +23,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { PostOptionsModule } from './modules/post-options/post-options.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { ProductsModule } from './modules/products/products.module';
 import { RolesModule } from './modules/roles/roles.module';
@@ -44,6 +45,7 @@ import { DebugModule } from './modules/debug/debug.module';
     BusinessesModule,
     ProductsModule,
     CategoriesModule,
+    PostOptionsModule,
     PostsModule,
     DebugModule,
     CommentsModule,

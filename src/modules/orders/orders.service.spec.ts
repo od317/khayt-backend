@@ -70,7 +70,12 @@ const makeLine = (overrides: Record<string, unknown> = {}) => ({
   quantity: 2,
   unitPrice: 5000,
   picked: false,
-  product: { id: 'prod-1', name: 'قميص', businessId: 'biz-1' },
+  product: {
+    id: 'prod-1',
+    name: 'قميص',
+    businessId: 'biz-1',
+    images: ['/uploads/products/shirt.jpg'],
+  },
   business: { id: 'biz-1', name: 'معمل' },
   ...overrides,
 });
@@ -538,6 +543,9 @@ describe('OrdersService', () => {
       const result = await service.detail('order-1', store);
 
       expect(result.order.canCancel).toBe(true);
+      expect(result.lines[0]?.productImage).toBe(
+        '/uploads/products/shirt.jpg',
+      );
       expect(result.whatsapp).toBe('0994000001');
       expect(result.phone).toBe('0111234567');
     });

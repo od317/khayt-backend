@@ -48,7 +48,11 @@ export type PostResponse = {
   workType: string[];
   experience: string | null;
   salary: string | null;
+  salaryType: string | null;
   pricing: string | null;
+  servicePlace: string | null;
+  sellMethod: string | null;
+  priceMethod: string | null;
   condition: string | null;
   price: string | null;
   categories: PostCategoryResponse[];
@@ -129,7 +133,11 @@ export function toPostResponse(
     workType: post.workType,
     experience: post.experience,
     salary: post.salary,
+    salaryType: post.salaryType,
     pricing: post.pricing,
+    servicePlace: post.servicePlace,
+    sellMethod: post.sellMethod,
+    priceMethod: post.priceMethod,
     condition: post.condition,
     price: post.price,
     categories: (post.categories ?? []).map((row) => ({

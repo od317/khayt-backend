@@ -21,6 +21,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PostOptionsService } from '../post-options/post-options.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
@@ -56,6 +57,7 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly postOptions: PostOptionsService,
   ) {}
 
   async list(
@@ -179,6 +181,7 @@ export class PostsService {
     const resolved = { ...dto, imageUrls, videoUrl, media };
     this.assertTypeRequirements(resolved);
     this.assertMediaRequirements(resolved);
+    await this.assertOptionSelections(dto.type, dto);
 
     if (dto.businessId) {
       const business = await this.prisma.business.findUnique({
@@ -213,7 +216,11 @@ export class PostsService {
         workType: dto.workType ?? [],
         experience: dto.experience ?? null,
         salary: dto.salary ?? null,
+        salaryType: dto.salaryType ?? null,
         pricing: dto.pricing ?? null,
+        servicePlace: dto.servicePlace ?? null,
+        sellMethod: dto.sellMethod ?? null,
+        priceMethod: dto.priceMethod ?? null,
         condition: dto.condition ?? null,
         price: dto.price ?? null,
         categories: {
@@ -260,6 +267,46 @@ export class PostsService {
       await this.assertAssignableCategories(dto.categoryIds);
     }
 
+    const optionPatch = {
+      specialty: dto.specialty,
+      skills: dto.skills,
+      workType: dto.workType,
+      salaryType: dto.salaryType,
+      servicePlace: dto.servicePlace,
+      pricing: dto.pricing,
+      sellMethod: dto.sellMethod,
+      priceMethod: dto.priceMethod,
+      condition: dto.condition,
+    };
+    const touchesOptions = Object.values(optionPatch).some((v) => v !== undefined);
+    if (touchesOptions) {
+      const current = await this.prisma.post.findFirst({
+        where: { id, deletedAt: null },
+        select: {
+          specialty: true,
+          skills: true,
+          workType: true,
+          salaryType: true,
+          servicePlace: true,
+          pricing: true,
+          sellMethod: true,
+          priceMethod: true,
+          condition: true,
+        },
+      });
+      await this.assertOptionSelections(existing.type, {
+        specialty: dto.specialty ?? current?.specialty ?? undefined,
+        skills: dto.skills ?? current?.skills,
+        workType: dto.workType ?? current?.workType,
+        salaryType: dto.salaryType ?? current?.salaryType ?? undefined,
+        servicePlace: dto.servicePlace ?? current?.servicePlace ?? undefined,
+        pricing: dto.pricing ?? current?.pricing ?? undefined,
+        sellMethod: dto.sellMethod ?? current?.sellMethod ?? undefined,
+        priceMethod: dto.priceMethod ?? current?.priceMethod ?? undefined,
+        condition: dto.condition ?? current?.condition ?? undefined,
+      });
+    }
+
     const uploadedImages = postImagePaths(files);
     const uploadedVideo = postVideoPath(files);
 
@@ -291,7 +338,11 @@ export class PostsService {
         if (dto.workType !== undefined) data.workType = dto.workType;
         if (dto.experience !== undefined) data.experience = dto.experience;
         if (dto.salary !== undefined) data.salary = dto.salary;
+        if (dto.salaryType !== undefined) data.salaryType = dto.salaryType;
         if (dto.pricing !== undefined) data.pricing = dto.pricing;
+        if (dto.servicePlace !== undefined) data.servicePlace = dto.servicePlace;
+        if (dto.sellMethod !== undefined) data.sellMethod = dto.sellMethod;
+        if (dto.priceMethod !== undefined) data.priceMethod = dto.priceMethod;
         if (dto.condition !== undefined) data.condition = dto.condition;
         if (dto.price !== undefined) data.price = dto.price;
         if (dto.active !== undefined) data.active = dto.active;
@@ -613,6 +664,33 @@ export class PostsService {
         {
           error: 'validation_failed',
           message: 'Missing type-specific fields',
+          fields,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  private async assertOptionSelections(
+    type: PostType,
+    values: {
+      specialty?: string;
+      skills?: string[];
+      workType?: string[];
+      salaryType?: string;
+      servicePlace?: string;
+      pricing?: string;
+      sellMethod?: string;
+      priceMethod?: string;
+      condition?: string;
+    },
+  ): Promise<void> {
+    const fields = await this.postOptions.validateSelections(type, values);
+    if (Object.keys(fields).length > 0) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'One or more values are not valid post options',
           fields,
         },
         HttpStatus.BAD_REQUEST,

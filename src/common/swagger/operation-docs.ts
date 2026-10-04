@@ -445,6 +445,76 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       ],
     }),
   },
+  'get /post-options': {
+    '200': ok({
+      type: 'job_offering',
+      fields: {
+        specialty: [{ id: '', kind: 'specialty', label: '', sortOrder: 0 }],
+        skills: [
+          {
+            id: '',
+            kind: 'skill',
+            label: '',
+            parentId: '',
+            sortOrder: 0,
+          },
+        ],
+        workType: [{ id: '', kind: 'work_type', label: '', sortOrder: 0 }],
+        salaryType: [
+          { id: '', kind: 'salary_type', label: '', sortOrder: 0 },
+        ],
+        condition: [],
+        servicePlace: [],
+        pricing: [],
+        sellMethod: [],
+        priceMethod: [],
+      },
+    }),
+  },
+  'get /admin/post-options': {
+    '200': ok({
+      items: [
+        {
+          id: '',
+          kind: 'specialty',
+          label: '',
+          parentId: null,
+          sortOrder: 0,
+          postTypes: ['job_offering'],
+          active: true,
+        },
+      ],
+    }),
+  },
+  'post /admin/post-options': {
+    '201': created({
+      option: {
+        id: '',
+        kind: 'specialty',
+        label: '',
+        parentId: null,
+        sortOrder: 0,
+        postTypes: ['job_offering'],
+        active: true,
+      },
+    }),
+  },
+  'patch /admin/post-options/{id}': {
+    '200': ok({
+      option: {
+        id: '',
+        kind: 'specialty',
+        label: '',
+        parentId: null,
+        sortOrder: 0,
+        postTypes: ['job_offering'],
+        active: true,
+      },
+    }),
+  },
+  'delete /admin/post-options/{id}': {
+    '200': ok({ ok: true }),
+  },
   'get /admin/categories': {
     '200': ok({
       items: [

@@ -29,6 +29,7 @@ export type OrderLineResponse = {
   id: string;
   productId: string;
   productName: string;
+  productImage: string | null;
   businessId: string;
   businessName: string;
   quantity: number;
@@ -88,7 +89,7 @@ type OrderLineWithRelations = {
   quantity: number;
   unitPrice: number;
   picked: boolean;
-  product: { name: string };
+  product: { name: string; images: string[] };
   business: { name: string };
 };
 
@@ -116,6 +117,7 @@ export function toOrderLineResponse(
     id: line.id,
     productId: line.productId,
     productName: line.product.name,
+    productImage: line.product.images?.[0] ?? null,
     businessId: line.businessId,
     businessName: line.business.name,
     quantity: line.quantity,

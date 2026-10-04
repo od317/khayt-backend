@@ -13,6 +13,7 @@ import {
   CategoryApplies,
   MediaType,
   NotificationType,
+  PostOptionKind,
   PostType,
   PrismaClient,
   UserRole,
@@ -935,6 +936,191 @@ async function main(): Promise<void> {
   console.log(`  supply rows: ${supply.length}`);
 
   // ------------------------------------------------------------
+  // Post options (admin-managed publish chips)
+  // ------------------------------------------------------------
+  const jobSpecialtyId = 'opt-job-specialty-production';
+  const serviceSpecialtyId = 'opt-service-specialty-sewing';
+  const productSpecialtyId = 'opt-product-specialty-men';
+  const materialSpecialtyId = 'opt-material-specialty-fabric';
+
+  const postOptions: {
+    id: string;
+    kind: PostOptionKind;
+    postTypes: PostType[];
+    label: string;
+    parentId?: string | null;
+    sortOrder: number;
+  }[] = [
+    {
+      id: jobSpecialtyId,
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.job_offering, PostType.job_seeking],
+      label: 'إنتاج/صناعة',
+      sortOrder: 0,
+    },
+    {
+      id: 'opt-job-specialty-management',
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.job_offering, PostType.job_seeking],
+      label: 'إدارة',
+      sortOrder: 1,
+    },
+    {
+      id: 'opt-job-skill-sewing',
+      kind: PostOptionKind.skill,
+      postTypes: [PostType.job_offering, PostType.job_seeking],
+      label: 'خياطة',
+      parentId: jobSpecialtyId,
+      sortOrder: 0,
+    },
+    {
+      id: 'opt-job-skill-cutting',
+      kind: PostOptionKind.skill,
+      postTypes: [PostType.job_offering, PostType.job_seeking],
+      label: 'قص',
+      parentId: jobSpecialtyId,
+      sortOrder: 1,
+    },
+    ...(['كامل', 'جزئي', 'عن بعد'] as const).map((label, i) => ({
+      id: `opt-work-type-${i}`,
+      kind: PostOptionKind.work_type,
+      postTypes: [PostType.job_offering, PostType.job_seeking],
+      label,
+      sortOrder: i,
+    })),
+    ...(['شهري', 'يومي', 'بالقطعة', 'حسب الاتفاق'] as const).map(
+      (label, i) => ({
+        id: `opt-salary-type-${i}`,
+        kind: PostOptionKind.salary_type,
+        postTypes: [PostType.job_offering],
+        label,
+        sortOrder: i,
+      }),
+    ),
+    {
+      id: serviceSpecialtyId,
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.service_offering, PostType.service_requesting],
+      label: 'خياطة',
+      sortOrder: 0,
+    },
+    {
+      id: 'opt-service-specialty-design',
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.service_offering, PostType.service_requesting],
+      label: 'تصميم',
+      sortOrder: 1,
+    },
+    {
+      id: 'opt-service-specialty-embroidery',
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.service_offering, PostType.service_requesting],
+      label: 'تطريز',
+      sortOrder: 2,
+    },
+    ...(['في المشغل', 'عند الزبون', 'عن بعد'] as const).map((label, i) => ({
+      id: `opt-service-place-${i}`,
+      kind: PostOptionKind.service_place,
+      postTypes: [PostType.service_offering],
+      label,
+      sortOrder: i,
+    })),
+    ...(['حسب الطلب', 'بالساعة', 'بالقطعة', 'شهري'] as const).map(
+      (label, i) => ({
+        id: `opt-pricing-${i}`,
+        kind: PostOptionKind.pricing,
+        postTypes: [PostType.service_offering],
+        label,
+        sortOrder: i,
+      }),
+    ),
+    {
+      id: productSpecialtyId,
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.product_offering],
+      label: 'ألبسة رجالية',
+      sortOrder: 0,
+    },
+    {
+      id: 'opt-product-specialty-women',
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.product_offering],
+      label: 'ألبسة نسائية',
+      sortOrder: 1,
+    },
+    {
+      id: 'opt-product-specialty-kids',
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.product_offering],
+      label: 'ألبسة أطفال',
+      sortOrder: 2,
+    },
+    ...(['جملة', 'مفرق', 'كلاهما'] as const).map((label, i) => ({
+      id: `opt-sell-method-${i}`,
+      kind: PostOptionKind.sell_method,
+      postTypes: [PostType.product_offering],
+      label,
+      sortOrder: i,
+    })),
+    ...(['سعر ثابت', 'حسب الكمية', 'قابل للتفاوض'] as const).map(
+      (label, i) => ({
+        id: `opt-price-method-${i}`,
+        kind: PostOptionKind.price_method,
+        postTypes: [PostType.product_offering],
+        label,
+        sortOrder: i,
+      }),
+    ),
+    {
+      id: materialSpecialtyId,
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.material_offering, PostType.material_requesting],
+      label: 'أقمشة',
+      sortOrder: 0,
+    },
+    {
+      id: 'opt-material-specialty-machines',
+      kind: PostOptionKind.specialty,
+      postTypes: [PostType.material_offering, PostType.material_requesting],
+      label: 'ماكينات خياطة',
+      sortOrder: 1,
+    },
+    ...(['جديدة', 'مستعملة - ممتازة', 'مستعملة - جيدة'] as const).map(
+      (label, i) => ({
+        id: `opt-condition-${i}`,
+        kind: PostOptionKind.condition,
+        postTypes: [PostType.material_offering, PostType.material_requesting],
+        label,
+        sortOrder: i,
+      }),
+    ),
+  ];
+
+  for (const option of postOptions) {
+    await prisma.postOption.upsert({
+      where: { id: option.id },
+      create: {
+        id: option.id,
+        kind: option.kind,
+        postTypes: option.postTypes,
+        label: option.label,
+        parentId: option.parentId ?? null,
+        sortOrder: option.sortOrder,
+        active: true,
+      },
+      update: {
+        kind: option.kind,
+        postTypes: option.postTypes,
+        label: option.label,
+        parentId: option.parentId ?? null,
+        sortOrder: option.sortOrder,
+        active: true,
+      },
+    });
+  }
+  console.log(`  post options: ${postOptions.length}`);
+
+  // ------------------------------------------------------------
   // Posts
   // ------------------------------------------------------------
   const posts = [
@@ -948,8 +1134,10 @@ async function main(): Promise<void> {
       location: 'دمشق',
       media: MediaType.none,
       active: true,
-      specialty: 'خياطة',
-      workType: ['دوام كامل'],
+      specialty: 'إنتاج/صناعة',
+      skills: ['خياطة'],
+      workType: ['كامل'],
+      salaryType: 'حسب الاتفاق',
       salary: 'حسب الخبرة',
       createdAt: hoursAgo(1),
     },
@@ -963,8 +1151,8 @@ async function main(): Promise<void> {
       location: 'دمشق',
       media: MediaType.none,
       active: true,
-      specialty: 'خياطة',
-      workType: ['دوام كامل', 'دوام جزئي'],
+      specialty: 'إنتاج/صناعة',
+      workType: ['كامل', 'جزئي'],
       experience: '10 سنوات',
       createdAt: hoursAgo(2),
     },
@@ -982,8 +1170,9 @@ async function main(): Promise<void> {
         'https://placehold.co/600x400?text=Tatriz2',
       ],
       active: true,
-      specialty: 'تطريز',
-      pricing: 'حسب القطعة',
+      specialty: 'تصميم',
+      servicePlace: 'في المشغل',
+      pricing: 'بالقطعة',
       createdAt: hoursAgo(3),
     },
     {
@@ -997,6 +1186,9 @@ async function main(): Promise<void> {
       media: MediaType.image,
       imageUrls: ['https://placehold.co/600x400?text=Qamis'],
       active: true,
+      specialty: 'ألبسة رجالية',
+      sellMethod: 'جملة',
+      priceMethod: 'سعر ثابت',
       price: '45000',
       createdAt: hoursAgo(4),
     },
@@ -1011,7 +1203,7 @@ async function main(): Promise<void> {
       media: MediaType.none,
       active: true,
       specialty: 'أقمشة',
-      condition: 'جديد',
+      condition: 'جديدة',
       createdAt: hoursAgo(5),
     },
     {

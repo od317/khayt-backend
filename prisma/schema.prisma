@@ -97,6 +97,19 @@ enum CategoryApplies {
   both
 }
 
+/// Admin-managed chip/dropdown values used when creating posts.
+enum PostOptionKind {
+  specialty
+  skill
+  work_type
+  salary_type
+  service_place
+  pricing
+  sell_method
+  price_method
+  condition
+}
+
 // ============================================================
 // USERS
 // ============================================================
@@ -297,16 +310,18 @@ model Post {
   deletedAt  DateTime?
   
   // type-specific
-  specialty  String?
-  experience String?
-  workType   String[]
-  skills     String[]
-  salary     String?
-  pricing    String?
-  condition  String?
-  price      String?
-
-  
+  specialty    String?
+  experience   String?
+  workType     String[]
+  skills       String[]
+  salary       String?
+  salaryType   String?
+  pricing      String?
+  servicePlace String?
+  sellMethod   String?
+  priceMethod  String?
+  condition    String?
+  price        String?
 
   // relations
   author     User           @relation(fields: [authorId], references: [id])
@@ -320,6 +335,30 @@ model Post {
   @@index([type])
   @@index([active])
   @@index([createdAt])
+}
+
+// ============================================================
+// POST OPTIONS (admin-managed form chips)
+// ============================================================
+
+model PostOption {
+  id        String         @id @default(uuid())
+  kind      PostOptionKind
+  /// Which publish forms this option appears on.
+  postTypes PostType[]
+  label     String
+  /// Skills nest under a specialty option.
+  parentId  String?
+  sortOrder Int            @default(0)
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  parent   PostOption?  @relation("PostOptionTree", fields: [parentId], references: [id])
+  children PostOption[] @relation("PostOptionTree")
+
+  @@index([kind, active])
+  @@index([parentId])
 }
 
 // ============================================================

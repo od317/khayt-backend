@@ -140,11 +140,47 @@ export class CreatePostDto {
   @MaxLength(200)
   salary?: string;
 
+  @ApiPropertyOptional({
+    example: 'شهري',
+    description: 'Salary type chip for job_offering (from post-options).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  salaryType?: string;
+
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   pricing?: string;
+
+  @ApiPropertyOptional({
+    example: 'في المشغل',
+    description: 'Where the service is done (from post-options).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  servicePlace?: string;
+
+  @ApiPropertyOptional({
+    example: 'جملة',
+    description: 'Sell method for product_offering (from post-options).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  sellMethod?: string;
+
+  @ApiPropertyOptional({
+    example: 'سعر ثابت',
+    description: 'Price method for product_offering (from post-options).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  priceMethod?: string;
 
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
