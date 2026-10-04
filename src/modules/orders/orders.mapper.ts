@@ -62,6 +62,8 @@ export type OrderDetailResponse = {
   store: { id: string; name: string; phone: string | null };
   lines: OrderLineResponse[];
   delivery: OrderDeliveryResponse | null;
+  whatsapp: string;
+  phone: string;
 };
 
 type OrderWithStore = Order & {
@@ -127,6 +129,10 @@ export function toOrderDetailResponse(
   lines: OrderLineWithRelations[],
   flags: { canCancel: boolean; canAdvance: boolean },
   delivery: OrderDeliveryResponse | null = null,
+  contacts: { whatsapp: string; phone: string } = {
+    whatsapp: '',
+    phone: '',
+  },
 ): OrderDetailResponse {
   return {
     order: {
@@ -154,5 +160,7 @@ export function toOrderDetailResponse(
     },
     lines: lines.map(toOrderLineResponse),
     delivery,
+    whatsapp: contacts.whatsapp,
+    phone: contacts.phone,
   };
 }

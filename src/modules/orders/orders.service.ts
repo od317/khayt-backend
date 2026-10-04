@@ -14,6 +14,7 @@ import {
   User,
   UserRole,
 } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
@@ -43,6 +44,7 @@ import {
   toOrderListItem,
 } from './orders.mapper';
 import { RedisService } from '../../common/redis/redis.service';
+import { AppConfig } from '../../config/configuration';
 import {
   ORDER_CHANNEL,
   ORDERS_FEED_CHANNEL,
@@ -57,6 +59,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly redis: RedisService,
+    private readonly config: ConfigService<AppConfig, true>,
   ) {}
 
   async list(
@@ -170,6 +173,7 @@ export class OrdersService {
         canAdvance: canActorAdvance(ctx),
       },
       delivery,
+      this.supportContacts(),
     );
   }
 
@@ -661,6 +665,10 @@ export class OrdersService {
       error: 'order_not_accessible',
       message: 'Order not found',
     });
+  }
+
+  private supportContacts(): { whatsapp: string; phone: string } {
+    return this.config.get('orderSupport', { infer: true });
   }
 
   private async publishOrderLive(

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { OrderStatus, UserRole } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { RedisService } from '../../common/redis/redis.service';
@@ -199,6 +200,12 @@ describe('OrdersService', () => {
       prisma as unknown as PrismaService,
       notifications as unknown as NotificationsService,
       redis as unknown as RedisService,
+      {
+        get: vi.fn().mockReturnValue({
+          whatsapp: '0994000001',
+          phone: '0111234567',
+        }),
+      } as unknown as ConfigService,
     );
   });
 
@@ -531,6 +538,8 @@ describe('OrdersService', () => {
       const result = await service.detail('order-1', store);
 
       expect(result.order.canCancel).toBe(true);
+      expect(result.whatsapp).toBe('0994000001');
+      expect(result.phone).toBe('0111234567');
     });
 
     it('returns canAdvance true for inventory at review', async () => {

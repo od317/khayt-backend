@@ -158,6 +158,8 @@ export const sampleOrderDetail = {
   store: { id: '', name: '', phone: null as string | null },
   lines: [sampleOrderLine],
   delivery: null as null,
+  whatsapp: '',
+  phone: '',
 };
 
 export const sampleNotification = {

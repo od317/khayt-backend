@@ -29,6 +29,10 @@ export type AppConfig = {
     clientEmail: string;
     privateKey: string;
   } | null;
+  orderSupport: {
+    whatsapp: string;
+    phone: string;
+  };
 };
 
 const required = (key: string): string => {
@@ -89,4 +93,8 @@ export default (): AppConfig => ({
       'production',
   corsOrigins: ['http://localhost:3000', 'http://localhost:3001'],
   firebase: firebaseFromEnv(),
+  orderSupport: {
+    whatsapp: process.env.ORDER_WHATSAPP ?? '',
+    phone: process.env.ORDER_PHONE ?? '',
+  },
 });
