@@ -300,7 +300,7 @@ model Post {
   authorId  String
   businessId String?
   type      PostType
-  title     String
+  title     String?
   body      String
   media     MediaType @default(none)
   imageUrls String[]
