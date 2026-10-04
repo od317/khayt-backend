@@ -37,6 +37,22 @@ export type PostOptionsByTypeResponse = {
   fields: Record<string, PostOptionItem[]>;
 };
 
+export type PostOptionsCatalogResponse = {
+  byType: Record<PostType, { fields: Record<string, PostOptionItem[]> }>;
+};
+
+export type PostOptionsListResponse =
+  | PostOptionsByTypeResponse
+  | PostOptionsCatalogResponse;
+
+function emptyFieldsForType(type: PostType): Record<string, PostOptionItem[]> {
+  const fields: Record<string, PostOptionItem[]> = {};
+  for (const kind of POST_OPTION_KINDS_BY_TYPE[type]) {
+    fields[POST_OPTION_FIELD_NAME[kind]] = [];
+  }
+  return fields;
+}
+
 function toItem(row: PostOption): PostOptionItem {
   return {
     id: row.id,
@@ -61,25 +77,28 @@ function toAdminItem(row: PostOption): PostOptionAdminItem {
 export class PostOptionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listForType(
+  async list(
     query: QueryPostOptionsDto,
-  ): Promise<PostOptionsByTypeResponse> {
-    const kinds = POST_OPTION_KINDS_BY_TYPE[query.type];
-    const fields: Record<string, PostOptionItem[]> = {};
-
-    for (const kind of kinds) {
-      fields[POST_OPTION_FIELD_NAME[kind]] = [];
+  ): Promise<PostOptionsListResponse> {
+    if (query.type) {
+      return this.listForType(query.type);
     }
+    return this.listAllSeparated();
+  }
+
+  async listForType(type: PostType): Promise<PostOptionsByTypeResponse> {
+    const kinds = POST_OPTION_KINDS_BY_TYPE[type];
+    const fields = emptyFieldsForType(type);
 
     if (kinds.length === 0) {
-      return { type: query.type, fields };
+      return { type, fields };
     }
 
     const rows = await this.prisma.postOption.findMany({
       where: {
         active: true,
         kind: { in: [...kinds] },
-        postTypes: { has: query.type },
+        postTypes: { has: type },
       },
       orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }],
     });
@@ -89,7 +108,31 @@ export class PostOptionsService {
       fields[key]?.push(toItem(row));
     }
 
-    return { type: query.type, fields };
+    return { type, fields };
+  }
+
+  async listAllSeparated(): Promise<PostOptionsCatalogResponse> {
+    const byType = {} as PostOptionsCatalogResponse['byType'];
+    for (const type of Object.values(PostType)) {
+      byType[type] = { fields: emptyFieldsForType(type) };
+    }
+
+    const rows = await this.prisma.postOption.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }],
+    });
+
+    for (const row of rows) {
+      const key = POST_OPTION_FIELD_NAME[row.kind];
+      const item = toItem(row);
+      for (const type of row.postTypes) {
+        const bucket = byType[type]?.fields;
+        if (!bucket || !(key in bucket)) continue;
+        bucket[key].push(item);
+      }
+    }
+
+    return { byType };
   }
 
   async listAdmin(

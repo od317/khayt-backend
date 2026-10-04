@@ -447,27 +447,35 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'get /post-options': {
     '200': ok({
-      type: 'job_offering',
-      fields: {
-        specialty: [{ id: '', kind: 'specialty', label: '', sortOrder: 0 }],
-        skills: [
-          {
-            id: '',
-            kind: 'skill',
-            label: '',
-            parentId: '',
-            sortOrder: 0,
+      byType: {
+        job_offering: {
+          fields: {
+            specialty: [{ id: '', label: '', parentId: null, sortOrder: 0 }],
+            skills: [{ id: '', label: '', parentId: '', sortOrder: 0 }],
+            workType: [{ id: '', label: '', parentId: null, sortOrder: 0 }],
+            salaryType: [{ id: '', label: '', parentId: null, sortOrder: 0 }],
           },
-        ],
-        workType: [{ id: '', kind: 'work_type', label: '', sortOrder: 0 }],
-        salaryType: [
-          { id: '', kind: 'salary_type', label: '', sortOrder: 0 },
-        ],
-        condition: [],
-        servicePlace: [],
-        pricing: [],
-        sellMethod: [],
-        priceMethod: [],
+        },
+        service_offering: {
+          fields: {
+            specialty: [],
+            servicePlace: [],
+            pricing: [],
+          },
+        },
+        product_offering: {
+          fields: {
+            specialty: [],
+            sellMethod: [],
+            priceMethod: [],
+          },
+        },
+        material_offering: {
+          fields: {
+            specialty: [],
+            condition: [],
+          },
+        },
       },
     }),
   },

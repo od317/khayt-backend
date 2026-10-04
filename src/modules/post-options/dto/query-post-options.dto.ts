@@ -3,9 +3,15 @@ import { PostOptionKind, PostType } from '@prisma/client';
 import { IsEnum, IsOptional } from 'class-validator';
 
 export class QueryPostOptionsDto {
-  @ApiProperty({ enum: PostType, example: PostType.job_offering })
+  @ApiPropertyOptional({
+    enum: PostType,
+    example: PostType.job_offering,
+    description:
+      'If omitted, returns options for every post type under `byType`.',
+  })
+  @IsOptional()
   @IsEnum(PostType)
-  type!: PostType;
+  type?: PostType;
 }
 
 export class QueryAdminPostOptionsDto {

@@ -2,7 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { Public } from '../../common/decorators/public.decorator';
 import { QueryPostOptionsDto } from './dto/query-post-options.dto';
 import {
-  PostOptionsByTypeResponse,
+  PostOptionsListResponse,
   PostOptionsService,
 } from './post-options.service';
 
@@ -14,7 +14,7 @@ export class PostOptionsController {
   @Get()
   list(
     @Query() query: QueryPostOptionsDto,
-  ): Promise<PostOptionsByTypeResponse> {
-    return this.options.listForType(query);
+  ): Promise<PostOptionsListResponse> {
+    return this.options.list(query);
   }
 }

@@ -55,9 +55,10 @@ describe('PostOptionsService', () => {
       },
     ]);
 
-    const result = await service.listForType({ type: PostType.job_offering });
+    const result = await service.list({ type: PostType.job_offering });
 
-    expect(result.type).toBe(PostType.job_offering);
+    expect(result).toMatchObject({ type: PostType.job_offering });
+    if (!('fields' in result)) throw new Error('expected typed response');
     expect(result.fields.specialty).toEqual([
       expect.objectContaining({ id: 's1', label: 'إنتاج/صناعة' }),
     ]);
@@ -67,6 +68,49 @@ describe('PostOptionsService', () => {
     expect(result.fields.skills).toEqual([]);
     expect(result.fields.salaryType).toEqual([]);
     expect(result.fields).not.toHaveProperty('experience');
+  });
+
+  it('returns every post type under byType when type is omitted', async () => {
+    prisma.postOption.findMany.mockResolvedValue([
+      {
+        id: 's1',
+        kind: PostOptionKind.specialty,
+        label: 'إنتاج/صناعة',
+        parentId: null,
+        sortOrder: 0,
+        postTypes: [PostType.job_offering, PostType.job_seeking],
+        active: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'c1',
+        kind: PostOptionKind.condition,
+        label: 'جديدة',
+        parentId: null,
+        sortOrder: 0,
+        postTypes: [PostType.material_offering],
+        active: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+
+    const result = await service.list({});
+
+    expect(result).toHaveProperty('byType');
+    if (!('byType' in result)) throw new Error('expected catalog response');
+    expect(result.byType.job_offering.fields.specialty).toEqual([
+      expect.objectContaining({ id: 's1' }),
+    ]);
+    expect(result.byType.job_seeking.fields.specialty).toEqual([
+      expect.objectContaining({ id: 's1' }),
+    ]);
+    expect(result.byType.material_offering.fields.condition).toEqual([
+      expect.objectContaining({ label: 'جديدة' }),
+    ]);
+    expect(result.byType.product_offering.fields.specialty).toEqual([]);
+    expect(result.byType.reel.fields).toEqual({});
   });
 
   it('requires parentId when creating a skill', async () => {
