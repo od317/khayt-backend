@@ -855,6 +855,7 @@ async function main(): Promise<void> {
       packaging: { onlyPackage: false, unitsPerPackage: 10, label: 'علبة 10' },
       discount: { percent: 10, originalPrice: 50000 },
       offer: 'عرض خاص',
+      guarantee: true,
     },
     {
       id: 'prod-qamis-kaki',
@@ -867,6 +868,7 @@ async function main(): Promise<void> {
       price: 40000,
       inWarehouse: false,
       available: true,
+      guarantee: false,
     },
     {
       id: 'prod-bantal-jeans',
@@ -879,6 +881,7 @@ async function main(): Promise<void> {
       price: 65000,
       inWarehouse: true,
       available: true,
+      guarantee: true,
       variants: {
         axes: [{ key: 'size', label: 'قياس' }],
         options: [

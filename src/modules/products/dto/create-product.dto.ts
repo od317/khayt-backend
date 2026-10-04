@@ -218,4 +218,17 @@ export class CreateProductDto {
   @IsString()
   @MaxLength(500)
   offer?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Whether the product includes a guarantee.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
+  @IsBoolean()
+  guarantee?: boolean;
 }

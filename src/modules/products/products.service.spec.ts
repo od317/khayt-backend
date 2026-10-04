@@ -48,6 +48,7 @@ const makeProduct = (
   price: 5000,
   inWarehouse: false,
   available: true,
+  guarantee: false,
   variants: null,
   packaging: null,
   discount: null,

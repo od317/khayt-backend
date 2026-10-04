@@ -11,6 +11,7 @@ export type ProductResponse = {
   price: number;
   inWarehouse: boolean;
   available: boolean;
+  guarantee: boolean;
   variants: unknown;
   packaging: unknown;
   discount: unknown;
@@ -32,6 +33,7 @@ export function toProductResponse(product: Product): ProductResponse {
     price: product.price,
     inWarehouse: product.inWarehouse,
     available: product.available,
+    guarantee: product.guarantee,
     variants: product.variants,
     packaging: product.packaging,
     discount: product.discount,

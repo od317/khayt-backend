@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -75,4 +76,17 @@ export class UpdateProductDto {
   @IsString()
   @MaxLength(500)
   offer?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Whether the product includes a guarantee.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
+  @IsBoolean()
+  guarantee?: boolean;
 }

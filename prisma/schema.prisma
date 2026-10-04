@@ -245,6 +245,7 @@ model Product {
   price       Int
   inWarehouse Boolean  @default(false)  // R1 — gates ordering
   available   Boolean  @default(true)
+  guarantee   Boolean  @default(false)
   deletedAt   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

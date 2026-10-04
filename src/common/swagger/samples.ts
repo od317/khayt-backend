@@ -46,6 +46,7 @@ export const sampleProduct = {
   price: 0,
   inWarehouse: false,
   available: true,
+  guarantee: false,
   variants: {
     axes: [
       { key: 'color', label: 'لون' },

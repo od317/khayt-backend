@@ -152,6 +152,7 @@ export class ProductsService {
         price: dto.price,
         images: uploaded,
         inWarehouse: false,
+        guarantee: dto.guarantee ?? false,
         variants: variants ? toJson(variants) : Prisma.JsonNull,
         packaging: dto.packaging ? toJson(dto.packaging) : Prisma.JsonNull,
         discount: dto.discount ? toJson(dto.discount) : Prisma.JsonNull,
@@ -198,6 +199,7 @@ export class ProductsService {
     if (dto.packaging !== undefined) data.packaging = toJson(dto.packaging);
     if (dto.discount !== undefined) data.discount = toJson(dto.discount);
     if (dto.offer !== undefined) data.offer = dto.offer;
+    if (dto.guarantee !== undefined) data.guarantee = dto.guarantee;
 
     const product = await this.prisma.product.update({
       where: { id },
