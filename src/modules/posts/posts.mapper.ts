@@ -34,7 +34,7 @@ export type PostCategoryResponse = {
 export type PostResponse = {
   id: string;
   type: PostType;
-  title: string;
+  title: string | null;
   body: string;
   media: MediaType;
   imageUrls: string[];
