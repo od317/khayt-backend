@@ -121,10 +121,21 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '200': ok({ sent: true }),
     '400': errors('Validation failed', {
       validation_failed: {
-        summary: 'Invalid phone',
+        summary: 'Invalid phone or name',
         value: validationFailed({
           phone: 'must be a Syrian phone number (09xxxxxxxx)',
+          name: 'must be longer than or equal to 2 characters',
         }),
+      },
+    }),
+    '401': errors('Unauthorized', {
+      invalid_name: {
+        summary: 'Name does not match this phone',
+        value: errorBody(
+          401,
+          'invalid_name',
+          'Name does not match this phone number',
+        ),
       },
     }),
     '429': errors('Too many requests', {
@@ -161,6 +172,14 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
           401,
           'code_expired',
           'Verification code is missing or expired',
+        ),
+      },
+      invalid_name: {
+        summary: 'Name does not match this phone',
+        value: errorBody(
+          401,
+          'invalid_name',
+          'Name does not match this phone number',
         ),
       },
     }),

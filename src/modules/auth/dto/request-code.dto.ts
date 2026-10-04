@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsString, Matches } from 'class-validator';
+import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { normalizePhone, SYRIAN_PHONE_PATTERN } from '../phone';
 
 export class RequestCodeDto {
@@ -13,4 +13,14 @@ export class RequestCodeDto {
     message: 'must be a Syrian phone number (09xxxxxxxx)',
   })
   phone!: string;
+
+  @ApiProperty({
+    example: 'أحمد',
+    description:
+      'Required with the phone. New phones register this name; existing phones must send the same name as before.',
+  })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  name!: string;
 }

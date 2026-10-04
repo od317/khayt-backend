@@ -52,7 +52,7 @@ export class AuthController {
   @Post('request-code')
   @HttpCode(HttpStatus.OK)
   requestCode(@Body() dto: RequestCodeDto): Promise<{ sent: true }> {
-    return this.auth.requestCode(dto.phone);
+    return this.auth.requestCode(dto.phone, dto.name);
   }
 
   @Public()
@@ -62,12 +62,7 @@ export class AuthController {
     @Body() dto: VerifyDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.auth.verify(
-      dto.phone,
-      dto.code,
-      dto.name,
-      dto.fcmToken,
-    );
+    const result = await this.auth.verify(dto.phone, dto.code, dto.fcmToken);
     this.setRefreshCookie(res, result.refreshToken);
     return result;
   }

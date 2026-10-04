@@ -125,15 +125,16 @@ All routes are under `/api/...`.
 
 ### Mobile
 
-1. `POST /api/auth/request-code` `{ phone }` → OTP in Redis  
+1. `POST /api/auth/request-code` `{ phone, name }` → OTP in Redis  
+   - new phone → name kept for verify  
+   - existing phone → name must match (`invalid_name` otherwise; no OTP sent)  
 2. `POST /api/auth/verify` `{ phone, code, fcmToken? }` → JWT + user  
-3. `POST /api/auth/verify` requires `name` with the phone/OTP  
-4. If `onboardingCompleted === false` → `POST /api/auth/onboarding`  
+3. If `onboardingCompleted === false` → `POST /api/auth/onboarding`  
    - Employee: `role` + `locationId` only  
    - Factory (`workshop`) / store: extra multipart fields — `businessName`,
      `description`, `services[]`, `experienceYears`, `image` file  
-5. `GET /api/auth/me` → user + optional business + unread count  
-6. Refresh via refresh token endpoint
+4. `GET /api/auth/me` → user + optional business + unread count  
+5. Refresh via refresh token endpoint
 
 ### Dashboard
 

@@ -25,15 +25,6 @@ export class VerifyDto {
   @Matches(/^\d{6}$/, { message: 'must be a 6-digit code' })
   code!: string;
 
-  @ApiProperty({
-    example: 'أحمد',
-    description: 'Display name entered with the phone number.',
-  })
-  @IsString()
-  @MinLength(2)
-  @MaxLength(100)
-  name!: string;
-
   @ApiPropertyOptional({
     example: '',
     description: 'Firebase Cloud Messaging device token from the Android app',
