@@ -412,6 +412,15 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   'get /locations/cities': {
     '200': ok({ items: [{ id: '', name: 'دمشق' }] }),
   },
+  'get /locations/{id}/areas': {
+    '200': ok({ items: [{ id: '', name: 'المزة' }] }),
+    '404': errors('Not found', {
+      not_found: {
+        summary: 'City location missing',
+        value: errorBody(404, 'not_found', 'Location not found'),
+      },
+    }),
+  },
   'get /admin/locations': {
     '200': ok({ items: [sampleAdminLocation] }),
   },

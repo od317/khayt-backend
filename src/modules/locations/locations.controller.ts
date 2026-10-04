@@ -1,6 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { Public } from '../../common/decorators/public.decorator';
 import {
+  AreaResponse,
   CityFlatResponse,
   CityResponse,
   LocationsService,
@@ -20,5 +21,11 @@ export class LocationsController {
   @Get('cities')
   listCities(): Promise<{ items: CityFlatResponse[] }> {
     return this.locations.listCities();
+  }
+
+  @Public()
+  @Get(':id/areas')
+  listAreas(@Param('id') id: string): Promise<{ items: AreaResponse[] }> {
+    return this.locations.listAreas(id);
   }
 }

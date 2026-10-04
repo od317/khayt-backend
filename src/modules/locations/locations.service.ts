@@ -91,6 +91,27 @@ export class LocationsService {
     return { items: cities };
   }
 
+  async listAreas(locationId: string): Promise<{ items: AreaResponse[] }> {
+    const city = await this.prisma.location.findFirst({
+      where: { id: locationId, parentId: null, active: true },
+      select: { id: true },
+    });
+    if (!city) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Location not found',
+      });
+    }
+
+    const areas = await this.prisma.location.findMany({
+      where: { parentId: locationId, active: true },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, name: true },
+    });
+
+    return { items: areas };
+  }
+
   async listAll(): Promise<{ items: AdminLocationResponse[] }> {
     const cities = await this.prisma.location.findMany({
       where: { parentId: null },

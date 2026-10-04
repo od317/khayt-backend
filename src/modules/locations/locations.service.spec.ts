@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { LocationsService } from './locations.service';
@@ -5,6 +6,7 @@ import { LocationsService } from './locations.service';
 type PrismaMock = {
   location: {
     findMany: ReturnType<typeof vi.fn>;
+    findFirst: ReturnType<typeof vi.fn>;
     findUnique: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
@@ -31,6 +33,7 @@ describe('LocationsService', () => {
     prisma = {
       location: {
         findMany: vi.fn().mockResolvedValue([]),
+        findFirst: vi.fn(),
         findUnique: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
@@ -126,5 +129,40 @@ describe('LocationsService', () => {
     );
     expect(result.location.name).toBe('حمص');
     expect(result.location.parentId).toBeNull();
+  });
+
+  it('returns areas for a city location id', async () => {
+    prisma.location.findFirst.mockResolvedValue({ id: 'loc-damascus' });
+    prisma.location.findMany.mockResolvedValue([
+      { id: 'loc-damascus-mazzeh', name: 'المزة' },
+      { id: 'loc-damascus-midan', name: 'الميدان' },
+    ]);
+
+    const result = await service.listAreas('loc-damascus');
+
+    expect(prisma.location.findFirst).toHaveBeenCalledWith({
+      where: { id: 'loc-damascus', parentId: null, active: true },
+      select: { id: true },
+    });
+    expect(prisma.location.findMany).toHaveBeenCalledWith({
+      where: { parentId: 'loc-damascus', active: true },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, name: true },
+    });
+    expect(result.items).toEqual([
+      { id: 'loc-damascus-mazzeh', name: 'المزة' },
+      { id: 'loc-damascus-midan', name: 'الميدان' },
+    ]);
+  });
+
+  it('rejects an unknown location id for areas', async () => {
+    prisma.location.findFirst.mockResolvedValue(null);
+
+    const error = await service
+      .listAreas('missing')
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(NotFoundException);
+    expect(prisma.location.findMany).not.toHaveBeenCalled();
   });
 });
