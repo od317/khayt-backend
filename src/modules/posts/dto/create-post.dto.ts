@@ -1,9 +1,8 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiHideProperty, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MediaType, PostType } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   IsArray,
   IsEnum,
   IsNotEmpty,
@@ -55,12 +54,8 @@ export class CreatePostDto {
   @IsEnum(MediaType)
   media?: MediaType;
 
-  @ApiPropertyOptional({
-    type: [String],
-    deprecated: true,
-    description:
-      'Use the images file field instead. Ignored when files are uploaded.',
-  })
+  /** Legacy URL list — prefer uploading `images` files. Hidden from Swagger. */
+  @ApiHideProperty()
   @IsOptional()
   @Transform(parseJsonIfString)
   @IsArray()
@@ -76,12 +71,8 @@ export class CreatePostDto {
   @IsOptional()
   images?: unknown;
 
-  @ApiPropertyOptional({
-    example: '',
-    deprecated: true,
-    description:
-      'Use the video file field instead. Ignored when a video file is uploaded.',
-  })
+  /** Legacy URL — prefer uploading `video` file. Hidden from Swagger. */
+  @ApiHideProperty()
   @IsOptional()
   @IsString()
   @MaxLength(500)
@@ -95,15 +86,19 @@ export class CreatePostDto {
   @IsOptional()
   video?: unknown;
 
-  @ApiProperty({ type: [String], example: [''] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: [],
+    description: 'Optional. Omit or send [] if the post has no categories.',
+  })
+  @IsOptional()
   @Transform(parseJsonIfString)
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(20)
   @IsString({ each: true })
-  categoryIds!: string[];
+  categoryIds?: string[];
 
-  @ApiPropertyOptional({ example: '' })
+  @ApiHideProperty()
   @IsOptional()
   @IsString()
   businessId?: string;

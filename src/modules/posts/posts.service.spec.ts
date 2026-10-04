@@ -199,7 +199,6 @@ describe('PostsService', () => {
         skills: ['خياطة'],
         workType: ['كامل'],
         salaryType: 'حسب الاتفاق',
-        categoryIds: ['cat-1'],
       });
 
       expect(result.post.id).toBe('post-1');
@@ -209,15 +208,15 @@ describe('PostsService', () => {
           type: PostType.job_offering,
           specialty: 'إنتاج/صناعة',
           salaryType: 'حسب الاتفاق',
-          categories: {
-            create: [{ categoryId: 'cat-1' }],
-          },
         }),
         include: expect.objectContaining({
           author: { include: { location: true } },
           business: true,
         }),
       });
+      expect(prisma.post.create.mock.calls[0]?.[0]?.data).not.toHaveProperty(
+        'categories',
+      );
     });
 
     it('stores uploaded images and sets media to image', async () => {
@@ -239,7 +238,6 @@ describe('PostsService', () => {
           skills: ['خياطة'],
           workType: ['كامل'],
           salaryType: 'حسب الاتفاق',
-          categoryIds: ['cat-1'],
         },
         [
           {
@@ -274,7 +272,6 @@ describe('PostsService', () => {
           title: 'تشكيلة صيفية',
           body: 'جولة في المشغل',
           location: 'دمشق',
-          categoryIds: ['cat-1'],
         },
         [
           {
@@ -294,30 +291,25 @@ describe('PostsService', () => {
       });
     });
 
-    it('rejects a post without categories', async () => {
-      const error = await service
-        .create(actor, {
-          type: PostType.job_offering,
-          title: 'مطلوب خياط',
-          body: 'نبحث عن خياط ماهر',
-          location: 'دمشق',
-          specialty: 'إنتاج/صناعة',
-          skills: ['خياطة'],
-          workType: ['كامل'],
-          salaryType: 'حسب الاتفاق',
-          categoryIds: [],
-        })
-        .catch((err: unknown) => err);
+    it('creates a post without categories', async () => {
+      prisma.post.create.mockResolvedValue(makePost());
 
-      expect(error).toBeInstanceOf(HttpException);
-      expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'validation_failed',
-        fields: { categoryIds: 'required' },
+      await service.create(actor, {
+        type: PostType.job_offering,
+        title: 'مطلوب خياط',
+        body: 'نبحث عن خياط ماهر',
+        location: 'دمشق',
+        specialty: 'إنتاج/صناعة',
+        skills: ['خياطة'],
+        workType: ['كامل'],
+        salaryType: 'حسب الاتفاق',
       });
-      expect(prisma.post.create).not.toHaveBeenCalled();
+
+      expect(prisma.post.create).toHaveBeenCalled();
+      expect(prisma.category.findMany).not.toHaveBeenCalled();
     });
 
-    it('creates a reel with video and categories', async () => {
+    it('creates a reel with video', async () => {
       prisma.post.create.mockResolvedValue(
         makePost({
           type: PostType.reel,
@@ -332,7 +324,6 @@ describe('PostsService', () => {
         body: 'جولة في المشغل',
         location: 'دمشق',
         videoUrl: '/uploads/reels/a.mp4',
-        categoryIds: ['cat-1', 'cat-2'],
       });
 
       expect(prisma.post.create).toHaveBeenCalledWith({

@@ -196,9 +196,10 @@ export class PostsService {
       }
     }
 
-    await this.assertAssignableCategories(dto.categoryIds);
-
-    const categoryIds = [...new Set(dto.categoryIds)];
+    const categoryIds = [...new Set(dto.categoryIds ?? [])];
+    if (categoryIds.length > 0) {
+      await this.assertAssignableCategories(categoryIds);
+    }
 
     const post = await this.prisma.post.create({
       data: {
@@ -223,9 +224,13 @@ export class PostsService {
         priceMethod: dto.priceMethod ?? null,
         condition: dto.condition ?? null,
         price: dto.price ?? null,
-        categories: {
-          create: categoryIds.map((categoryId) => ({ categoryId })),
-        },
+        ...(categoryIds.length > 0
+          ? {
+              categories: {
+                create: categoryIds.map((categoryId) => ({ categoryId })),
+              },
+            }
+          : {}),
       },
       include: POST_INCLUDE,
     });
@@ -602,14 +607,7 @@ export class PostsService {
   private async assertAssignableCategories(ids: string[]): Promise<void> {
     const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
     if (unique.length === 0) {
-      throw new HttpException(
-        {
-          error: 'validation_failed',
-          message: 'At least one category is required',
-          fields: { categoryIds: 'required' },
-        },
-        HttpStatus.BAD_REQUEST,
-      );
+      return;
     }
 
     const rows = await this.prisma.category.findMany({

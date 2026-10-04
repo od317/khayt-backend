@@ -3,6 +3,8 @@
 Backend API for خيط: a warehouse and marketplace platform for the
 Syrian clothing industry.
 
+Full project reference: [PROJECT.md](./PROJECT.md). Deeper design notes: [`docs/`](./docs/).
+
 ## Stack
 
 - NestJS + TypeScript

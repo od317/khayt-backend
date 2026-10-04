@@ -8,7 +8,6 @@ const base = {
   title: 'مطلوب خياط',
   body: 'نبحث عن خياط ماهر',
   location: 'دمشق',
-  categoryIds: ['cat-1'],
 };
 
 const collect = (errors: ValidationError[]): string[] => {
@@ -59,9 +58,9 @@ describe('CreatePostDto', () => {
     expect(messages).toEqual([]);
   });
 
-  it('rejects a post without categories', async () => {
+  it('allows a post without categories', async () => {
     const messages = await run({ categoryIds: [] });
-    expect(messages.length).toBeGreaterThan(0);
+    expect(messages).toEqual([]);
   });
 
   it('rejects more than 8 imageUrls', async () => {

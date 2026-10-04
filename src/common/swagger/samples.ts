@@ -267,10 +267,10 @@ export const sampleTokens = {
 };
 
 const postMultipartHint =
-  'multipart/form-data. Use the `images` file picker (repeat, max 8). Arrays such as categoryIds can be JSON strings. Do not send image URLs.';
+  'multipart/form-data. Optional: upload photos with `images` (repeat, max 8).';
 
 const reelMultipartHint =
-  'multipart/form-data. Upload the reel with `video`, and optional photos with `images` (repeat, max 8). Arrays such as categoryIds can be JSON strings.';
+  'multipart/form-data. Upload the reel with `video`, and optional photos with `images` (repeat, max 8).';
 
 export const createPostSwaggerExamples = {
   job_offering: {
@@ -281,7 +281,6 @@ export const createPostSwaggerExamples = {
       title: 'مطلوب خياط ماهر',
       body: 'نبحث عن خياط للعمل في المعمل',
       location: 'دمشق',
-      categoryIds: ['cat-wazaif'],
       specialty: 'إنتاج/صناعة',
       skills: ['خياطة'],
       experience: '3 سنوات',
@@ -298,7 +297,6 @@ export const createPostSwaggerExamples = {
       title: 'خدمة تطريز',
       body: 'أقدم تطريز يدوي',
       location: 'دمشق',
-      categoryIds: ['cat-tatriz', 'cat-khadamat'],
       specialty: 'تطريز',
       servicePlace: 'في المشغل',
       pricing: 'بالقطعة',
@@ -312,7 +310,6 @@ export const createPostSwaggerExamples = {
       title: 'قمصان قطن',
       body: 'قمصان جاهزة للبيع',
       location: 'دمشق',
-      categoryIds: ['cat-qumsan'],
       specialty: 'ألبسة رجالية',
       sellMethod: 'جملة',
       priceMethod: 'سعر ثابت',
@@ -327,7 +324,6 @@ export const createPostSwaggerExamples = {
       title: 'قماش قطن للبيع',
       body: 'قماش قطن، ماكينة خياطة',
       location: 'دمشق',
-      categoryIds: ['cat-qumsan'],
       specialty: 'أقمشة',
       condition: 'جديدة',
       price: '2500000',
@@ -341,7 +337,6 @@ export const createPostSwaggerExamples = {
       title: 'تشكيلة صيفية جديدة',
       body: 'جولة في المشغل',
       location: 'دمشق',
-      categoryIds: ['cat-qumsan'],
     },
   },
   material_requesting: {
@@ -352,7 +347,6 @@ export const createPostSwaggerExamples = {
       title: 'أبحث عن قماش كتان',
       body: 'قماش كتان، مقص كهربائي',
       location: 'دمشق',
-      categoryIds: ['cat-bantal'],
       specialty: 'أقمشة',
       condition: 'أي حالة',
     },
@@ -365,9 +359,8 @@ export const createPostSwaggerExamples = {
       title: 'خياط يبحث عن عمل',
       body: 'خبرة 10 سنوات في خياطة القمصان',
       location: 'دمشق',
-      categoryIds: ['cat-wazaif'],
-      specialty: 'خياطة',
-      workType: ['دوام كامل', 'دوام جزئي'],
+      specialty: 'إنتاج/صناعة',
+      workType: ['كامل', 'جزئي'],
       experience: '10 سنوات',
     },
   },
@@ -379,7 +372,6 @@ export const createPostSwaggerExamples = {
       title: 'أحتاج خياط',
       body: 'أبحث عن خياط لإنهاء طلب',
       location: 'دمشق',
-      categoryIds: ['cat-khadamat'],
       specialty: 'خياطة',
     },
   },
