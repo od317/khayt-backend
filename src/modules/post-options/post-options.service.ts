@@ -291,14 +291,12 @@ export class PostOptionsService {
       const specialty = (byKind.get(PostOptionKind.specialty) ?? []).find(
         (r) => r.label === values.specialty,
       );
+      // Catalog skills must belong to the specialty; free-text skills are allowed.
       for (const skill of values.skills) {
         const match = skillRows.find((r) => r.label === skill);
-        if (!match) {
-          fields.skills = 'must use active skill options';
-          break;
-        }
+        if (!match) continue;
         if (specialty && match.parentId && match.parentId !== specialty.id) {
-          fields.skills = 'skills must belong to the selected specialty';
+          fields.skills = 'catalog skills must belong to the selected specialty';
           break;
         }
       }
@@ -309,11 +307,6 @@ export class PostOptionsService {
       value?: string;
       field: string;
     }> = [
-      {
-        kind: PostOptionKind.salary_type,
-        value: values.salaryType,
-        field: 'salaryType',
-      },
       {
         kind: PostOptionKind.service_place,
         value: values.servicePlace,
@@ -341,13 +334,6 @@ export class PostOptionsService {
       if (!kinds.includes(item.kind) || !item.value) continue;
       if (!labelsOf(item.kind).has(item.value)) {
         fields[item.field] = `must be an active ${item.field} option`;
-      }
-    }
-
-    if (kinds.includes(PostOptionKind.work_type) && values.workType?.length) {
-      const allowed = labelsOf(PostOptionKind.work_type);
-      if (values.workType.some((v) => !allowed.has(v))) {
-        fields.workType = 'must use active workType options';
       }
     }
 

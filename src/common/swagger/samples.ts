@@ -30,6 +30,7 @@ export const sampleBusiness = {
   equipment: null as string | null,
   minOrder: null as string | null,
   experience: null as string | null,
+  services: [] as string[],
   duration: null as string | null,
   topics: [] as string[],
   createdAt: AT,

@@ -109,7 +109,12 @@ export class CreatePostDto {
   @MaxLength(100)
   specialty?: string;
 
-  @ApiPropertyOptional({ type: [String], example: [''] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['خياطة', 'مهارة مخصصة'],
+    description:
+      'Mix of catalog skills and optional free-text skills. Custom values are stored on the post only (not in post-options).',
+  })
   @IsOptional()
   @Transform(parseJsonIfString)
   @IsArray()

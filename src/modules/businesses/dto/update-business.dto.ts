@@ -62,6 +62,12 @@ export class UpdateBusinessDto {
   @MaxLength(100)
   experience?: string;
 
+  @ApiPropertyOptional({ type: [String], example: ['خياطة'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  services?: string[];
+
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()

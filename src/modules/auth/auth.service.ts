@@ -9,7 +9,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Location, Prisma, User, UserRole } from '@prisma/client';
+import {
+  BusinessType,
+  Location,
+  Prisma,
+  User,
+  UserRole,
+} from '@prisma/client';
 import { createHash, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
@@ -125,6 +131,7 @@ export class AuthService {
   async verify(
     rawPhone: string,
     code: string,
+    name: string,
     fcmToken?: string,
   ): Promise<VerifyResponse> {
     const phone = normalizePhone(rawPhone);
@@ -163,7 +170,8 @@ export class AuthService {
     await this.redis.del(otpKey(phone));
     await this.redis.del(otpAttemptsKey(phone));
 
-    const user = await this.findOrCreateUser(phone);
+    const trimmedName = name.trim();
+    const user = await this.findOrCreateUser(phone, trimmedName);
     if (user.suspended) {
       throw new ForbiddenException({
         error: 'account_suspended',
@@ -434,7 +442,8 @@ export class AuthService {
   async onboarding(
     actor: AuthenticatedUser,
     dto: OnboardingDto,
-  ): Promise<{ user: UserResponse }> {
+    image?: Express.Multer.File,
+  ): Promise<{ user: UserResponse; business: BusinessResponse | null }> {
     const existing = await this.prisma.user.findUnique({
       where: { id: actor.id },
       select: { onboardingCompleted: true },
@@ -456,7 +465,7 @@ export class AuthService {
 
     const location = await this.prisma.location.findFirst({
       where: { id: dto.locationId, active: true },
-      select: { id: true },
+      select: { id: true, name: true },
     });
 
     if (!location) {
@@ -486,17 +495,90 @@ export class AuthService {
       );
     }
 
-    const user = await this.prisma.user.update({
-      where: { id: actor.id },
-      data: {
-        role: role.value,
-        location: { connect: { id: dto.locationId } },
-        onboardingCompleted: true,
-      },
-      include: { location: true },
+    const needsBusiness =
+      role.value === UserRole.workshop || role.value === UserRole.store;
+    if (needsBusiness) {
+      this.assertBusinessOnboarding(dto, image);
+    }
+
+    const businessType =
+      role.value === UserRole.workshop
+        ? BusinessType.workshop
+        : role.value === UserRole.store
+          ? BusinessType.store
+          : null;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({
+        where: { id: actor.id },
+        data: {
+          role: role.value,
+          location: { connect: { id: dto.locationId } },
+          onboardingCompleted: true,
+        },
+        include: { location: true },
+      });
+
+      if (!needsBusiness || !businessType) {
+        return { user, business: null };
+      }
+
+      const services = (dto.services ?? [])
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      const business = await tx.business.create({
+        data: {
+          ownerId: actor.id,
+          type: businessType,
+          name: dto.businessName!.trim(),
+          location: location.name,
+          description: dto.description!.trim(),
+          services,
+          experience: String(dto.experienceYears),
+          imageUrl: image ? `/uploads/businesses/${image.filename}` : null,
+        },
+      });
+
+      return { user, business };
     });
 
-    return { user: toUserResponse(user) };
+    return {
+      user: toUserResponse(result.user),
+      business: result.business ? toBusinessResponse(result.business) : null,
+    };
+  }
+
+  private assertBusinessOnboarding(
+    dto: OnboardingDto,
+    image?: Express.Multer.File,
+  ): void {
+    const fields: Record<string, string> = {};
+    if (!dto.businessName?.trim()) {
+      fields.businessName = 'required for workshop/store';
+    }
+    if (!dto.description?.trim()) {
+      fields.description = 'required for workshop/store';
+    }
+    if (!dto.services?.length) {
+      fields.services = 'required for workshop/store';
+    }
+    if (dto.experienceYears === undefined || dto.experienceYears === null) {
+      fields.experienceYears = 'required for workshop/store';
+    }
+    if (!image) {
+      fields.image = 'required for workshop/store';
+    }
+    if (Object.keys(fields).length > 0) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'Business profile is required for this role',
+          fields,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
   private generateCode(): string {
@@ -511,12 +593,20 @@ export class AuthService {
 
   private async findOrCreateUser(
     phone: string,
+    name: string,
   ): Promise<User & { location: Location | null }> {
     const existing = await this.prisma.user.findUnique({
       where: { phone },
       include: { location: true },
     });
     if (existing) {
+      if (!existing.onboardingCompleted && name && name !== existing.name) {
+        return this.prisma.user.update({
+          where: { id: existing.id },
+          data: { name },
+          include: { location: true },
+        });
+      }
       return existing;
     }
 
@@ -524,7 +614,7 @@ export class AuthService {
       return await this.prisma.user.create({
         data: {
           phone,
-          name: phone,
+          name,
           role: UserRole.employee,
         },
         include: { location: true },

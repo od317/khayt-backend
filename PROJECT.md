@@ -91,8 +91,8 @@ backend/
 
 - One user → at most **one** `Business` (`Business.ownerId` unique).
 - Stores place `Order`s; factories own `Product` / `Supply`.
-- Onboarding today: `POST /api/auth/onboarding` sets `role` + `locationId`
-  only (business profile create is still a separate `POST /api/businesses`).
+- Onboarding: employee finishes with role + location; workshop/store must
+  also submit business profile (name, image, description, services, years).
 
 ---
 
@@ -127,9 +127,13 @@ All routes are under `/api/...`.
 
 1. `POST /api/auth/request-code` `{ phone }` → OTP in Redis  
 2. `POST /api/auth/verify` `{ phone, code, fcmToken? }` → JWT + user  
-3. If `onboardingCompleted === false` → `POST /api/auth/onboarding`  
-4. `GET /api/auth/me` → user + optional business + unread count  
-5. Refresh via refresh token endpoint
+3. `POST /api/auth/verify` requires `name` with the phone/OTP  
+4. If `onboardingCompleted === false` → `POST /api/auth/onboarding`  
+   - Employee: `role` + `locationId` only  
+   - Factory (`workshop`) / store: extra multipart fields — `businessName`,
+     `description`, `services[]`, `experienceYears`, `image` file  
+5. `GET /api/auth/me` → user + optional business + unread count  
+6. Refresh via refresh token endpoint
 
 ### Dashboard
 
@@ -194,10 +198,14 @@ Admin CRUD (`admin` / `super_admin`):
 - `PATCH /api/admin/post-options/:id`
 - `DELETE /api/admin/post-options/:id`
 
-Kinds: `specialty`, `skill`, `work_type`, `salary_type`, `service_place`,
-`pricing`, `sell_method`, `price_method`, `condition`.
+Public catalog kinds (no workType / salaryType / experience chips):
+`specialty`, `skill`, `service_place`, `pricing`, `sell_method`,
+`price_method`, `condition`.
 
-Required on create (must match catalog labels):
+Still accepted on create as **free text** (not from catalog):
+`workType`, `salaryType`, `experience`.
+
+Required on create:
 
 | Post type | Required fields |
 | --- | --- |
@@ -206,7 +214,8 @@ Required on create (must match catalog labels):
 | `product_offering` | specialty, sellMethod, priceMethod |
 | `material_offering` | specialty, condition |
 
-Skills are parented to a specialty (`parentId`).
+Skills may mix catalog labels (parented to specialty) and optional free-text
+values stored only on the post.
 
 Default catalog SQL (safe re-run, keeps custom rows):
 
@@ -307,8 +316,6 @@ then update docs.
 
 ## 12. Known gaps / next product notes
 
-- Store/factory **business profile during onboarding** is not forced yet
-  (role + location only; `Business` created separately).
 - OTP is temporarily fixed for testing; real SMS still TODO.
 - Directory-only actors (shipping companies, marketers) are admin-managed
   listings rather than full login accounts.

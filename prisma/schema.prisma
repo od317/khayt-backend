@@ -211,7 +211,8 @@ model Business {
   capacity    String?   // workshop
   equipment   String?   // workshop
   minOrder    String?   // workshop
-  experience  String?   // workshop, institute
+  experience  String?   // workshop, institute, store (years as text)
+  services    String[]  @default([]) // workshop, store — free-text services
   duration    String?   // institute
   topics      String[]  // institute
 

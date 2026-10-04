@@ -14,6 +14,7 @@ export type BusinessResponse = {
   equipment: string | null;
   minOrder: string | null;
   experience: string | null;
+  services: string[];
   duration: string | null;
   topics: string[];
   createdAt: string;
@@ -43,6 +44,7 @@ export function toBusinessResponse(business: Business): BusinessResponse {
     equipment: business.equipment,
     minOrder: business.minOrder,
     experience: business.experience,
+    services: business.services,
     duration: business.duration,
     topics: business.topics,
     createdAt: business.createdAt.toISOString(),

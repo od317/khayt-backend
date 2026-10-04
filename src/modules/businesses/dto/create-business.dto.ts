@@ -62,6 +62,16 @@ export class CreateBusinessDto {
   @MaxLength(100)
   experience?: string;
 
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['خياطة'],
+    description: 'Free-text services for workshop/store.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  services?: string[];
+
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()

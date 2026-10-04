@@ -43,10 +43,10 @@ describe('PostOptionsService', () => {
         updatedAt: new Date(),
       },
       {
-        id: 'w1',
-        kind: PostOptionKind.work_type,
-        label: 'كامل',
-        parentId: null,
+        id: 'sk1',
+        kind: PostOptionKind.skill,
+        label: 'خياطة',
+        parentId: 's1',
         sortOrder: 0,
         postTypes: [PostType.job_offering],
         active: true,
@@ -62,11 +62,11 @@ describe('PostOptionsService', () => {
     expect(result.fields.specialty).toEqual([
       expect.objectContaining({ id: 's1', label: 'إنتاج/صناعة' }),
     ]);
-    expect(result.fields.workType).toEqual([
-      expect.objectContaining({ label: 'كامل' }),
+    expect(result.fields.skills).toEqual([
+      expect.objectContaining({ id: 'sk1', label: 'خياطة' }),
     ]);
-    expect(result.fields.skills).toEqual([]);
-    expect(result.fields.salaryType).toEqual([]);
+    expect(result.fields).not.toHaveProperty('salaryType');
+    expect(result.fields).not.toHaveProperty('workType');
     expect(result.fields).not.toHaveProperty('experience');
   });
 

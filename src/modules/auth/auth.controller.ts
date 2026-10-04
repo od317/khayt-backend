@@ -9,15 +9,21 @@ import {
   Post,
   Req,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiOkResponse } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiOkResponse } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path';
+import { diskStorage } from 'multer';
 import { RequireUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { AuthenticatedUser } from '../../common/types/auth';
 import { AppConfig } from '../../config/configuration';
-import type { UserResponse } from './auth.mapper';
+import type { BusinessResponse, UserResponse } from './auth.mapper';
 import { AuthService } from './auth.service';
 import { LogoutResponseDto } from './dto/logout-response.dto';
 import { OnboardingDto } from './dto/onboarding.dto';
@@ -26,6 +32,14 @@ import { RefreshResponseDto } from './dto/refresh-response.dto';
 import { RequestCodeDto } from './dto/request-code.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { VerifyDto } from './dto/verify.dto';
+
+const businessImageStorage = diskStorage({
+  destination: './uploads/businesses',
+  filename: (_req, file, cb) => {
+    const ext = extname(file.originalname) || '.jpg';
+    cb(null, `${randomUUID()}${ext}`);
+  },
+});
 
 @Controller('auth')
 export class AuthController {
@@ -48,7 +62,12 @@ export class AuthController {
     @Body() dto: VerifyDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.auth.verify(dto.phone, dto.code, dto.fcmToken);
+    const result = await this.auth.verify(
+      dto.phone,
+      dto.code,
+      dto.name,
+      dto.fcmToken,
+    );
     this.setRefreshCookie(res, result.refreshToken);
     return result;
   }
@@ -107,11 +126,20 @@ export class AuthController {
 
   @Post('onboarding')
   @HttpCode(HttpStatus.OK)
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @ApiBody({ type: OnboardingDto })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: businessImageStorage,
+      limits: { fileSize: 8 * 1024 * 1024 },
+    }),
+  )
   onboarding(
     @RequireUser() user: AuthenticatedUser,
     @Body() dto: OnboardingDto,
-  ): Promise<{ user: UserResponse }> {
-    return this.auth.onboarding(user, dto);
+    @UploadedFile() image?: Express.Multer.File,
+  ): Promise<{ user: UserResponse; business: BusinessResponse | null }> {
+    return this.auth.onboarding(user, dto, image);
   }
 
   private setRefreshCookie(res: Response, refreshToken: string): void {

@@ -25,6 +25,7 @@ const makeBusiness = (overrides: Record<string, unknown> = {}) => ({
   equipment: null,
   minOrder: null,
   experience: null,
+  services: [],
   duration: null,
   topics: [],
   createdAt: new Date('2026-01-01T00:00:00.000Z'),

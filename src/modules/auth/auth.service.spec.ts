@@ -71,7 +71,10 @@ describe('AuthService', () => {
       create: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
     };
-    business: { findUnique: ReturnType<typeof vi.fn> };
+    business: {
+      findUnique: ReturnType<typeof vi.fn>;
+      create: ReturnType<typeof vi.fn>;
+    };
     notification: {
       count: ReturnType<typeof vi.fn>;
       deleteMany: ReturnType<typeof vi.fn>;
@@ -112,7 +115,7 @@ describe('AuthService', () => {
         create: vi.fn(),
         update: vi.fn(),
       },
-      business: { findUnique: vi.fn() },
+      business: { findUnique: vi.fn(), create: vi.fn() },
       notification: { count: vi.fn(), deleteMany: vi.fn() },
       location: { findFirst: vi.fn() },
       role: { findFirst: vi.fn() },
@@ -200,7 +203,7 @@ describe('AuthService', () => {
     redis.get.mockResolvedValue(null);
 
     const error = await service
-      .verify(PHONE, '123456')
+      .verify(PHONE, '123456', 'أحمد')
       .catch((err: unknown) => err);
 
     expect(error).toBeInstanceOf(UnauthorizedException);
@@ -214,7 +217,7 @@ describe('AuthService', () => {
     redis.increment.mockResolvedValue(1);
 
     const error = await service
-      .verify(PHONE, '000000')
+      .verify(PHONE, '000000', 'أحمد')
       .catch((err: unknown) => err);
 
     expect(error).toBeInstanceOf(UnauthorizedException);
@@ -291,12 +294,12 @@ describe('AuthService', () => {
     const created = makeUser();
     prisma.user.create.mockResolvedValue(created);
 
-    const result = await service.verify(PHONE, '123456');
+    const result = await service.verify(PHONE, '123456', 'أحمد');
 
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: {
         phone: PHONE,
-        name: PHONE,
+        name: 'أحمد',
         role: UserRole.employee,
       },
       include: { location: true },
@@ -314,7 +317,7 @@ describe('AuthService', () => {
     redis.get.mockResolvedValue('123456');
     prisma.user.findUnique.mockResolvedValue(existing);
 
-    const result = await service.verify(PHONE, '123456');
+    const result = await service.verify(PHONE, '123456', 'أحمد');
 
     expect(prisma.user.create).not.toHaveBeenCalled();
     expect(result.user.id).toBe('existing-user');
@@ -322,11 +325,14 @@ describe('AuthService', () => {
   });
 
   it('stores an FCM token when verify includes fcmToken', async () => {
-    const existing = makeUser();
+    const existing = makeUser({
+      name: 'أحمد',
+      onboardingCompleted: true,
+    });
     redis.get.mockResolvedValue('123456');
     prisma.user.findUnique.mockResolvedValue(existing);
 
-    await service.verify(PHONE, '123456', 'sample-fcm-token');
+    await service.verify(PHONE, '123456', 'أحمد', 'sample-fcm-token');
 
     expect(fcm.registerToken).toHaveBeenCalledWith(
       existing.id,
@@ -336,10 +342,16 @@ describe('AuthService', () => {
 
   it('rejects a suspended user', async () => {
     redis.get.mockResolvedValue('123456');
-    prisma.user.findUnique.mockResolvedValue(makeUser({ suspended: true }));
+    prisma.user.findUnique.mockResolvedValue(
+      makeUser({
+        name: 'أحمد',
+        onboardingCompleted: true,
+        suspended: true,
+      }),
+    );
 
     const error = await service
-      .verify(PHONE, '123456')
+      .verify(PHONE, '123456', 'أحمد')
       .catch((err: unknown) => err);
 
     expect(error).toBeInstanceOf(ForbiddenException);
@@ -351,35 +363,121 @@ describe('AuthService', () => {
   describe('onboarding', () => {
     const LOCATION_ID = 'loc-damascus';
 
-    it('sets role, locationId, and the flag', async () => {
+    it('sets role, locationId, and the flag for employee', async () => {
       prisma.user.findUnique.mockResolvedValueOnce({
         onboardingCompleted: false,
       });
-      prisma.location.findFirst.mockResolvedValue({ id: LOCATION_ID });
-      prisma.role.findFirst.mockResolvedValue({ value: UserRole.store });
+      prisma.location.findFirst.mockResolvedValue({
+        id: LOCATION_ID,
+        name: 'دمشق',
+      });
+      prisma.role.findFirst.mockResolvedValue({ value: UserRole.employee });
       const updated = makeUser({
-        role: UserRole.store,
+        role: UserRole.employee,
         locationId: LOCATION_ID,
         onboardingCompleted: true,
       });
       prisma.user.update.mockResolvedValue(updated);
 
       const result = await service.onboarding(actor, {
-        role: UserRole.store,
+        role: UserRole.employee,
         locationId: LOCATION_ID,
       });
 
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: actor.id },
         data: {
-          role: UserRole.store,
+          role: UserRole.employee,
           location: { connect: { id: LOCATION_ID } },
           onboardingCompleted: true,
         },
         include: { location: true },
       });
       expect(result.user.onboardingCompleted).toBe(true);
-      expect(result.user.role).toBe(UserRole.store);
+      expect(result.user.role).toBe(UserRole.employee);
+      expect(result.business).toBeNull();
+      expect(prisma.business.create).not.toHaveBeenCalled();
+    });
+
+    it('creates a business profile for store/workshop', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: false,
+      });
+      prisma.location.findFirst.mockResolvedValue({
+        id: LOCATION_ID,
+        name: 'دمشق',
+      });
+      prisma.role.findFirst.mockResolvedValue({ value: UserRole.workshop });
+      const updated = makeUser({
+        role: UserRole.workshop,
+        locationId: LOCATION_ID,
+        onboardingCompleted: true,
+      });
+      prisma.user.update.mockResolvedValue(updated);
+      prisma.business.create.mockResolvedValue({
+        id: 'biz-1',
+        ownerId: actor.id,
+        type: 'workshop',
+        name: 'معمل النسيج',
+        location: 'دمشق',
+        description: 'وصف',
+        phone: null,
+        imageUrl: '/uploads/businesses/a.jpg',
+        verified: false,
+        capacity: null,
+        equipment: null,
+        minOrder: null,
+        experience: '5',
+        services: ['خياطة'],
+        duration: null,
+        topics: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const result = await service.onboarding(
+        actor,
+        {
+          role: UserRole.workshop,
+          locationId: LOCATION_ID,
+          businessName: 'معمل النسيج',
+          description: 'وصف',
+          services: ['خياطة'],
+          experienceYears: 5,
+        },
+        { filename: 'a.jpg' } as Express.Multer.File,
+      );
+
+      expect(prisma.business.create).toHaveBeenCalled();
+      expect(result.business?.name).toBe('معمل النسيج');
+      expect(result.business?.services).toEqual(['خياطة']);
+    });
+
+    it('rejects store onboarding without business fields', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: false,
+      });
+      prisma.location.findFirst.mockResolvedValue({
+        id: LOCATION_ID,
+        name: 'دمشق',
+      });
+      prisma.role.findFirst.mockResolvedValue({ value: UserRole.store });
+
+      const error = await service
+        .onboarding(actor, {
+          role: UserRole.store,
+          locationId: LOCATION_ID,
+        })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+        fields: expect.objectContaining({
+          businessName: expect.any(String),
+          image: expect.any(String),
+        }),
+      });
     });
 
     it('rejects an unknown locationId', async () => {

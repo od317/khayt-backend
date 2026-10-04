@@ -5,17 +5,10 @@ export const POST_OPTION_KINDS_BY_TYPE: Record<
   PostType,
   readonly PostOptionKind[]
 > = {
-  job_offering: [
-    PostOptionKind.specialty,
-    PostOptionKind.skill,
-    PostOptionKind.work_type,
-    PostOptionKind.salary_type,
-  ],
-  job_seeking: [
-    PostOptionKind.specialty,
-    PostOptionKind.skill,
-    PostOptionKind.work_type,
-  ],
+  // workType / salaryType / experience stay on the post body as free text —
+  // they are not catalog chips anymore.
+  job_offering: [PostOptionKind.specialty, PostOptionKind.skill],
+  job_seeking: [PostOptionKind.specialty, PostOptionKind.skill],
   service_offering: [
     PostOptionKind.specialty,
     PostOptionKind.service_place,

@@ -452,8 +452,6 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
           fields: {
             specialty: [{ id: '', label: '', parentId: null, sortOrder: 0 }],
             skills: [{ id: '', label: '', parentId: '', sortOrder: 0 }],
-            workType: [{ id: '', label: '', parentId: null, sortOrder: 0 }],
-            salaryType: [{ id: '', label: '', parentId: null, sortOrder: 0 }],
           },
         },
         service_offering: {

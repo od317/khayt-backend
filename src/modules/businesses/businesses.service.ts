@@ -145,6 +145,7 @@ export class BusinessesService {
         equipment: dto.equipment ?? null,
         minOrder: dto.minOrder ?? null,
         experience: dto.experience ?? null,
+        services: dto.services ?? [],
         duration: dto.duration ?? null,
         topics: dto.topics ?? [],
       },
@@ -167,6 +168,7 @@ export class BusinessesService {
     if (dto.equipment !== undefined) data.equipment = dto.equipment;
     if (dto.minOrder !== undefined) data.minOrder = dto.minOrder;
     if (dto.experience !== undefined) data.experience = dto.experience;
+    if (dto.services !== undefined) data.services = dto.services;
     if (dto.duration !== undefined) data.duration = dto.duration;
     if (dto.topics !== undefined) data.topics = dto.topics;
 

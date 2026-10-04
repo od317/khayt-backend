@@ -1,6 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { IsNotIn, IsString } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsInt,
+  IsNotIn,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 const INTERNAL_ROLES = [
   UserRole.super_admin,
@@ -8,6 +20,20 @@ const INTERNAL_ROLES = [
   UserRole.inventory,
   UserRole.delivery,
 ] as const;
+
+function parseJsonIfString({ value }: { value: unknown }): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (trimmed === '') {
+    return undefined;
+  }
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    return JSON.parse(trimmed) as unknown;
+  }
+  return value;
+}
 
 export class OnboardingDto {
   @ApiProperty({ example: 'employee' })
@@ -20,4 +46,57 @@ export class OnboardingDto {
   @ApiProperty({ example: '' })
   @IsString()
   locationId!: string;
+
+  @ApiPropertyOptional({
+    example: 'معمل النسيج',
+    description:
+      'Required when role is workshop (مصنع) or store. Business display name.',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(200)
+  businessName?: string;
+
+  @ApiPropertyOptional({
+    example: 'نصنع ألبسة رجالية',
+    description: 'Required when role is workshop or store.',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  description?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['خياطة', 'قص'],
+    description:
+      'Required when role is workshop or store. Enter services one by one (JSON array in multipart).',
+  })
+  @IsOptional()
+  @Transform(parseJsonIfString)
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  services?: string[];
+
+  @ApiPropertyOptional({
+    example: 5,
+    description: 'Required when role is workshop or store. Years of experience.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(80)
+  experienceYears?: number;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Required when role is workshop or store. Business image file.',
+  })
+  @IsOptional()
+  image?: unknown;
 }
