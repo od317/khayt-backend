@@ -35,7 +35,7 @@ export class CreatePostDto {
   @IsString()
   @MinLength(3)
   @MaxLength(200)
-  title!: string;
+  title?: string;
 
   @ApiProperty({ example: '' })
   @IsString()
