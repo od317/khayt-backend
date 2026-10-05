@@ -801,6 +801,14 @@ async function main(): Promise<void> {
       locationId: 'loc-damascus-midan',
       onboardingCompleted: true,
     },
+    {
+      id: 'user-workshop-rural-damascus',
+      phone: '0995034013',
+      name: 'معمل ريف دمشق للخياطة',
+      role: UserRole.workshop,
+      locationId: 'loc-rural-damascus-duma',
+      onboardingCompleted: true,
+    },
   ];
 
   for (const u of users) {
