@@ -698,6 +698,62 @@ async function main(): Promise<void> {
       locationId: 'loc-damascus',
       onboardingCompleted: true,
     },
+    {
+      id: 'user-workshop-halep',
+      phone: '0994000007',
+      name: 'معمل الشهباء',
+      role: UserRole.workshop,
+      locationId: 'loc-halep',
+      onboardingCompleted: true,
+    },
+    {
+      id: 'user-workshop-homs',
+      phone: '0994000008',
+      name: 'مشغل حمص للجينز',
+      role: UserRole.workshop,
+      locationId: 'loc-homs',
+      onboardingCompleted: true,
+    },
+    {
+      id: 'user-workshop-lattakia',
+      phone: '0994000009',
+      name: 'معمل الساحل',
+      role: UserRole.workshop,
+      locationId: 'loc-lattakia',
+      onboardingCompleted: true,
+    },
+    {
+      id: 'user-institute-halep',
+      phone: '0994000010',
+      name: 'معهد حلب',
+      role: UserRole.institute,
+      locationId: 'loc-halep',
+      onboardingCompleted: true,
+    },
+    {
+      id: 'user-institute-homs',
+      phone: '0994000011',
+      name: 'معهد حمص',
+      role: UserRole.institute,
+      locationId: 'loc-homs',
+      onboardingCompleted: true,
+    },
+    {
+      id: 'user-store-halep',
+      phone: '0994000012',
+      name: 'متجر الشهباء للأقمشة',
+      role: UserRole.store,
+      locationId: 'loc-halep',
+      onboardingCompleted: true,
+    },
+    {
+      id: 'user-store-damascus-babtouma',
+      phone: '0994000013',
+      name: 'مؤسسة باب توما',
+      role: UserRole.store,
+      locationId: 'loc-damascus-bab-touma',
+      onboardingCompleted: true,
+    },
   ];
 
   for (const u of users) {
@@ -755,48 +811,174 @@ async function main(): Promise<void> {
     );
   }
 
-  // ------------------------------------------------------------
-  // Businesses
-  // ------------------------------------------------------------
-  const businesses = [
-    {
-      id: 'biz-workshop',
-      ownerId: 'user-workshop',
-      type: BusinessType.workshop,
-      name: 'معمل النسيج الدمشقي',
-      location: 'دمشق - القدم',
-      description: 'معمل متخصص بصناعة القمصان والبناطيل',
-      phone: '0994000002',
-      verified: true,
-      capacity: '5000 قطعة شهرياً',
-      equipment: '20 ماكينة خياطة صناعية',
-      minOrder: '100 قطعة',
-      experience: '15 سنة',
-    },
-    {
-      id: 'biz-institute',
-      ownerId: 'user-institute',
-      type: BusinessType.institute,
-      name: 'معهد الخياطة',
-      location: 'دمشق - الميدان',
-      description: 'دورات تدريب على الخياطة والتطريز',
-      phone: '0994000003',
-      verified: true,
-      duration: '3 أشهر',
-      topics: ['خياطة أساسية', 'تطريز يدوي', 'تصميم أزياء'],
-      experience: '8 سنوات',
-    },
-    {
-      id: 'biz-store',
-      ownerId: 'user-store',
-      type: BusinessType.store,
-      name: 'متجر الأزياء',
-      location: 'دمشق - الحمرا',
-      description: 'متجر لبيع الملابس بالجملة',
-      phone: '0994000004',
-      verified: false,
-    },
-  ];
+  const SHARED_IMAGE_URL =
+  'https://images.pexels.com/photos/37080685/pexels-photo-37080685/free-photo-of-modern-fashion-store-interior-with-colorful-clothing-display.jpeg?h=1000&w=1500&fit=crop';
+
+const businesses = [
+  // ─────────────────────────────────────────────
+  // Existing 3
+  // ─────────────────────────────────────────────
+  {
+    id: 'biz-workshop',
+    ownerId: 'user-workshop',
+    type: BusinessType.workshop,
+    name: 'معمل النسيج الدمشقي',
+    location: 'دمشق - القدم',
+    description: 'معمل متخصص بصناعة القمصان والبناطيل',
+    phone: '0994000002',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: true,
+    capacity: '5000 قطعة شهرياً',
+    equipment: '20 ماكينة خياطة صناعية',
+    minOrder: '100 قطعة',
+    experience: '15 سنة',
+    services: ['خياطة قمصان', 'خياطة بناطيل', 'قص وتفصيل', 'تطريز آلي'],
+  },
+  {
+    id: 'biz-institute',
+    ownerId: 'user-institute',
+    type: BusinessType.institute,
+    name: 'معهد الخياطة',
+    location: 'دمشق - الميدان',
+    description: 'دورات تدريب على الخياطة والتطريز',
+    phone: '0994000003',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: true,
+    duration: '3 أشهر',
+    topics: ['خياطة أساسية', 'تطريز يدوي', 'تصميم أزياء'],
+    experience: '8 سنوات',
+    services: ['دورات خياطة', 'دورات تطريز', 'دورات تصميم'],
+  },
+  {
+    id: 'biz-store',
+    ownerId: 'user-store',
+    type: BusinessType.store,
+    name: 'متجر الأزياء',
+    location: 'دمشق - الحمرا',
+    description: 'متجر لبيع الملابس بالجملة',
+    phone: '0994000004',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: false,
+    services: ['بيع جملة', 'بيع مفرق', 'توصيل داخل دمشق'],
+    experience: '5 سنوات',
+  },
+
+  // ─────────────────────────────────────────────
+  // New workshops
+  // ─────────────────────────────────────────────
+  {
+    id: 'biz-workshop-halep',
+    ownerId: 'user-workshop-halep',
+    type: BusinessType.workshop,
+    name: 'معمل الشهباء للخياطة',
+    location: 'حلب - الشيخ نجار',
+    description: 'معمل متخصص بالألبسة النسائية والأطفال',
+    phone: '0994000007',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: true,
+    capacity: '3000 قطعة شهرياً',
+    equipment: '12 ماكينة خياطة + 2 أوفرلوك',
+    minOrder: '50 قطعة',
+    experience: '10 سنوات',
+    services: ['خياطة فساتين', 'خياطة أطفال', 'تطريز', 'قص ليزر'],
+  },
+  {
+    id: 'biz-workshop-homs',
+    ownerId: 'user-workshop-homs',
+    type: BusinessType.workshop,
+    name: 'مشغل حمص للجينز',
+    location: 'حمص - الوعر',
+    description: 'متخصصون بصناعة الجينز بكل أنواعه',
+    phone: '0994000008',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: true,
+    capacity: '2000 قطعة شهرياً',
+    equipment: '8 ماكينات جينز صناعية',
+    minOrder: '30 قطعة',
+    experience: '7 سنوات',
+    services: ['خياطة جينز', 'تعديل جينز', 'قص جينز', 'غسيل جينز'],
+  },
+  {
+    id: 'biz-workshop-lattakia',
+    ownerId: 'user-workshop-lattakia',
+    type: BusinessType.workshop,
+    name: 'معمل الساحل للتطريز',
+    location: 'اللاذقية - الرمل الجنوبي',
+    description: 'تطريز يدوي وآلي بجودة عالية',
+    phone: '0994000009',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: false,
+    capacity: '1500 قطعة شهرياً',
+    equipment: '6 ماكينات تطريز',
+    minOrder: '20 قطعة',
+    experience: '12 سنة',
+    services: ['تطريز يدوي', 'تطريز آلي', 'شعارات', 'أسماء مطرزة'],
+  },
+
+  // ─────────────────────────────────────────────
+  // New institutes
+  // ─────────────────────────────────────────────
+  {
+    id: 'biz-institute-halep',
+    ownerId: 'user-institute-halep',
+    type: BusinessType.institute,
+    name: 'معهد حلب للتدريب المهني',
+    location: 'حلب - العزيزية',
+    description: 'دورات مهنية في الخياطة والتصميم',
+    phone: '0994000010',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: true,
+    duration: '6 أشهر',
+    topics: ['خياطة متقدمة', 'تصميم أزياء', 'باترون', 'تطريز'],
+    experience: '10 سنوات',
+    services: ['دورات خياطة', 'دورات باترون', 'دورات تصميم'],
+  },
+  {
+    id: 'biz-institute-homs',
+    ownerId: 'user-institute-homs',
+    type: BusinessType.institute,
+    name: 'معهد حمص للخياطة',
+    location: 'حمص - الإنشاءات',
+    description: 'تعليم الخياطة من الصفر حتى الاحتراف',
+    phone: '0994000011',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: false,
+    duration: '4 أشهر',
+    topics: ['خياطة أساسية', 'خياطة متقدمة', 'تطريز يدوي'],
+    experience: '5 سنوات',
+    services: ['دورات خياطة', 'دورات تطريز'],
+  },
+
+  // ─────────────────────────────────────────────
+  // New stores
+  // ─────────────────────────────────────────────
+  {
+    id: 'biz-store-halep',
+    ownerId: 'user-store-halep',
+    type: BusinessType.store,
+    name: 'متجر الشهباء للأقمشة',
+    location: 'حلب - الجميلية',
+    description: 'أقمشة محلية ومستوردة بالجملة والمفرق',
+    phone: '0994000012',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: true,
+    services: ['بيع أقمشة', 'بيع جملة', 'توصيل'],
+    experience: '15 سنة',
+  },
+  {
+    id: 'biz-store-damascus-babtouma',
+    ownerId: 'user-store-damascus-babtouma',
+    type: BusinessType.store,
+    name: 'مؤسسة باب توما للأزياء',
+    location: 'دمشق - باب توما',
+    description: 'بيع الألبسة الرجالية والنسائية',
+    phone: '0994000013',
+    imageUrl: SHARED_IMAGE_URL,
+    verified: true,
+    services: ['بيع ملابس رجالية', 'بيع ملابس نسائية', 'بيع مفرق'],
+    experience: '8 سنوات',
+  },
+];
 
   for (const b of businesses) {
     const { id, ...rest } = b;
