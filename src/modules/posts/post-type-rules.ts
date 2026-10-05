@@ -2,16 +2,20 @@ import { PostType } from '@prisma/client';
 
 /**
  * Per-type requirements for POST /posts.
- * Fields are the *required* ones for each type. All other fields are optional.
- * Source: the app's publish forms.
+ * Fields listed here are *required* when a post is created with that type.
+ *
+ * NOTE: All fields are currently optional — `body` is the only required
+ * field and is enforced by CreatePostDto via class-validator. This map
+ * exists so you can re-introduce per-type requirements later without
+ * touching the service layer.
  */
 export const POST_TYPE_REQUIRED_FIELDS: Record<PostType, readonly string[]> = {
-  job_seeking: ['specialty', 'workType'],
-  job_offering: ['specialty', 'skills', 'workType', 'salaryType'],
-  service_offering: ['specialty', 'servicePlace', 'pricing'],
-  service_requesting: ['specialty'],
-  product_offering: ['specialty', 'sellMethod', 'priceMethod'],
-  material_offering: ['specialty', 'condition'],
-  material_requesting: ['specialty'],
+  job_seeking: [],
+  job_offering: [],
+  service_offering: [],
+  service_requesting: [],
+  product_offering: [],
+  material_offering: [],
+  material_requesting: [],
   reel: [],
 };

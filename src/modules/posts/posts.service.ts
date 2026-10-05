@@ -42,6 +42,9 @@ type PostWithRelations = Post & {
   categories?: { category: { id: string; name: string; slug: string } }[];
 };
 
+/** Same as CreatePostDto but with a concrete `type`. Used internally. */
+type ResolvedCreatePostDto = CreatePostDto & { type: PostType };
+
 const POST_INCLUDE = {
   author: { include: { location: true } },
   business: true,
@@ -51,6 +54,9 @@ const POST_INCLUDE = {
     },
   },
 } as const;
+
+/** Default type when the client omits it. */
+const DEFAULT_POST_TYPE: PostType = PostType.job_seeking;
 
 @Injectable()
 export class PostsService {
@@ -165,23 +171,35 @@ export class PostsService {
     dto: CreatePostDto,
     files: Express.Multer.File[] = [],
   ): Promise<{ post: PostResponse }> {
+    // 1. Resolve the type first (defaults if client omitted it).
+    const type: PostType = dto.type ?? DEFAULT_POST_TYPE;
+
     const uploadedImages = postImagePaths(files);
     const uploadedVideo = postVideoPath(files);
     const imageUrls =
       uploadedImages.length > 0 ? uploadedImages : (dto.imageUrls ?? []);
     const videoUrl = uploadedVideo ?? dto.videoUrl ?? undefined;
+
     const media =
-      dto.type === PostType.reel
+      type === PostType.reel
         ? MediaType.video
         : uploadedImages.length > 0
           ? MediaType.image
           : (dto.media ??
             (imageUrls.length > 0 ? MediaType.image : MediaType.none));
 
-    const resolved = { ...dto, imageUrls, videoUrl, media };
+    // 2. Build a "resolved" DTO with a concrete type for validators.
+    const resolved: ResolvedCreatePostDto = {
+      ...dto,
+      type,
+      imageUrls,
+      videoUrl,
+      media,
+    };
+
     this.assertTypeRequirements(resolved);
     this.assertMediaRequirements(resolved);
-    await this.assertOptionSelections(dto.type, dto);
+    await this.assertOptionSelections(type, dto);
 
     if (dto.businessId) {
       const business = await this.prisma.business.findUnique({
@@ -205,10 +223,10 @@ export class PostsService {
       data: {
         authorId: actor.id,
         businessId: dto.businessId ?? null,
-        type: dto.type,
+        type,                              // ✅ concrete PostType
         title: dto.title,
         body: dto.body,
-        location: dto.location,
+        location: dto.location ?? null,    // ✅ nullable
         media,
         imageUrls,
         videoUrl: videoUrl ?? null,
@@ -283,8 +301,12 @@ export class PostsService {
       priceMethod: dto.priceMethod,
       condition: dto.condition,
     };
-    const touchesOptions = Object.values(optionPatch).some((v) => v !== undefined);
-    if (touchesOptions) {
+    const touchesOptions = Object.values(optionPatch).some(
+      (v) => v !== undefined,
+    );
+
+    // ✅ Guard: only validate options if the post has a concrete type.
+    if (touchesOptions && existing.type) {
       const current = await this.prisma.post.findFirst({
         where: { id, deletedAt: null },
         select: {
@@ -321,6 +343,7 @@ export class PostsService {
         if (dto.title !== undefined) data.title = dto.title;
         if (dto.body !== undefined) data.body = dto.body;
         if (dto.location !== undefined) data.location = dto.location;
+
         if (uploadedImages.length > 0) {
           data.imageUrls = uploadedImages;
           if (existing.type !== PostType.reel) {
@@ -335,9 +358,14 @@ export class PostsService {
         } else if (dto.videoUrl !== undefined) {
           data.videoUrl = dto.videoUrl;
         }
-        if (dto.media !== undefined && uploadedImages.length === 0 && !uploadedVideo) {
+        if (
+          dto.media !== undefined &&
+          uploadedImages.length === 0 &&
+          !uploadedVideo
+        ) {
           data.media = dto.media;
         }
+
         if (dto.specialty !== undefined) data.specialty = dto.specialty;
         if (dto.skills !== undefined) data.skills = dto.skills;
         if (dto.workType !== undefined) data.workType = dto.workType;
@@ -641,7 +669,8 @@ export class PostsService {
     }
   }
 
-  private assertTypeRequirements(dto: CreatePostDto): void {
+  // ✅ Signature tightened: type is guaranteed at this point.
+  private assertTypeRequirements(dto: ResolvedCreatePostDto): void {
     const required = POST_TYPE_REQUIRED_FIELDS[dto.type];
     const fields: Record<string, string> = {};
 
@@ -696,9 +725,12 @@ export class PostsService {
     }
   }
 
-  private assertMediaRequirements(dto: CreatePostDto): void {
+  // ✅ Signature tightened: type is guaranteed at this point.
+  private assertMediaRequirements(dto: ResolvedCreatePostDto): void {
     const media =
-      dto.type === PostType.reel ? MediaType.video : (dto.media ?? MediaType.none);
+      dto.type === PostType.reel
+        ? MediaType.video
+        : (dto.media ?? MediaType.none);
     const fields: Record<string, string> = {};
 
     if (dto.type === PostType.reel || media === MediaType.video) {
