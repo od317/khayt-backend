@@ -996,12 +996,12 @@ async function main(): Promise<void> {
     },
     {
       id: 'biz-workshop-damascus-rural',
-      ownerId: 'user-workshop-halep', // reuse? NO — see note below
+      ownerId: 'user-workshop-rural-damascus', // reuse? NO — see note below
       type: BusinessType.workshop,
       name: 'معمل ريف دمشق للخياطة',
       location: 'ريف دمشق - دوما',
       description: 'خياطة كميات كبيرة للألبسة الجاهزة',
-      phone: '0994000019',
+      phone: '0995000013',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       capacity: '4000 قطعة شهرياً',
