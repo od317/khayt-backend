@@ -299,13 +299,13 @@ model Post {
   id        String    @id @default(uuid())
   authorId  String
   businessId String?
-  type      PostType
+  type      PostType?
   title     String?
   body      String
   media     MediaType @default(none)
   imageUrls String[]
   videoUrl  String?
-  location  String
+  location  String?
   active    Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

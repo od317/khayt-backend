@@ -33,13 +33,13 @@ export type PostCategoryResponse = {
 
 export type PostResponse = {
   id: string;
-  type: PostType;
+  type: PostType | null;
   title: string | null;
   body: string;
   media: MediaType;
   imageUrls: string[];
   videoUrl: string | null;
-  location: string;
+  location: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;

@@ -27,27 +27,31 @@ export function parseJsonIfString({ value }: { value: unknown }): unknown {
 }
 
 export class CreatePostDto {
-  @ApiProperty({ enum: PostType, example: PostType.job_seeking })
+  @ApiPropertyOptional({ enum: PostType, example: PostType.job_seeking })
+  @IsOptional()
   @IsEnum(PostType)
-  type!: PostType;
+  type?: PostType;
 
-  @ApiProperty({ example: '' })
+  @ApiPropertyOptional({ example: '' })
+  @IsOptional()
   @IsString()
   @MinLength(3)
   @MaxLength(200)
   title?: string;
 
+  // ✅ ONLY REQUIRED FIELD
   @ApiProperty({ example: '' })
   @IsString()
+  @IsNotEmpty()
   @MinLength(1)
   @MaxLength(5000)
   body!: string;
 
-  @ApiProperty({ example: '' })
+  @ApiPropertyOptional({ example: '' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(200)
-  location!: string;
+  location?: string;
 
   @ApiPropertyOptional({ enum: MediaType })
   @IsOptional()
