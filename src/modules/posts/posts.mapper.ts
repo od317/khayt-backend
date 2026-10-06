@@ -5,6 +5,7 @@ import {
   MediaType,
   Post,
   PostType,
+  Product,
   User,
   UserRole,
 } from '@prisma/client';
@@ -30,6 +31,15 @@ export type PostCategoryResponse = {
   name: string;
   slug: string;
 };
+
+export type PostProductResponse = {
+  id: string;
+  name: string;
+  price: number;
+  images: string[];
+  businessId: string;
+};
+
 
 export type PostResponse = {
   id: string;
@@ -62,6 +72,7 @@ export type PostResponse = {
   comments: number;
   likedByMe: boolean;
   savedByMe: boolean;
+  product: PostProductResponse | null;
 };
 
 export type CommentAuthorResponse = {
@@ -111,6 +122,7 @@ export function toPostBusinessResponse(
 export function toPostResponse(
   post: Post & {
     author: User & { location: Location | null };
+    product?: Product | null;
     business: Business | null;
     categories?: { category: { id: string; name: string; slug: string } }[];
   },
@@ -151,6 +163,15 @@ export function toPostResponse(
     comments: counts.comments,
     likedByMe: counts.likedByMe,
     savedByMe: counts.savedByMe,
+    product: post.product
+      ? {
+        id: post.product.id,
+        name: post.product.name,
+        price: post.product.price,
+        images: post.product.images,
+        businessId: post.product.businessId,
+      }
+      : null,
   };
 }
 

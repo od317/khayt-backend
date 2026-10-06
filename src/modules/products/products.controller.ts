@@ -22,6 +22,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import type { AuthenticatedUser } from '../../common/types/auth';
 import { Paginated } from '../../common/utils/pagination';
 import { CreateProductDto } from './dto/create-product.dto';
+import { ProductNamesQueryDto } from './dto/product-names-query.dto';
 import { QueryProductsDto } from './dto/query-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductResponse } from './products.mapper';
@@ -42,7 +43,17 @@ const ProductFilesInterceptor = AnyFilesInterceptor({
 
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly products: ProductsService) {}
+  constructor(private readonly products: ProductsService) { }
+
+  // ⚠️ Order matters: 'names' must come BEFORE ':id'.
+  @RequireUser()
+  @Get('names')
+  names(
+    @RequireUser() user: AuthenticatedUser,
+    @Query() query: ProductNamesQueryDto,
+  ): Promise<{ items: { id: string; name: string }[] }> {
+    return this.products.names(user, query);
+  }
 
   @Public()
   @Get()

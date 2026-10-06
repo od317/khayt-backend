@@ -16,6 +16,7 @@ import {
   PostType,
   Prisma,
   User,
+  UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
@@ -39,6 +40,14 @@ import { postImagePaths, postVideoPath } from './post-uploads';
 type PostWithRelations = Post & {
   author: User & { location: Location | null };
   business: Business | null;
+  product?: {
+    id: string;
+    name: string;
+    price: number;
+    images: string[];
+    businessId: string;
+    deletedAt: Date | null;
+  } | null;   // 👈 add
   categories?: { category: { id: string; name: string; slug: string } }[];
 };
 
@@ -48,6 +57,16 @@ type ResolvedCreatePostDto = CreatePostDto & { type: PostType };
 const POST_INCLUDE = {
   author: { include: { location: true } },
   business: true,
+  product: {
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      images: true,
+      businessId: true,
+      deletedAt: true,
+    },
+  },
   categories: {
     include: {
       category: { select: { id: true, name: true, slug: true } },
@@ -64,7 +83,7 @@ export class PostsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly postOptions: PostOptionsService,
-  ) {}
+  ) { }
 
   async list(
     query: QueryPostsDto,
@@ -219,6 +238,13 @@ export class PostsService {
       await this.assertAssignableCategories(categoryIds);
     }
 
+    let productId: string | null = null;
+    if (dto.productId) {
+      await this.assertCanLinkProduct(actor, dto.productId, dto.businessId);
+      productId = dto.productId;
+    }
+
+
     const post = await this.prisma.post.create({
       data: {
         authorId: actor.id,
@@ -242,12 +268,13 @@ export class PostsService {
         priceMethod: dto.priceMethod ?? null,
         condition: dto.condition ?? null,
         price: dto.price ?? null,
+        productId,
         ...(categoryIds.length > 0
           ? {
-              categories: {
-                create: categoryIds.map((categoryId) => ({ categoryId })),
-              },
-            }
+            categories: {
+              create: categoryIds.map((categoryId) => ({ categoryId })),
+            },
+          }
           : {}),
       },
       include: POST_INCLUDE,
@@ -334,6 +361,18 @@ export class PostsService {
       });
     }
 
+    // 👇 ADD THIS BLOCK
+    let productPatch: Prisma.PostUpdateInput['product'] | undefined;
+    if (dto.productId !== undefined) {
+      if (dto.productId === null || dto.productId === '') {
+        productPatch = { disconnect: true };
+      } else {
+        await this.assertCanLinkProduct(actor, dto.productId, dto.businessId);
+        productPatch = { connect: { id: dto.productId } };
+      }
+    }
+    // 👆
+
     const uploadedImages = postImagePaths(files);
     const uploadedVideo = postVideoPath(files);
 
@@ -379,6 +418,8 @@ export class PostsService {
         if (dto.condition !== undefined) data.condition = dto.condition;
         if (dto.price !== undefined) data.price = dto.price;
         if (dto.active !== undefined) data.active = dto.active;
+
+        if (productPatch !== undefined) data.product = productPatch;
 
         if (dto.categoryIds !== undefined) {
           await tx.postCategory.deleteMany({ where: { postId: id } });
@@ -669,6 +710,51 @@ export class PostsService {
     }
   }
 
+  private async assertCanLinkProduct(
+    actor: AuthenticatedUser,
+    productId: string,
+    businessId: string | undefined,
+  ): Promise<void> {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, deletedAt: null },
+      select: {
+        businessId: true,
+        business: { select: { ownerId: true } },
+      },
+    });
+
+    if (!product) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'Product not found',
+          fields: { productId: 'unknown product' },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (businessId && product.businessId !== businessId) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'Product belongs to a different business',
+          fields: { productId: 'must belong to the same business as the post' },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const isAdmin =
+      actor.role === UserRole.admin || actor.role === UserRole.super_admin;
+    if (!isAdmin && product.business.ownerId !== actor.id) {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'Cannot link a post to a product you do not own',
+      });
+    }
+  }
+
   // ✅ Signature tightened: type is guaranteed at this point.
   private assertTypeRequirements(dto: ResolvedCreatePostDto): void {
     const required = POST_TYPE_REQUIRED_FIELDS[dto.type];
@@ -781,15 +867,15 @@ export class PostsService {
         }),
         actor
           ? this.prisma.like.findMany({
-              where: { userId: actor.id, postId: { in: postIds } },
-              select: { postId: true },
-            })
+            where: { userId: actor.id, postId: { in: postIds } },
+            select: { postId: true },
+          })
           : Promise.resolve([] as { postId: string }[]),
         actor
           ? this.prisma.savedPost.findMany({
-              where: { userId: actor.id, postId: { in: postIds } },
-              select: { postId: true },
-            })
+            where: { userId: actor.id, postId: { in: postIds } },
+            select: { postId: true },
+          })
           : Promise.resolve([] as { postId: string }[]),
       ],
     );

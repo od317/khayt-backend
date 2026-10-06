@@ -153,6 +153,16 @@ export class CreatePostDto {
   salary?: string;
 
   @ApiPropertyOptional({
+    example: 'prod-qamis-abyad',
+    description:
+      'Optional. Set to null to unlink the current product.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  productId?: string | null;
+
+  @ApiPropertyOptional({
     example: 'شهري',
     description: 'Salary type chip for job_offering (from post-options).',
   })

@@ -46,7 +46,7 @@ function toJson(value: unknown): Prisma.InputJsonValue {
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async list(query: QueryProductsDto): Promise<Paginated<ProductResponse>> {
     const where: Prisma.ProductWhereInput = { deletedAt: null };
@@ -87,6 +87,32 @@ export class ProductsService {
       query.page,
       query.limit,
     );
+  }
+
+  async names(
+    actor: AuthenticatedUser,
+    query: { businessId?: string },
+  ): Promise<{ items: { id: string; name: string }[] }> {
+    const where: Prisma.ProductWhereInput = { deletedAt: null };
+
+    if (query.businessId) {
+      await this.assertCanManageBusiness(actor, query.businessId);
+      where.businessId = query.businessId;
+    } else if (
+      actor.role !== UserRole.admin &&
+      actor.role !== UserRole.super_admin
+    ) {
+      // Non-admins: only products from businesses they own
+      where.business = { ownerId: actor.id };
+    }
+
+    const rows = await this.prisma.product.findMany({
+      where,
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true },
+    });
+
+    return { items: rows };
   }
 
   async detail(id: string): Promise<ProductDetailResponse> {
@@ -131,6 +157,8 @@ export class ProductsService {
 
     return response;
   }
+
+
 
   async create(
     actor: AuthenticatedUser,

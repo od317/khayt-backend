@@ -249,6 +249,7 @@ model Product {
   images      String[]
   unit        String
   price       Int
+  posts Post[]
   inWarehouse Boolean  @default(false)
   available   Boolean  @default(true)
   guarantee   Boolean  @default(false)
@@ -311,6 +312,9 @@ model Post {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt  DateTime?
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
 
   specialty    String?
   experience   String?
