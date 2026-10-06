@@ -22,6 +22,21 @@ const INTERNAL_ROLES = ['inventory', 'admin', 'super_admin'] as const;
 
 type InternalRole = (typeof INTERNAL_ROLES)[number];
 
+export type InventoryTotals = {
+  productCount: number;
+  sent: number;
+  remaining: number;
+  sold: number;
+};
+
+export type InventoryListResponse = {
+  items: InventoryItemResponse[];
+  totals: InventoryTotals;
+  total: number;
+  page: number;
+  limit: number;
+};
+
 export type InventoryDetailResponse = {
   item: InventoryItemResponse;
   business: BusinessSummaryResponse;
@@ -30,21 +45,12 @@ export type InventoryDetailResponse = {
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  /**
-   * Shared query for both /inventory and /supply.
-   *
-   * The `scope` argument is what differs between the two endpoints:
-   *   { type: 'all' }             — internal, no restriction
-   *   { type: 'business', id }    — restricted to a single business
-   *
-   * Any additional filters (q, category, lowStock) are applied on top.
-   */
   private async queryItems(
     query: QueryInventoryDto,
     scope: { type: 'all' } | { type: 'business'; id: string },
-  ): Promise<Paginated<InventoryItemResponse>> {
+  ): Promise<InventoryListResponse> {
     const where: Prisma.SupplyWhereInput = {};
 
     if (scope.type === 'business') {
@@ -69,9 +75,6 @@ export class InventoryService {
       };
     }
 
-    // lowStock is applied after the query because it depends on a
-    // constant, not a column. At our scale this is fine; if the
-    // threshold ever moves to a column, this becomes a where clause.
     const { skip, take } = skipTake(query.page, query.limit);
 
     const [rows, total] = await this.prisma.$transaction([
@@ -94,25 +97,28 @@ export class InventoryService {
       mapped = mapped.filter((item) => !item.isLowStock);
     }
 
-    // Pagination with post-filter: we took `take` rows from the DB but
-    // then filtered in memory, so the page slice is applied here.
-    // For an unfiltered query this is identical to the DB-level slice.
-    // For a filtered query the page may contain fewer items than `take`
-    // — acceptable at this scale.
-    const paged = mapped.slice(0, take);
+    const totals: InventoryTotals = {
+      productCount: mapped.length,
+      sent: mapped.reduce((sum, item) => sum + item.sent, 0),
+      remaining: mapped.reduce((sum, item) => sum + item.remaining, 0),
+      sold: mapped.reduce((sum, item) => sum + item.sold, 0),
+    };
 
-    return paginate(
-      paged,
-      query.lowStock ? mapped.length : total,
-      query.page,
-      query.limit,
-    );
+    const paged = mapped.slice(skip, skip + take);
+
+    return {
+      items: paged,
+      totals,
+      total: mapped.length,
+      page: query.page,
+      limit: query.limit,
+    };
   }
 
   async listInventory(
     query: QueryInventoryDto,
     actor: AuthenticatedUser,
-  ): Promise<Paginated<InventoryItemResponse>> {
+  ): Promise<InventoryListResponse> {
     this.assertInternal(actor);
     return this.queryItems(query, { type: 'all' });
   }
@@ -153,13 +159,11 @@ export class InventoryService {
   async listSupply(
     query: QuerySupplyDto,
     actor: AuthenticatedUser,
-  ): Promise<Paginated<InventoryItemResponse>> {
+  ): Promise<InventoryListResponse> {
     if (this.isInternal(actor)) {
-      // Internal staff see all, optionally filtered by businessId.
       return this.queryItems(query, { type: 'all' });
     }
 
-    // External actor: must be a business owner. Find their business.
     const ownedBusiness = await this.prisma.business.findUnique({
       where: { ownerId: actor.id },
       select: { id: true },
@@ -172,7 +176,6 @@ export class InventoryService {
       });
     }
 
-    // If they passed a businessId, it must be their own.
     if (query.businessId && query.businessId !== ownedBusiness.id) {
       throw new ForbiddenException({
         error: 'forbidden',
