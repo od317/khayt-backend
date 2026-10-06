@@ -1285,6 +1285,42 @@ async function main(): Promise<void> {
   console.log(`  businesses: ${businesses.length}`);
 
   // ------------------------------------------------------------
+  // Business ↔ Category links
+  // ------------------------------------------------------------
+  const businessCategories: { businessId: string; categoryId: string }[] = [
+    // Stores (متاجر) → cat-biz-store
+    { businessId: 'biz-store', categoryId: 'cat-biz-store' },
+    { businessId: 'biz-store-halep', categoryId: 'cat-biz-store' },
+    { businessId: 'biz-store-babtouma', categoryId: 'cat-biz-store' },
+    { businessId: 'biz-store-homs', categoryId: 'cat-biz-store' },
+    { businessId: 'biz-store-midan', categoryId: 'cat-biz-store' },
+
+    // Workshops (مشاغل) → cat-biz-factory
+    { businessId: 'biz-workshop', categoryId: 'cat-biz-factory' },
+    { businessId: 'biz-workshop-halep', categoryId: 'cat-biz-factory' },
+    { businessId: 'biz-workshop-homs', categoryId: 'cat-biz-factory' },
+    { businessId: 'biz-workshop-lattakia', categoryId: 'cat-biz-factory' },
+    { businessId: 'biz-workshop-tartous', categoryId: 'cat-biz-factory' },
+    { businessId: 'biz-workshop-hama', categoryId: 'cat-biz-factory' },
+    { businessId: 'biz-workshop-damascus-rural', categoryId: 'cat-biz-factory' },
+
+    // Institutes (معاهد تدريب) → cat-biz-institute
+    { businessId: 'biz-institute', categoryId: 'cat-biz-institute' },
+    { businessId: 'biz-institute-halep', categoryId: 'cat-biz-institute' },
+    { businessId: 'biz-institute-homs', categoryId: 'cat-biz-institute' },
+    { businessId: 'biz-institute-lattakia', categoryId: 'cat-biz-institute' },
+  ];
+
+  for (const { businessId, categoryId } of businessCategories) {
+    await prisma.businessCategory.upsert({
+      where: { businessId_categoryId: { businessId, categoryId } },
+      create: { businessId, categoryId },
+      update: {},
+    });
+  }
+  console.log(`  business-category links: ${businessCategories.length}`);
+
+  // ------------------------------------------------------------
   // Products
   // ------------------------------------------------------------
   const products = [
