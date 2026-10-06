@@ -32,24 +32,14 @@ import {
   PostCounts,
   PostResponse,
   toCommentResponse,
+  PostWithRelationsForMapper,
   toPostResponse,
 } from './posts.mapper';
 import { POST_TYPE_REQUIRED_FIELDS } from './post-type-rules';
 import { postImagePaths, postVideoPath } from './post-uploads';
 
-type PostWithRelations = Post & {
-  author: User & { location: Location | null };
-  business: Business | null;
-  product?: {
-    id: string;
-    name: string;
-    price: number;
-    images: string[];
-    businessId: string;
-    deletedAt: Date | null;
-  } | null;   // 👈 add
-  categories?: { category: { id: string; name: string; slug: string } }[];
-};
+type PostWithRelations = PostWithRelationsForMapper;
+
 
 /** Same as CreatePostDto but with a concrete `type`. Used internally. */
 type ResolvedCreatePostDto = CreatePostDto & { type: PostType };
@@ -361,17 +351,26 @@ export class PostsService {
       });
     }
 
-    // 👇 ADD THIS BLOCK
     let productPatch: Prisma.PostUpdateInput['product'] | undefined;
     if (dto.productId !== undefined) {
       if (dto.productId === null || dto.productId === '') {
         productPatch = { disconnect: true };
       } else {
-        await this.assertCanLinkProduct(actor, dto.productId, dto.businessId);
+        // businessId is immutable on a post — read it from the existing post
+        // so we can enforce "product must belong to the same business".
+        const existingPostBusinessId =
+          await this.prisma.post.findFirst({
+            where: { id, deletedAt: null },
+            select: { businessId: true },
+          });
+        await this.assertCanLinkProduct(
+          actor,
+          dto.productId,
+          existingPostBusinessId?.businessId ?? undefined,
+        );
         productPatch = { connect: { id: dto.productId } };
       }
     }
-    // 👆
 
     const uploadedImages = postImagePaths(files);
     const uploadedVideo = postVideoPath(files);

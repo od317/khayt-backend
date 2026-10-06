@@ -29,6 +29,16 @@ export class UpdatePostDto {
   @MaxLength(5000)
   body?: string;
 
+  @ApiPropertyOptional({
+    example: 'prod-qamis-abyad',
+    description:
+      'Optional. Set to null or empty string to unlink the current product.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  productId?: string | null;
+
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()

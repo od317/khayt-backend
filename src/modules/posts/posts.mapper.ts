@@ -95,6 +95,23 @@ export type PostCounts = {
   savedByMe: boolean;
 };
 
+
+export type PostResponseProduct = {
+  id: string;
+  name: string;
+  price: number;
+  images: string[];
+  businessId: string;
+  deletedAt: Date | null;
+};
+
+export type PostWithRelationsForMapper = Post & {
+  author: User & { location: Location | null };
+  business: Business | null;
+  product?: PostResponseProduct | null;
+  categories?: { category: { id: string; name: string; slug: string } }[];
+};
+
 export function toPostAuthorResponse(
   user: User & { location: Location | null },
 ): PostAuthorResponse {
@@ -120,12 +137,7 @@ export function toPostBusinessResponse(
 }
 
 export function toPostResponse(
-  post: Post & {
-    author: User & { location: Location | null };
-    product?: Product | null;
-    business: Business | null;
-    categories?: { category: { id: string; name: string; slug: string } }[];
-  },
+  post: PostWithRelationsForMapper,
   counts: PostCounts,
 ): PostResponse {
   return {

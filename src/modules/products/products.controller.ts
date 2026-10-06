@@ -45,8 +45,6 @@ const ProductFilesInterceptor = AnyFilesInterceptor({
 export class ProductsController {
   constructor(private readonly products: ProductsService) { }
 
-  // ⚠️ Order matters: 'names' must come BEFORE ':id'.
-  @RequireUser()
   @Get('names')
   names(
     @RequireUser() user: AuthenticatedUser,
