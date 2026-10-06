@@ -46,6 +46,7 @@ const BUSINESS_SCOPES: CategoryApplies[] = [
 const WORKSHOP_OR_INSTITUTE: CategoryApplies[] = [
   CategoryApplies.workshop,
   CategoryApplies.institute,
+  CategoryApplies.store,
 ];
 
 @Injectable()
