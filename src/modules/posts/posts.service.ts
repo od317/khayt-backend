@@ -44,6 +44,7 @@ const POST_DISALLOWED_SCOPES: CategoryApplies[] = [
   CategoryApplies.workshop,
   CategoryApplies.institute,
   CategoryApplies.store,
+  CategoryApplies.workshop_institute,
 ];
 
 type PostWithRelations = PostWithRelationsForMapper;

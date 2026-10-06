@@ -34,6 +34,20 @@ const BUSINESS_CATEGORY_SCOPES: CategoryApplies[] = [
   CategoryApplies.store,
 ];
 
+
+const BUSINESS_SCOPES: CategoryApplies[] = [
+  CategoryApplies.business,
+  CategoryApplies.workshop,
+  CategoryApplies.institute,
+  CategoryApplies.store,
+  CategoryApplies.workshop_institute,
+];
+
+const WORKSHOP_OR_INSTITUTE: CategoryApplies[] = [
+  CategoryApplies.workshop,
+  CategoryApplies.institute,
+];
+
 @Injectable()
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) { }
@@ -46,11 +60,19 @@ export class CategoriesService {
     const where: Prisma.CategoryWhereInput = {};
 
     if (query.appliesTo && query.appliesTo.length > 0) {
-      // Explicit filter — return exactly what was asked for.
-      where.appliesTo = { in: query.appliesTo };
+      // Expand any shorthand aliases into their underlying values.
+      const expanded = new Set<CategoryApplies>();
+      for (const scope of query.appliesTo) {
+        if (scope === CategoryApplies.workshop_institute) {
+          for (const s of WORKSHOP_OR_INSTITUTE) expanded.add(s);
+        } else {
+          expanded.add(scope);
+        }
+      }
+      where.appliesTo = { in: [...expanded] };
     } else {
-      // No filter — hide all business-scoped categories by default.
-      where.appliesTo = { notIn: BUSINESS_CATEGORY_SCOPES };
+      // Default: hide all business-scoped categories.
+      where.appliesTo = { notIn: BUSINESS_SCOPES };
     }
 
     const rows = await this.prisma.category.findMany({

@@ -95,6 +95,7 @@ enum CategoryApplies {
   workshop      // مصانع / مشاغل
   institute     // معاهد
   store         // متاجر
+  workshop_institute // workshop + institute
   both
 }
 
