@@ -57,7 +57,6 @@ export class ProductsController {
 
   // ⚠️ Order matters: 'names' must come BEFORE ':id'.
   @Get('names')
-  @RequireUser()
   @ApiOperation({
     summary: 'List product names',
     description:
