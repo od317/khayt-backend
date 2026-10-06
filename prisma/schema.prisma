@@ -1,9 +1,6 @@
 // خيط — Database Schema
 // Derived from 02-domain.md. This file is the source of truth for the
 // database shape.
-//
-// Run `npx prisma migrate dev --name init` to create the database.
-// Run `npx prisma generate` to produce the TypeScript types.
 
 generator client {
   provider = "prisma-client-js"
@@ -19,10 +16,10 @@ datasource db {
 // ============================================================
 
 enum UserRole {
-  employee    // موظف
-  workshop    // مشغل / مصنع / معمل
-  institute   // معهد
-  store       // متجر
+  employee
+  workshop
+  institute
+  store
   // internal
   super_admin
   admin
@@ -37,14 +34,14 @@ enum BusinessType {
 }
 
 enum PostType {
-  job_seeking         // أبحث عن عمل
-  job_offering        // ابحث عن موظف
-  service_offering    // عرض خدمة
-  service_requesting  // أحتاج شخصاً
-  product_offering    // عرض منتج
-  material_offering   // عرض مواد ومكنات
-  material_requesting // أبحث عن مواد ومكنات
-  reel                // ريل
+  job_seeking
+  job_offering
+  service_offering
+  service_requesting
+  product_offering
+  material_offering
+  material_requesting
+  reel
 }
 
 enum MediaType {
@@ -54,31 +51,31 @@ enum MediaType {
 }
 
 enum OrderStatus {
-  review      // قيد المراجعة
-  preparing   // قيد التجهيز
-  ready       // جاهز للتسليم
-  in_transit  // قيد التوصيل
-  delivered   // تم التسليم
-  cancelled   // ملغي
-  failed      // فشل التسليم
+  review
+  preparing
+  ready
+  in_transit
+  delivered
+  cancelled
+  failed
 }
 
 enum DeliveryStatus {
-  unassigned  // بانتظار التعيين
-  in_transit  // قيد التوصيل
-  delivered   // تم التسليم
-  failed      // فشل التسليم
+  unassigned
+  in_transit
+  delivered
+  failed
 }
 
 enum PaymentType {
-  cash    // نقدي
-  credit  // دين
+  cash
+  credit
 }
 
 enum BillStatus {
-  paid     // مدفوع
-  unpaid   // غير مدفوع
-  partial  // مدفوع جزئياً
+  paid
+  unpaid
+  partial
 }
 
 enum NotificationType {
@@ -94,10 +91,10 @@ enum NotificationType {
 enum CategoryApplies {
   post
   product
+  business
   both
 }
 
-/// Admin-managed chip/dropdown values used when creating posts.
 enum PostOptionKind {
   specialty
   skill
@@ -130,9 +127,6 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  // Store drop-off for warehouse orders. Set on the first order (map pin
-  // + address string) and reused for later orders. Delivery staff last
-  // reported position uses the same columns.
   deliveryAddress String?
   deliveryLat     Float?
   deliveryLng     Float?
@@ -208,13 +202,13 @@ model Business {
   updatedAt   DateTime     @updatedAt
 
   // type-specific
-  capacity    String?   // workshop
-  equipment   String?   // workshop
-  minOrder    String?   // workshop
-  experience  String?   // workshop, institute, store (years as text)
-  services    String[]  @default([]) // workshop, store — free-text services
-  duration    String?   // institute
-  topics      String[]  // institute
+  capacity    String?
+  equipment   String?
+  minOrder    String?
+  experience  String?
+  services    String[]  @default([])
+  duration    String?
+  topics      String[]
 
   // relations
   owner      User            @relation("BusinessOwner", fields: [ownerId], references: [id])
@@ -225,10 +219,21 @@ model Business {
   bills      Bill[]
   orderLines OrderLine[]
   savedBy    SavedBusiness[]
+  categories BusinessCategory[]   // 👈 ADDED
 
   @@index([type])
   @@index([location])
   @@index([ownerId])
+}
+
+model BusinessCategory {
+  businessId String
+  categoryId String
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@id([businessId, categoryId])
 }
 
 // ============================================================
@@ -242,24 +247,20 @@ model Product {
   category    String
   description String?
   images      String[]
-  unit        String   // قطعة / متر / طقم / دورة
+  unit        String
   price       Int
-  inWarehouse Boolean  @default(false)  // R1 — gates ordering
+  inWarehouse Boolean  @default(false)
   available   Boolean  @default(true)
   guarantee   Boolean  @default(false)
   deletedAt   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // variants — jsonb tree, not entities.
-  // { axes: [{ key, label }], options: [{ name, image, hex?, children? }] }
-  // axes length 1 (e.g. flavor) or 2 (e.g. color → size). Each option has an image.
   variants  Json?
-  packaging Json?   // { onlyPackage, unitsPerPackage, label }
-  discount  Json?   // { percent, originalPrice }
+  packaging Json?
+  discount  Json?
   offer     String?
 
-  // relations
   business      Business        @relation(fields: [businessId], references: [id])
   supply        Supply[]
   orderLines    OrderLine[]
@@ -310,8 +311,7 @@ model Post {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt  DateTime?
-  
-  // type-specific
+
   specialty    String?
   experience   String?
   workType     String[]
@@ -325,7 +325,6 @@ model Post {
   condition    String?
   price        String?
 
-  // relations
   author     User           @relation(fields: [authorId], references: [id])
   business   Business?      @relation(fields: [businessId], references: [id])
   categories PostCategory[]
@@ -346,10 +345,8 @@ model Post {
 model PostOption {
   id        String         @id @default(uuid())
   kind      PostOptionKind
-  /// Which publish forms this option appears on.
   postTypes PostType[]
   label     String
-  /// Skills nest under a specialty option.
   parentId  String?
   sortOrder Int            @default(0)
   active    Boolean        @default(true)
@@ -374,7 +371,8 @@ model Category {
   appliesTo CategoryApplies @default(both)
   sortOrder Int            @default(0)
 
-  posts PostCategory[]
+  posts      PostCategory[]
+  businesses BusinessCategory[]
 }
 
 model PostCategory {
@@ -483,9 +481,9 @@ model OrderLine {
   id         String  @id @default(uuid())
   orderId    String
   productId  String
-  businessId String   // which factory supplies this line
+  businessId String
   quantity   Int
-  unitPrice  Int      // locked at order time
+  unitPrice  Int
   picked     Boolean @default(false)
 
   order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -524,7 +522,7 @@ model DeliveryOrder {
   order    Order    @relation(fields: [orderId], references: [id])
 
   @@id([deliveryId, orderId])
-  @@unique([orderId])  // an order belongs to one delivery
+  @@unique([orderId])
 }
 
 // ============================================================
@@ -690,7 +688,7 @@ model StockMovement {
   supplyId   String
   type       StockMovementType
   quantity   Int
-  reference  String?  // ORD-#### or RCV-####
+  reference  String?
   createdAt  DateTime @default(now())
 
   @@index([supplyId])

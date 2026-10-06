@@ -116,6 +116,31 @@ async function main(): Promise<void> {
   // Categories
   // ------------------------------------------------------------
   const categories = [
+    // ── Business categories (appliesTo: business) ──
+    {
+      id: 'cat-biz-factory',
+      name: 'مشاغل',
+      slug: 'masane',
+      appliesTo: CategoryApplies.business,
+      sortOrder: 300,
+    },
+    {
+      id: 'cat-biz-store',
+      name: 'متاجر',
+      slug: 'matajer',
+      appliesTo: CategoryApplies.business,
+      sortOrder: 320,
+    },
+    {
+      id: 'cat-biz-institute',
+      name: 'معاهد تدريب',
+      slug: 'maahid-tadrib',
+      appliesTo: CategoryApplies.business,
+      sortOrder: 330,
+    },
+    // ═════════════════════════════════════════
+    // Original 10
+    // ═════════════════════════════════════════
     {
       id: 'cat-qumsan',
       name: 'قمصان',
@@ -185,6 +210,130 @@ async function main(): Promise<void> {
       slug: 'adawat',
       appliesTo: CategoryApplies.product,
       sortOrder: 100,
+    },
+
+    // ═════════════════════════════════════════
+    // New categories (15)
+    // ═════════════════════════════════════════
+
+    // ── Fabric types (appliesTo: product) ──
+    {
+      id: 'cat-qutn',
+      name: 'قطن',
+      slug: 'qutn',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 110,
+    },
+    {
+      id: 'cat-harir',
+      name: 'حرير',
+      slug: 'harir',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 120,
+    },
+    {
+      id: 'cat-suf',
+      name: 'صوف',
+      slug: 'suf',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 130,
+    },
+    {
+      id: 'cat-ktan',
+      name: 'كتان',
+      slug: 'ktan',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 140,
+    },
+    {
+      id: 'cat-jinz',
+      name: 'جينز',
+      slug: 'jinz',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 150,
+    },
+    {
+      id: 'cat-shatan',
+      name: 'ساتان',
+      slug: 'shatan',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 160,
+    },
+    {
+      id: 'cat-makhmal',
+      name: 'مخمل',
+      slug: 'makhmal',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 170,
+    },
+
+    // ── Garment types (appliesTo: both) ──
+    {
+      id: 'cat-taqm',
+      name: 'أطقم',
+      slug: 'taqm',
+      appliesTo: CategoryApplies.both,
+      sortOrder: 180,
+    },
+    {
+      id: 'cat-jaket',
+      name: 'جاكيتات',
+      slug: 'jaket',
+      appliesTo: CategoryApplies.both,
+      sortOrder: 190,
+    },
+    {
+      id: 'cat-mueataf',
+      name: 'معاطف',
+      slug: 'mueataf',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 200,
+    },
+    {
+      id: 'cat-tannoura',
+      name: 'تنانير',
+      slug: 'tannoura',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 210,
+    },
+    {
+      id: 'cat-malabis-atfal',
+      name: 'ملابس أطفال',
+      slug: 'malabis-atfal',
+      appliesTo: CategoryApplies.both,
+      sortOrder: 220,
+    },
+
+    // ── Services (appliesTo: post) ──
+    {
+      id: 'cat-tasmin',
+      name: 'تصميم أزياء',
+      slug: 'tasmin-azia',
+      appliesTo: CategoryApplies.post,
+      sortOrder: 230,
+    },
+    {
+      id: 'cat-tarmim',
+      name: 'ترميم وتعديل',
+      slug: 'tarmim-tadeel',
+      appliesTo: CategoryApplies.post,
+      sortOrder: 240,
+    },
+
+    // ── Materials & tools (appliesTo: product) ──
+    {
+      id: 'cat-khayut',
+      name: 'خيوط',
+      slug: 'khayut',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 250,
+    },
+    {
+      id: 'cat-azrar',
+      name: 'أزرار وسحابات',
+      slug: 'azrar-sahabat',
+      appliesTo: CategoryApplies.product,
+      sortOrder: 260,
     },
   ];
 

@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Category, Prisma } from '@prisma/client';
+import { Category, CategoryApplies, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { QueryCategoriesDto } from './dto/query-categories.dto';
@@ -29,15 +29,22 @@ export function toCategoryResponse(category: Category): CategoryResponse {
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  async list(
-    query: QueryCategoriesDto,
-  ): Promise<{ items: CategoryResponse[] }> {
+  async list(query: QueryCategoriesDto): Promise<{ items: CategoryResponse[] }> {
     const where: Prisma.CategoryWhereInput = {};
 
-    if (query.appliesTo) {
+    if (query.appliesTo === CategoryApplies.business) {
+      // Explicitly asked for business categories — return ONLY them.
+      where.appliesTo = CategoryApplies.business;
+    } else if (query.appliesTo) {
+      // Explicit post/product/both filter — return exactly that.
       where.appliesTo = query.appliesTo;
+    } else {
+      // No filter — hide business categories from the default dropdown.
+      where.appliesTo = {
+        not: CategoryApplies.business,
+      };
     }
 
     const rows = await this.prisma.category.findMany({

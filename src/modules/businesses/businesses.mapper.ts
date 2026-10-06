@@ -1,5 +1,10 @@
-import { Business, BusinessType } from '@prisma/client';
-import { Supply } from '@prisma/client';
+import { Business, BusinessType, Supply } from '@prisma/client';
+
+export type BusinessCategoryResponse = {
+  id: string;
+  name: string;
+  slug: string;
+};
 
 export type BusinessResponse = {
   id: string;
@@ -17,6 +22,7 @@ export type BusinessResponse = {
   services: string[];
   duration: string | null;
   topics: string[];
+  categories: BusinessCategoryResponse[]; // 👈 NEW
   createdAt: string;
 };
 
@@ -30,7 +36,14 @@ export type SupplyLineResponse = {
   unitPrice: number;
 };
 
-export function toBusinessResponse(business: Business): BusinessResponse {
+/** Accepts optional `categories` relation from Prisma. */
+export function toBusinessResponse(
+  business: Business & {
+    categories?: {
+      category: { id: string; name: string; slug: string };
+    }[];
+  },
+): BusinessResponse {
   return {
     id: business.id,
     type: business.type,
@@ -47,6 +60,11 @@ export function toBusinessResponse(business: Business): BusinessResponse {
     services: business.services,
     duration: business.duration,
     topics: business.topics,
+    categories: (business.categories ?? []).map((row) => ({
+      id: row.category.id,
+      name: row.category.name,
+      slug: row.category.slug,
+    })),
     createdAt: business.createdAt.toISOString(),
   };
 }
