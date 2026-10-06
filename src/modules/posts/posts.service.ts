@@ -38,6 +38,14 @@ import {
 import { POST_TYPE_REQUIRED_FIELDS } from './post-type-rules';
 import { postImagePaths, postVideoPath } from './post-uploads';
 
+const POST_DISALLOWED_SCOPES: CategoryApplies[] = [
+  CategoryApplies.product,
+  CategoryApplies.business,
+  CategoryApplies.workshop,
+  CategoryApplies.institute,
+  CategoryApplies.store,
+];
+
 type PostWithRelations = PostWithRelationsForMapper;
 
 
@@ -694,10 +702,10 @@ export class PostsService {
       );
     }
 
-    const productOnly = rows.filter(
-      (row) => row.appliesTo === CategoryApplies.product,
+    const disallowed = rows.filter((row) =>
+      POST_DISALLOWED_SCOPES.includes(row.appliesTo),
     );
-    if (productOnly.length > 0) {
+    if (disallowed.length > 0) {
       throw new HttpException(
         {
           error: 'validation_failed',

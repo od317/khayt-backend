@@ -27,24 +27,30 @@ export function toCategoryResponse(category: Category): CategoryResponse {
   };
 }
 
+const BUSINESS_CATEGORY_SCOPES: CategoryApplies[] = [
+  CategoryApplies.business,
+  CategoryApplies.workshop,
+  CategoryApplies.institute,
+  CategoryApplies.store,
+];
+
 @Injectable()
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) { }
 
-  async list(query: QueryCategoriesDto): Promise<{ items: CategoryResponse[] }> {
+
+
+  async list(
+    query: QueryCategoriesDto,
+  ): Promise<{ items: CategoryResponse[] }> {
     const where: Prisma.CategoryWhereInput = {};
 
-    if (query.appliesTo === CategoryApplies.business) {
-      // Explicitly asked for business categories — return ONLY them.
-      where.appliesTo = CategoryApplies.business;
-    } else if (query.appliesTo) {
-      // Explicit post/product/both filter — return exactly that.
-      where.appliesTo = query.appliesTo;
+    if (query.appliesTo && query.appliesTo.length > 0) {
+      // Explicit filter — return exactly what was asked for.
+      where.appliesTo = { in: query.appliesTo };
     } else {
-      // No filter — hide business categories from the default dropdown.
-      where.appliesTo = {
-        not: CategoryApplies.business,
-      };
+      // No filter — hide all business-scoped categories by default.
+      where.appliesTo = { notIn: BUSINESS_CATEGORY_SCOPES };
     }
 
     const rows = await this.prisma.category.findMany({

@@ -23,6 +23,13 @@ import {
   toProductResponse,
 } from '../products/products.mapper';
 
+const BUSINESS_CATEGORY_SCOPES: CategoryApplies[] = [
+  CategoryApplies.business,
+  CategoryApplies.workshop,
+  CategoryApplies.institute,
+  CategoryApplies.store,
+];
+
 export type BusinessDetailResponse = {
   business: BusinessResponse;
   products: ProductResponse[];
@@ -256,15 +263,18 @@ export class BusinessesService {
       );
     }
 
-    const nonBusiness = rows.filter(
-      (row) => row.appliesTo !== CategoryApplies.business,
+    const invalid = rows.filter(
+      (row) => !BUSINESS_CATEGORY_SCOPES.includes(row.appliesTo),
     );
-    if (nonBusiness.length > 0) {
+    if (invalid.length > 0) {
       throw new HttpException(
         {
           error: 'validation_failed',
           message: 'One or more categories are not business categories',
-          fields: { categoryIds: 'must have appliesTo="business"' },
+          fields: {
+            categoryIds:
+              'must have appliesTo in [business, workshop, institute, store]',
+          },
         },
         HttpStatus.BAD_REQUEST,
       );

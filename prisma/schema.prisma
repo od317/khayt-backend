@@ -91,7 +91,10 @@ enum NotificationType {
 enum CategoryApplies {
   post
   product
-  business
+  business      // deprecated — kept for backwards compatibility
+  workshop      // مصانع / مشاغل
+  institute     // معاهد
+  store         // متاجر
   both
 }
 
