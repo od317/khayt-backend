@@ -5,7 +5,7 @@ export class ProductNamesQueryDto {
     @ApiPropertyOptional({
         example: 'biz-workshop',
         description:
-            'Restrict to a specific business. Must be owned by the current user.',
+            'Restrict to a specific business. Must be owned by the current user (or any, for admins).',
     })
     @IsOptional()
     @IsString()

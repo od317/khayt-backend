@@ -155,12 +155,12 @@ export class CreatePostDto {
   @ApiPropertyOptional({
     example: 'prod-qamis-abyad',
     description:
-      'Optional. Set to null to unlink the current product.',
+      'Optional. Link this post to a product. Must belong to a business owned by the current user (or any product if admin).',
   })
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  productId?: string | null;
+  productId?: string;
 
   @ApiPropertyOptional({
     example: 'شهري',

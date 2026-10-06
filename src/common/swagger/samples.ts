@@ -1,5 +1,21 @@
 const AT = '2026-09-29T07:22:15.000Z';
 
+export const sampleProductRef = {
+  id: 'prod-qamis-abyad',
+  name: 'قميص أبيض رجالي',
+  price: 45000,
+  images: ['/uploads/products/example.jpg'],
+  businessId: 'biz-workshop',
+};
+
+export const sampleProductNamesResponse = {
+  items: [
+    { id: 'prod-qamis-abyad', name: 'قميص أبيض رجالي' },
+    { id: 'prod-bantal-jeans', name: 'بنطال جينز' },
+    { id: 'prod-qamis-kaki', name: 'قميص كاكي' },
+  ],
+};
+
 export const sampleUser = {
   id: '',
   role: 'employee',
@@ -106,6 +122,7 @@ export const samplePost = {
     avatarUrl: null as string | null,
   },
   business: null as null,
+  product: sampleProductRef as typeof sampleProductRef | null,
   likes: 0,
   comments: 0,
   likedByMe: false,
@@ -315,6 +332,7 @@ export const createPostSwaggerExamples = {
       sellMethod: 'جملة',
       priceMethod: 'سعر ثابت',
       price: '45000',
+      productId: 'prod-qamis-abyad',
     },
   },
   material_offering: {

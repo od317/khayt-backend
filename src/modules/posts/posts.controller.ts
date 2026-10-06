@@ -13,7 +13,15 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiOperation,
+  ApiSecurity,
+  ApiTags,
+} from '@nestjs/swagger';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { diskStorage } from 'multer';
@@ -25,7 +33,12 @@ import { Public } from '../../common/decorators/public.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import type { AuthenticatedUser } from '../../common/types/auth';
 import { Paginated } from '../../common/utils/pagination';
-import { createPostSwaggerExamples } from '../../common/swagger/samples';
+import {
+  createPostSwaggerExamples,
+  paginated,
+  sampleComment,
+  samplePost,
+} from '../../common/swagger/samples';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
@@ -55,20 +68,31 @@ const PostFilesInterceptor = FileFieldsInterceptor(
 function flattenPostFiles(
   grouped:
     | {
-        images?: Express.Multer.File[];
-        video?: Express.Multer.File[];
-      }
+      images?: Express.Multer.File[];
+      video?: Express.Multer.File[];
+    }
     | undefined,
 ): Express.Multer.File[] {
   return [...(grouped?.images ?? []), ...(grouped?.video ?? [])];
 }
 
+@ApiTags('posts')
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly posts: PostsService) {}
+  constructor(private readonly posts: PostsService) { }
 
   @Public()
   @Get()
+  @ApiSecurity({})
+  @ApiOperation({
+    summary: 'List posts',
+    description:
+      'Public. Filters: type, businessId, categoryId, location, q, media, active, savedBy=me, authorId. If `active=false`, only the current user sees their own inactive posts.',
+  })
+  @ApiOkResponse({
+    description: 'Paginated list of posts',
+    schema: { example: paginated(samplePost) },
+  })
   list(
     @Query() query: QueryPostsDto,
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -78,6 +102,12 @@ export class PostsController {
 
   @Public()
   @Get(':id')
+  @ApiSecurity({})
+  @ApiOperation({ summary: 'Post detail' })
+  @ApiOkResponse({
+    description: 'Single post with author, business, categories, product',
+    schema: { example: { post: samplePost } },
+  })
   detail(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -86,12 +116,22 @@ export class PostsController {
   }
 
   @Post()
+  @ApiBearerAuth('access-token')
   @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Create post',
+    description:
+      'multipart/form-data. Only `body` is required. Optional `productId` links the post to one of your products.',
+  })
   @ApiBody({
     description:
-      'multipart/form-data. Attach photos with `images` (repeat, max 8). Reels also accept `video`.',
+      'multipart/form-data. Attach photos with `images` (repeat, max 8). Reels also accept `video`. Optional `productId` links to a product you own.',
     type: CreatePostDto,
     examples: createPostSwaggerExamples,
+  })
+  @ApiOkResponse({
+    description: 'The created post',
+    schema: { example: { post: samplePost } },
   })
   @UseInterceptors(PostFilesInterceptor)
   create(
@@ -107,11 +147,21 @@ export class PostsController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth('access-token')
   @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Update post',
+    description:
+      'multipart/form-data. Send `productId` (empty) to unlink the current product. Send nothing to leave the link unchanged.',
+  })
   @ApiBody({
     description:
-      'multipart/form-data. Replace photos with `images` (repeat, max 8) or the reel with `video`.',
+      'multipart/form-data. Replace photos with `images` (repeat, max 8) or the reel with `video`. Set `productId=` to unlink.',
     type: UpdatePostDto,
+  })
+  @ApiOkResponse({
+    description: 'The updated post',
+    schema: { example: { post: samplePost } },
   })
   @UseInterceptors(PostFilesInterceptor)
   update(
@@ -129,6 +179,12 @@ export class PostsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Soft-delete post' })
+  @ApiOkResponse({
+    description: 'The soft-deleted post',
+    schema: { example: { post: samplePost, deleted: true } },
+  })
   remove(
     @Param('id') id: string,
     @RequireUser() user: AuthenticatedUser,
@@ -138,6 +194,8 @@ export class PostsController {
 
   @Post(':id/like')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Like a post' })
   like(
     @Param('id') id: string,
     @RequireUser() user: AuthenticatedUser,
@@ -147,6 +205,8 @@ export class PostsController {
 
   @Delete(':id/like')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Unlike a post' })
   unlike(
     @Param('id') id: string,
     @RequireUser() user: AuthenticatedUser,
@@ -156,6 +216,8 @@ export class PostsController {
 
   @Post(':id/save')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Save a post' })
   save(
     @Param('id') id: string,
     @RequireUser() user: AuthenticatedUser,
@@ -165,6 +227,8 @@ export class PostsController {
 
   @Delete(':id/save')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Unsave a post' })
   unsave(
     @Param('id') id: string,
     @RequireUser() user: AuthenticatedUser,
@@ -174,6 +238,12 @@ export class PostsController {
 
   @Public()
   @Get(':id/comments')
+  @ApiSecurity({})
+  @ApiOperation({ summary: 'List comments on a post' })
+  @ApiOkResponse({
+    description: 'Paginated list of comments',
+    schema: { example: paginated(sampleComment) },
+  })
   listComments(
     @Param('id') id: string,
     @Query() query: PaginationDto,
@@ -182,6 +252,12 @@ export class PostsController {
   }
 
   @Post(':id/comments')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a comment' })
+  @ApiOkResponse({
+    description: 'The created comment',
+    schema: { example: { comment: sampleComment } },
+  })
   createComment(
     @Param('id') id: string,
     @RequireUser() user: AuthenticatedUser,
