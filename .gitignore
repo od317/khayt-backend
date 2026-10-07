@@ -7,3 +7,4 @@ uploads/
 .env.production
 .env.production.local
 docker-compose.prod.yml
+z_important

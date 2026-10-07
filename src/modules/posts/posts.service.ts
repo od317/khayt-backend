@@ -18,6 +18,7 @@ import {
   User,
   UserRole,
 } from '@prisma/client';
+import { AdminQueryPostsDto } from './dto/admin-query-posts.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
@@ -849,6 +850,157 @@ export class PostsService {
         HttpStatus.BAD_REQUEST,
       );
     }
+  }
+
+  async adminList(
+    query: AdminQueryPostsDto,
+  ): Promise<Paginated<PostResponse>> {
+    const where: Prisma.PostWhereInput = {};
+
+    // By default, hide soft-deleted. Admins can include them.
+    if (query.includeDeleted !== 'true') {
+      where.deletedAt = null;
+    }
+
+    // Active filter — if not specified, admins see BOTH active and inactive.
+    if (query.active === 'true') where.active = true;
+    if (query.active === 'false') where.active = false;
+
+    if (query.type && query.type.length > 0) {
+      where.type = { in: query.type };
+    }
+    if (query.authorId) where.authorId = query.authorId;
+    if (query.businessId) where.businessId = query.businessId;
+    if (query.location) {
+      where.location = { contains: query.location, mode: 'insensitive' };
+    }
+    if (query.q) {
+      where.OR = [
+        { title: { contains: query.q, mode: 'insensitive' } },
+        { body: { contains: query.q, mode: 'insensitive' } },
+      ];
+    }
+
+    const { skip, take } = skipTake(query.page, query.limit);
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.post.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: POST_INCLUDE,
+      }),
+      this.prisma.post.count({ where }),
+    ]);
+
+    const items = await this.attachCounts(rows, undefined);
+    return paginate(items, total, query.page, query.limit);
+  }
+
+  async adminRemove(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ post: PostResponse; deleted: true }> {
+    const existing = await this.prisma.post.findFirst({
+      where: { id, deletedAt: null },
+      select: { authorId: true },
+    });
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+
+    const post = await this.prisma.post.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+      include: POST_INCLUDE,
+    });
+
+    // Notify the author (fire-and-forget; never blocks the response)
+    if (existing.authorId !== actor.id) {
+      void this.notifications.notify({
+        userId: existing.authorId,
+        type: NotificationType.post_moderated, // see note below
+        title: 'تم حذف منشورك',
+        body: 'قام فريق الإدارة بحذف أحد منشوراتك لمخالفته سياسات المنصة.',
+        linkTo: '/posts',
+        actorId: actor.id,
+      });
+    }
+
+    const [response] = await this.attachCounts([post], actor);
+    if (!response) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+    return { post: response, deleted: true };
+  }
+
+  async adminSetActive(
+    id: string,
+    active: boolean,
+    actor: AuthenticatedUser,
+  ): Promise<{ post: PostResponse }> {
+    const existing = await this.prisma.post.findFirst({
+      where: { id, deletedAt: null },
+      select: { authorId: true, active: true },
+    });
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+
+    // No-op if the state doesn't change
+    if (existing.active === active) {
+      const current = await this.prisma.post.findFirst({
+        where: { id, deletedAt: null },
+        include: POST_INCLUDE,
+      });
+      if (!current) {
+        throw new NotFoundException({
+          error: 'not_found',
+          message: 'Post not found',
+        });
+      }
+      const [response] = await this.attachCounts([current], actor);
+      return { post: response! };
+    }
+
+    const post = await this.prisma.post.update({
+      where: { id },
+      data: { active },
+      include: POST_INCLUDE,
+    });
+
+    // Notify the author (fire-and-forget)
+    if (existing.authorId !== actor.id) {
+      void this.notifications.notify({
+        userId: existing.authorId,
+        type: NotificationType.new_comment, // see note below
+        title: active ? 'تم تفعيل منشورك' : 'تم تعطيل منشورك',
+        body: active
+          ? 'قام فريق الإدارة بإعادة تفعيل أحد منشوراتك.'
+          : 'قام فريق الإدارة بتعطيل أحد منشوراتك مؤقتاً. لن يظهر للآخرين.',
+        linkTo: `/posts/${id}`,
+        actorId: actor.id,
+      });
+    }
+
+    const [response] = await this.attachCounts([post], actor);
+    if (!response) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Post not found',
+      });
+    }
+    return { post: response };
   }
 
   private async attachCounts(

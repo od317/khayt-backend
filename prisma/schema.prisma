@@ -86,6 +86,7 @@ enum NotificationType {
   new_comment
   new_like
   receiving_confirmed
+  post_moderated 
 }
 
 enum CategoryApplies {
