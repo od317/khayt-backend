@@ -1,5 +1,6 @@
 import { MediaType, PostType } from '@prisma/client';
 import {
+  IsArray,
   IsBooleanString,
   IsEnum,
   IsIn,
@@ -8,11 +9,25 @@ import {
   MaxLength,
 } from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { Transform } from 'class-transformer';
+
+function toArray({ value }: { value: unknown }): unknown {
+  if (value === undefined || value === null || value === '') return undefined;
+  const raw = Array.isArray(value) ? value : [value];
+  return raw
+    .flatMap((v) => String(v).split(','))
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
 
 export class QueryPostsDto extends PaginationDto {
   @IsOptional()
-  @IsEnum(PostType)
-  type?: PostType;
+  @Transform(toArray)
+  @IsArray()
+  @IsEnum(PostType, { each: true })
+  type?: PostType[];
+
+
 
   @IsOptional()
   @IsString()
@@ -47,4 +62,9 @@ export class QueryPostsDto extends PaginationDto {
   @IsOptional()
   @IsIn(['me'])
   savedBy?: 'me';
+
+  @IsOptional()
+  @IsBooleanString()
+  forMe?: string;
+
 }
