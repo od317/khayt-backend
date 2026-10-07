@@ -2078,7 +2078,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'reel-11',
-      authorId: 'user-workshop-damascus-rural',
+      authorId: 'user-workshop-rural-damascus',
       businessId: 'biz-workshop-damascus-rural',
       type: PostType.reel,
       title: 'إنتاج ضخم في ريف دمشق',
@@ -2274,7 +2274,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'reel-25',
-      authorId: 'user-workshop-damascus-rural',
+      authorId: 'user-workshop-rural-damascus',
       businessId: 'biz-workshop-damascus-rural',
       type: PostType.reel,
       title: 'تفاصيل الخياطة المضاعفة',
