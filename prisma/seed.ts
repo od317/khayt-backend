@@ -2494,7 +2494,7 @@ async function main(): Promise<void> {
     {
       id: 'comment-reel-01',
       postId: 'reel-01',
-      authorId: 'user-store-midan',
+      authorId: 'user-store-damascus-midan',
       body: 'ما شاء الله، شغل نظيف!',
       createdAt: hoursAgo(1),
     },
