@@ -26,8 +26,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     super();
   }
 
-  override canActivate(context: ExecutionContext) {
+  override async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
+
     if (isSwaggerRequest(request)) {
       return true;
     }
@@ -37,18 +38,50 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getClass(),
     ]);
 
-    if (isPublic) {
+    const authHeader = request.headers.authorization;
+    const hasToken =
+      typeof authHeader === 'string' && authHeader.startsWith('Bearer ');
+
+    // Public + no token → skip auth entirely, allow anonymously.
+    if (isPublic && !hasToken) {
       return true;
     }
 
-    return super.canActivate(context);
+    // From here: either the route requires auth, or the client sent a
+    // token on a public route and we want to try to authenticate them.
+
+    try {
+      // super.canActivate() runs passport-jwt. It either sets req.user
+      // and returns true, or throws (which we catch below).
+      const result = await (super.canActivate(context) as Promise<boolean>);
+      return result;
+    } catch (error) {
+      // On public routes, an invalid token must NOT block the request.
+      // Just leave req.user undefined and let the request through.
+      if (isPublic) {
+        return true;
+      }
+      throw error;
+    }
   }
 
   override handleRequest<TUser = AuthenticatedUser>(
     err: unknown,
     user: TUser | false,
     info: unknown,
+    context: ExecutionContext,
   ): TUser {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    // On public routes, we never want handleRequest to throw — return
+    // whatever we got (which may be `false`) and let the request proceed.
+    if (isPublic) {
+      return (user || undefined) as TUser;
+    }
+
     if (err instanceof HttpException) {
       throw err;
     }
