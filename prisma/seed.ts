@@ -1962,7 +1962,7 @@ async function main(): Promise<void> {
       location: 'حمص',
       media: MediaType.video,
       imageUrls: [],
-      videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+      videoUrl: 'https://videotourl.com/videos/1791367556277-5fecaffe-c970-4d65-8fd5-fc6dda05c554.mp4',
       active: true,
       createdAt: hoursAgo(3),
     },
