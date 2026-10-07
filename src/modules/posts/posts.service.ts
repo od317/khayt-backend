@@ -119,6 +119,9 @@ export class PostsService {
       where.savedBy = { some: { userId: actor.id } };
     }
 
+    // ─────────────────────────────────────────────────────────
+    // Post type filter — one block, one source of truth.
+    // ─────────────────────────────────────────────────────────
     if (query.forMe === 'true') {
       if (!actor) {
         throw new UnauthorizedException({
@@ -128,36 +131,23 @@ export class PostsService {
       }
 
       const roleTypes = POST_TYPES_BY_ROLE[actor.role as UserRole] ?? [];
-
       if (roleTypes.length === 0) {
-        // Internal roles or unknown role → empty feed.
         return paginate([], 0, query.page, query.limit);
       }
 
-      // If the client also passed type filters, intersect them with the
-      // role's allowed types. Otherwise use the role's full list.
       if (query.type && query.type.length > 0) {
         const allowed = query.type.filter((t) => roleTypes.includes(t));
         where.type = allowed.length > 0 ? { in: allowed } : { in: [] };
       } else {
         where.type = { in: roleTypes };
       }
-    } else {
-      // ── Existing behavior ──
-      if (query.type && query.type.length > 0) {
-        where.type = { in: query.type };
-      } else {
-        // Default feed: everything except reels.
-        where.type = { not: PostType.reel };
-      }
-    }
-
-    if (query.type && query.type.length > 0) {
+    } else if (query.type && query.type.length > 0) {
       where.type = { in: query.type };
     } else {
-      // No explicit type filter → exclude reels from the default feed.
       where.type = { not: PostType.reel };
     }
+    // ─────────────────────────────────────────────────────────
+
     if (query.businessId) where.businessId = query.businessId;
     if (query.media) where.media = query.media;
     if (query.location) {
