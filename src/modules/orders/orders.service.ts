@@ -60,7 +60,7 @@ export class OrdersService {
     private readonly notifications: NotificationsService,
     private readonly redis: RedisService,
     private readonly config: ConfigService<AppConfig, true>,
-  ) {}
+  ) { }
 
   async list(
     query: QueryOrdersDto,
@@ -145,17 +145,17 @@ export class OrdersService {
 
     const delivery = deliveryOrder
       ? {
-          id: deliveryOrder.delivery.id,
-          number: deliveryOrder.delivery.number,
-          status: deliveryOrder.delivery.status,
-          driver: deliveryOrder.delivery.driver
-            ? {
-                id: deliveryOrder.delivery.driver.id,
-                name: deliveryOrder.delivery.driver.name,
-                phone: deliveryOrder.delivery.driver.phone,
-              }
-            : null,
-        }
+        id: deliveryOrder.delivery.id,
+        number: deliveryOrder.delivery.number,
+        status: deliveryOrder.delivery.status,
+        driver: deliveryOrder.delivery.driver
+          ? {
+            id: deliveryOrder.delivery.driver.id,
+            name: deliveryOrder.delivery.driver.name,
+            phone: deliveryOrder.delivery.driver.phone,
+          }
+          : null,
+      }
       : null;
 
     const allLinesPicked = lines.every((l) => l.picked);
@@ -338,6 +338,7 @@ export class OrdersService {
                 businessId: product.businessId,
                 quantity: line.quantity,
                 unitPrice: product.price,
+                variant: line.variant ?? Prisma.JsonNull,
               };
             }),
           },

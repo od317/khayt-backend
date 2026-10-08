@@ -6,6 +6,7 @@ import {
   IsArray,
   IsInt,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Max,
@@ -19,6 +20,11 @@ export class CreateOrderLineDto {
   @ApiProperty({ example: '' })
   @IsString()
   productId!: string;
+
+  @ApiPropertyOptional({ example: { color: 'أبيض', size: 'L' } })
+  @IsOptional()
+  @IsObject()
+  variant?: Record<string, string>;
 
   @ApiProperty({ example: 1 })
   @Type(() => Number)

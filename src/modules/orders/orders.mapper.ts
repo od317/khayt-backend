@@ -35,6 +35,7 @@ export type OrderLineResponse = {
   quantity: number;
   unitPrice: number;
   picked: boolean;
+  variant: Record<string, string> | null;
 };
 
 export type OrderDeliveryResponse = {
@@ -89,6 +90,7 @@ type OrderLineWithRelations = {
   quantity: number;
   unitPrice: number;
   picked: boolean;
+  variant?: unknown;                                 // 👈 add
   product: { name: string; images: string[] };
   business: { name: string };
 };
@@ -120,6 +122,10 @@ export function toOrderLineResponse(
     productImage: line.product.images?.[0] ?? null,
     businessId: line.businessId,
     businessName: line.business.name,
+    variant:
+      line.variant && typeof line.variant === 'object' && !Array.isArray(line.variant)
+        ? (line.variant as Record<string, string>)
+        : null,
     quantity: line.quantity,
     unitPrice: line.unitPrice,
     picked: line.picked,
@@ -131,10 +137,7 @@ export function toOrderDetailResponse(
   lines: OrderLineWithRelations[],
   flags: { canCancel: boolean; canAdvance: boolean },
   delivery: OrderDeliveryResponse | null = null,
-  contacts: { whatsapp: string; phone: string } = {
-    whatsapp: '',
-    phone: '',
-  },
+  contacts: { whatsapp: string; phone: string } = { whatsapp: '', phone: '' },
 ): OrderDetailResponse {
   return {
     order: {

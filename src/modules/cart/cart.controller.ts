@@ -21,6 +21,7 @@ import { CartService } from './cart.service';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CartItemResponse, CartResponse } from './cart.mapper';
+import { OrderDetailResponse } from '../orders/orders.mapper';
 
 @ApiTags('cart')
 @ApiBearerAuth('access-token')
@@ -96,13 +97,16 @@ export class CartController {
     }
 
     @Post('checkout')
-    @HttpCode(HttpStatus.NOT_IMPLEMENTED)
+    @HttpCode(HttpStatus.CREATED)
     @ApiOperation({
-        summary: 'Place the cart as an order (not implemented yet)',
+        summary: 'Place the cart as an order',
         description:
-            'Store accounts only. Will create an Order with status `review` and decrement stock. Currently returns 501.',
+            'Store accounts only. Creates an Order with status `review` from the cart items. Uses the store\'s saved delivery address. Clears the cart on success.',
     })
-    checkout(@RequireUser() user: AuthenticatedUser): Promise<never> {
+    @ApiOkResponse({ description: 'The created order with its lines' })
+    checkout(
+        @RequireUser() user: AuthenticatedUser,
+    ): Promise<OrderDetailResponse> {
         return this.cart.checkout(user);
     }
 }

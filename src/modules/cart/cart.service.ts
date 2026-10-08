@@ -19,6 +19,8 @@ import {
     toCartItemResponse,
     toCartResponse,
 } from './cart.mapper';
+import { OrdersService } from '../orders/orders.service';
+import { OrderDetailResponse } from '../orders/orders.mapper';
 
 const MAX_CART_ITEMS = 100;
 const MAX_QUANTITY_PER_ITEM = 10000;
@@ -29,7 +31,7 @@ const CART_INCLUDE = {
 
 @Injectable()
 export class CartService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService, private readonly orders: OrdersService,) { }
 
     // ─────────────────────────────────────────────────────────
     // Read
@@ -215,46 +217,77 @@ export class CartService {
         return { cleared: true };
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Checkout (stub — wire to Orders later)
-    // ─────────────────────────────────────────────────────────
-
-    /**
-     * Placeholder for the real checkout flow.
-     *
-     * When ready, this method will:
-     *   1. Load all cart items for the store.
-     *   2. Verify each product is still available.
-     *   3. Create an Order with status `review`.
-     *   4. Create OrderLine rows (one per cart item).
-     *   5. Decrement Supply.remaining at each factory.
-     *   6. Clear the cart.
-     *   7. Notify each factory that a new order arrived.
-     *
-     * For now, it just checks the cart is non-empty and returns a
-     * not-implemented error so the client doesn't silently fail.
-     */
-    async checkout(actor: AuthenticatedUser): Promise<never> {
+    async checkout(actor: AuthenticatedUser): Promise<OrderDetailResponse> {
         assertStore(actor);
 
-        const count = await this.prisma.cartItem.count({
+        // 1. Load cart items with product info.
+        const cartItems = await this.prisma.cartItem.findMany({
             where: { userId: actor.id },
+            orderBy: { createdAt: 'asc' },
+            include: {
+                product: {
+                    select: {
+                        id: true,
+                        deletedAt: true,
+                        available: true,
+                    },
+                },
+            },
         });
 
-        if (count === 0) {
+        if (cartItems.length === 0) {
             throw new BadRequestException({
                 error: 'empty_cart',
                 message: 'Cart is empty',
             });
         }
 
-        throw new HttpException(
-            {
-                error: 'not_implemented',
-                message: 'Checkout is not implemented yet',
-            },
-            HttpStatus.NOT_IMPLEMENTED,
-        );
+        // 2. Fast-fail on obvious problems before delegating to orders.
+        //    OrdersService.create() will also re-check, but this gives
+        //    the user a specific error message tied to the cart item.
+        for (const item of cartItems) {
+            if (item.product.deletedAt !== null) {
+                throw new BadRequestException({
+                    error: 'product_unavailable',
+                    message: `Product no longer exists: ${item.productId}`,
+                    fields: { productId: item.productId },
+                });
+            }
+            if (!item.product.available) {
+                throw new BadRequestException({
+                    error: 'product_unavailable',
+                    message: `Product is currently unavailable: ${item.productId}`,
+                    fields: { productId: item.productId },
+                });
+            }
+        }
+
+        // 3. Map cart items → CreateOrderDto lines.
+        //
+        //    NOTE: variant info is not sent to OrdersService today. If two
+        //    variants of the same product are in the cart, they'll collapse
+        //    into two OrderLine rows with the same productId. When you're
+        //    ready, add `variant: Json?` to OrderLine and pass it here.
+        const lines = cartItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            variant:
+                item.variant && typeof item.variant === 'object' && !Array.isArray(item.variant)
+                    ? (item.variant as Record<string, string>)
+                    : undefined,
+        }));
+
+        // 4. Delegate to the existing order pipeline.
+        //    It handles: order number, stock check, review status,
+        //    notifications to staff, live publishing.
+        const order = await this.orders.create(actor, { lines });
+
+        // 5. Clear the cart ONLY after the order was created successfully.
+        //    If OrdersService.create throws, the cart stays intact and the
+        //    user can retry.
+        await this.prisma.cartItem.deleteMany({ where: { userId: actor.id } });
+
+        return order;
     }
 }
 
