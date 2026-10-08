@@ -29,6 +29,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { DebugModule } from './modules/debug/debug.module';
 import { ShippingCompaniesModule } from './modules/shipping-companies/shipping-companies.module';
+import { CartModule } from './modules/cart/cart.module';
 
 
 @Module({
@@ -45,6 +46,7 @@ import { ShippingCompaniesModule } from './modules/shipping-companies/shipping-c
     RolesModule,
     AdminModule,
     BusinessesModule,
+    CartModule,
     ProductsModule,
     CategoriesModule,
     PostOptionsModule,

@@ -112,6 +112,27 @@ enum PostOptionKind {
   condition
 }
 
+
+model CartItem {
+  id         String   @id @default(uuid())
+  userId     String
+  productId  String
+  quantity   Int      @default(1)
+  variant    Json?
+  /// Deterministic string used for the unique constraint. Empty string
+  /// means "no variant". Otherwise something like "color:أبيض|size:L".
+  variantKey String   @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId, variantKey])
+  @@index([userId])
+  @@index([productId])
+}
+
 // ============================================================
 // USERS
 // ============================================================
@@ -131,6 +152,8 @@ model User {
   onboardingCompleted Boolean @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  cartItems CartItem[]
 
   deliveryAddress String?
   deliveryLat     Float?
@@ -250,6 +273,7 @@ model Product {
   businessId  String
   name        String
   category    String
+  cartItems CartItem[]
   description String?
   images      String[]
   unit        String
