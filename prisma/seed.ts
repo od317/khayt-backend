@@ -2200,7 +2200,7 @@ async function main(): Promise<void> {
       location: 'طرطوس',
       media: MediaType.video,
       imageUrls: [],
-      videoUrl: 'https://res.cloudinary.com/demo/video/upload/docs/grass-vs-sand.mp4',
+      videoUrl: 'https://res.cloudinary.com/demo/video/upload/elephants.mp4',
       active: true,
       createdAt: hoursAgo(20),
     },
