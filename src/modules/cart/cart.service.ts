@@ -21,6 +21,7 @@ import {
 } from './cart.mapper';
 import { OrdersService } from '../orders/orders.service';
 import { OrderDetailResponse } from '../orders/orders.mapper';
+import { CheckoutDto } from './dto/checkout.dto';
 
 const MAX_CART_ITEMS = 100;
 const MAX_QUANTITY_PER_ITEM = 10000;
@@ -217,7 +218,10 @@ export class CartService {
         return { cleared: true };
     }
 
-    async checkout(actor: AuthenticatedUser): Promise<OrderDetailResponse> {
+    async checkout(
+        actor: AuthenticatedUser,
+        dto: CheckoutDto,
+    ): Promise<OrderDetailResponse> {
         assertStore(actor);
 
         // 1. Load cart items with product info.
@@ -243,8 +247,6 @@ export class CartService {
         }
 
         // 2. Fast-fail on obvious problems before delegating to orders.
-        //    OrdersService.create() will also re-check, but this gives
-        //    the user a specific error message tied to the cart item.
         for (const item of cartItems) {
             if (item.product.deletedAt !== null) {
                 throw new BadRequestException({
@@ -263,28 +265,27 @@ export class CartService {
         }
 
         // 3. Map cart items → CreateOrderDto lines.
-        //
-        //    NOTE: variant info is not sent to OrdersService today. If two
-        //    variants of the same product are in the cart, they'll collapse
-        //    into two OrderLine rows with the same productId. When you're
-        //    ready, add `variant: Json?` to OrderLine and pass it here.
         const lines = cartItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
             variant:
-                item.variant && typeof item.variant === 'object' && !Array.isArray(item.variant)
+                item.variant &&
+                    typeof item.variant === 'object' &&
+                    !Array.isArray(item.variant)
                     ? (item.variant as Record<string, string>)
                     : undefined,
         }));
 
         // 4. Delegate to the existing order pipeline.
-        //    It handles: order number, stock check, review status,
-        //    notifications to staff, live publishing.
-        const order = await this.orders.create(actor, { lines });
+        //    Forward the delivery address so `resolveOrderDropoff` gets it.
+        const order = await this.orders.create(actor, {
+            lines,
+            address: dto.address,
+            lat: dto.lat,
+            lng: dto.lng,
+        });
 
         // 5. Clear the cart ONLY after the order was created successfully.
-        //    If OrdersService.create throws, the cart stays intact and the
-        //    user can retry.
         await this.prisma.cartItem.deleteMany({ where: { userId: actor.id } });
 
         return order;

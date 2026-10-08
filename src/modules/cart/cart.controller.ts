@@ -22,6 +22,7 @@ import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CartItemResponse, CartResponse } from './cart.mapper';
 import { OrderDetailResponse } from '../orders/orders.mapper';
+import { CheckoutDto } from './dto/checkout.dto';
 
 @ApiTags('cart')
 @ApiBearerAuth('access-token')
@@ -101,12 +102,13 @@ export class CartController {
     @ApiOperation({
         summary: 'Place the cart as an order',
         description:
-            'Store accounts only. Creates an Order with status `review` from the cart items. Uses the store\'s saved delivery address. Clears the cart on success.',
+            'Store accounts only. Creates an Order with status `review`. On the first order, `address`, `lat`, and `lng` are required; afterwards the store\'s saved address is reused.',
     })
     @ApiOkResponse({ description: 'The created order with its lines' })
     checkout(
         @RequireUser() user: AuthenticatedUser,
+        @Body() dto: CheckoutDto,
     ): Promise<OrderDetailResponse> {
-        return this.cart.checkout(user);
+        return this.cart.checkout(user, dto);
     }
 }
