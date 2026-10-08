@@ -2356,6 +2356,63 @@ async function main(): Promise<void> {
   }
   console.log(`  posts: ${posts.length}`);
 
+  const shippingCompanies = [
+    {
+      id: 'ship-al-sham',
+      name: 'شركة الشام للشحن',
+      location: 'دمشق - المزة',
+      verified: true,
+      coverage: ['دمشق', 'ريف دمشق', 'حمص'],
+      deliveryTime: '24 ساعة',
+      pricing: 'يبدأ من 5000 ل.س',
+      fleet: '5 شاحنات + 2 فان',
+      phone: '0994111001',
+    },
+    {
+      id: 'ship-syria-express',
+      name: 'سوريا إكسبريس',
+      location: 'حلب - العزيزية',
+      verified: true,
+      coverage: ['حلب', 'إدلب', 'حماة', 'دمشق'],
+      deliveryTime: '48 ساعة',
+      pricing: 'يبدأ من 7000 ل.س',
+      fleet: '8 شاحنات',
+      phone: '0994111002',
+    },
+    {
+      id: 'ship-coastal-logistics',
+      name: 'الساحل للخدمات اللوجستية',
+      location: 'اللاذقية - الرمل الجنوبي',
+      verified: false,
+      coverage: ['اللاذقية', 'طرطوس', 'حمص'],
+      deliveryTime: '24-48 ساعة',
+      pricing: 'حسب الوزن والمسافة',
+      fleet: '4 شاحنات صغيرة',
+      phone: '0994111003',
+    },
+    {
+      id: 'ship-homs-cargo',
+      name: 'حمص كارجو',
+      location: 'حمص - الوعر',
+      verified: true,
+      coverage: ['حمص', 'حماة', 'دمشق', 'حلب'],
+      deliveryTime: '48-72 ساعة',
+      pricing: 'يبدأ من 6000 ل.س',
+      fleet: '6 شاحنات',
+      phone: '0994111004',
+    },
+  ];
+
+  for (const sc of shippingCompanies) {
+    await prisma.shippingCompany.upsert({
+      where: { id: sc.id },
+      create: sc,
+      update: sc,
+    });
+  }
+  console.log(`  shipping companies: ${shippingCompanies.length}`);
+
+
   // ------------------------------------------------------------
   // Post ↔ Category
   // ------------------------------------------------------------
