@@ -45,6 +45,15 @@ export class UpdatePostDto {
   @MaxLength(200)
   location?: string;
 
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description:
+      'Optional new cover image for a reel. If omitted, the existing thumbnail is kept.',
+  })
+  @IsOptional()
+  thumbnail?: unknown;
+
   @ApiPropertyOptional({ enum: MediaType })
   @IsOptional()
   @IsEnum(MediaType)

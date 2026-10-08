@@ -210,6 +210,15 @@ export class CreatePostDto {
   @MaxLength(200)
   condition?: string;
 
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description:
+      'Optional cover image for a reel (JPG/PNG). If omitted, a frame is auto-extracted from the video.',
+  })
+  @IsOptional()
+  thumbnail?: unknown;
+
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()

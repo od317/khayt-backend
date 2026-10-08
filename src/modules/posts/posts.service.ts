@@ -4,6 +4,7 @@ import {
   HttpStatus,
   Injectable,
   NotFoundException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -28,6 +29,9 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { join } from 'node:path';
+import { parse as parsePath } from 'node:path';
+import { extractVideoThumbnail } from './post-thumbnails';
 import {
   CommentResponse,
   PostCounts,
@@ -80,6 +84,7 @@ const DEFAULT_POST_TYPE: PostType = PostType.job_seeking;
 
 @Injectable()
 export class PostsService {
+  private readonly logger = new Logger(PostsService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -227,7 +232,7 @@ export class PostsService {
     const imageUrls =
       uploadedImages.length > 0 ? uploadedImages : (dto.imageUrls ?? []);
     const videoUrl = uploadedVideo ?? dto.videoUrl ?? undefined;
-
+    const thumbnailUrl = await this.resolveReelThumbnail(type, files);
     const media =
       type === PostType.reel
         ? MediaType.video
@@ -285,6 +290,7 @@ export class PostsService {
         media,
         imageUrls,
         videoUrl: videoUrl ?? null,
+        thumbnailUrl,
         specialty: dto.specialty ?? null,
         skills: dto.skills ?? [],
         workType: dto.workType ?? [],
@@ -413,6 +419,7 @@ export class PostsService {
 
     const uploadedImages = postImagePaths(files);
     const uploadedVideo = postVideoPath(files);
+    const uploadedThumbnail = files.find((f) => f.fieldname === 'thumbnail');
 
     const post = await this.prisma.$transaction(
       async (tx): Promise<PostWithRelations> => {
@@ -441,6 +448,17 @@ export class PostsService {
           !uploadedVideo
         ) {
           data.media = dto.media;
+        }
+
+        if (uploadedThumbnail) {
+          data.thumbnailUrl = `/uploads/posts/${uploadedThumbnail.filename}`;
+        } else if (uploadedVideo && existing.type === PostType.reel) {
+          // A new video was uploaded for a reel → regenerate the thumbnail.
+          const regenerated = await this.resolveReelThumbnail(
+            PostType.reel,
+            files,
+          );
+          if (regenerated) data.thumbnailUrl = regenerated;
         }
 
         if (dto.specialty !== undefined) data.specialty = dto.specialty;
@@ -1030,6 +1048,44 @@ export class PostsService {
       });
     }
     return { post: response };
+  }
+
+  /**
+ * Determines the thumbnail URL for a post.
+ *
+ * 1. If the client uploaded a file with fieldname `thumbnail`, that wins.
+ * 2. Otherwise, if the post is a reel and a video file is present, we
+ *    extract a frame with ffmpeg (installed in the container).
+ * 3. Otherwise, null.
+ *
+ * Never throws — the extraction helper handles its own errors and logs
+ * a warning on failure.
+ */
+  private async resolveReelThumbnail(
+    type: PostType,
+    files: Express.Multer.File[],
+  ): Promise<string | null> {
+    const custom = files.find((f) => f.fieldname === 'thumbnail');
+    if (custom) {
+      this.logger.log(`Using custom thumbnail for reel: ${custom.filename}`);
+      return `/uploads/posts/${custom.filename}`;
+    }
+
+    if (type !== PostType.reel) return null;
+
+    const video = files.find((f) => f.fieldname === 'video');
+    if (!video) return null;
+
+    const videoPath = join('./uploads/posts', video.filename);
+    const base = parsePath(video.filename).name;
+    const thumbFilename = `${base}.thumb.jpg`;
+    const thumbPath = join('./uploads/posts', thumbFilename);
+
+    const ok = await extractVideoThumbnail(videoPath, thumbPath, {
+      scale: '-1:720', // portrait reels
+    });
+
+    return ok ? `/uploads/posts/${thumbFilename}` : null;
   }
 
   private async attachCounts(

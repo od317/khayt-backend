@@ -307,6 +307,7 @@ model Post {
   authorId  String
   businessId String?
   type      PostType?
+  thumbnailUrl String?
   title     String?
   body      String
   media     MediaType @default(none)

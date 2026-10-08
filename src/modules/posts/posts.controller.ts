@@ -58,10 +58,11 @@ const PostFilesInterceptor = FileFieldsInterceptor(
   [
     { name: 'images', maxCount: 8 },
     { name: 'video', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },   // 👈 new
   ],
   {
     storage: postFilesStorage,
-    limits: { fileSize: 20 * 1024 * 1024, files: 9 },
+    limits: { fileSize: 20 * 1024 * 1024, files: 10 },   // 👈 was 9, now 10
   },
 );
 
@@ -70,10 +71,15 @@ function flattenPostFiles(
     | {
       images?: Express.Multer.File[];
       video?: Express.Multer.File[];
+      thumbnail?: Express.Multer.File[];   // 👈 new
     }
     | undefined,
 ): Express.Multer.File[] {
-  return [...(grouped?.images ?? []), ...(grouped?.video ?? [])];
+  return [
+    ...(grouped?.images ?? []),
+    ...(grouped?.video ?? []),
+    ...(grouped?.thumbnail ?? []),           // 👈 new
+  ];
 }
 
 @ApiTags('posts')
@@ -87,7 +93,7 @@ export class PostsController {
   @ApiOperation({
     summary: 'List posts',
     description:
-      'Public. Filters: type, businessId, categoryId, location, q, media, active, savedBy=me, authorId. If `active=false`, only the current user sees their own inactive posts.',
+      'Public. Filters: type, businessId, categoryId, location, q, media, active, savedBy=me, authorId, forMe=true. If `active=false`, only the current user sees their own inactive posts.',
   })
   @ApiOkResponse({
     description: 'Paginated list of posts',
@@ -125,7 +131,7 @@ export class PostsController {
   })
   @ApiBody({
     description:
-      'multipart/form-data. Attach photos with `images` (repeat, max 8). Reels also accept `video`. Optional `productId` links to a product you own.',
+      'multipart/form-data. Attach photos with `images` (repeat, max 8). Reels also accept `video`. Reels can pass a custom `thumbnail` (JPG/PNG); otherwise a frame is auto-extracted from the video. Optional `productId` links to a product you own.',
     type: CreatePostDto,
     examples: createPostSwaggerExamples,
   })
@@ -141,6 +147,7 @@ export class PostsController {
     files?: {
       images?: Express.Multer.File[];
       video?: Express.Multer.File[];
+      thumbnail?: Express.Multer.File[];   // 👈 new
     },
   ): Promise<{ post: PostResponse }> {
     return this.posts.create(user, dto, flattenPostFiles(files));
@@ -152,11 +159,11 @@ export class PostsController {
   @ApiOperation({
     summary: 'Update post',
     description:
-      'multipart/form-data. Send `productId` (empty) to unlink the current product. Send nothing to leave the link unchanged.',
+      'multipart/form-data. Send `productId` (empty) to unlink the current product. Send nothing to leave the link unchanged. Send `thumbnail` to replace the reel cover.',
   })
   @ApiBody({
     description:
-      'multipart/form-data. Replace photos with `images` (repeat, max 8) or the reel with `video`. Set `productId=` to unlink.',
+      'multipart/form-data. Replace photos with `images` (repeat, max 8) or the reel with `video`. Send `thumbnail` to set a new reel cover. Set `productId=` to unlink.',
     type: UpdatePostDto,
   })
   @ApiOkResponse({
@@ -172,6 +179,7 @@ export class PostsController {
     files?: {
       images?: Express.Multer.File[];
       video?: Express.Multer.File[];
+      thumbnail?: Express.Multer.File[];   // 👈 new
     },
   ): Promise<{ post: PostResponse }> {
     return this.posts.update(id, user, dto, flattenPostFiles(files));

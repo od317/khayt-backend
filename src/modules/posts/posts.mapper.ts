@@ -49,6 +49,7 @@ export type PostResponse = {
   media: MediaType;
   imageUrls: string[];
   videoUrl: string | null;
+  thumbnailUrl: string | null;
   location: string | null;
   active: boolean;
   createdAt: string;
@@ -148,6 +149,7 @@ export function toPostResponse(
     media: post.media,
     imageUrls: post.imageUrls,
     videoUrl: post.videoUrl,
+    thumbnailUrl: post.thumbnailUrl,
     location: post.location,
     active: post.active,
     createdAt: post.createdAt.toISOString(),
