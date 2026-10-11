@@ -634,27 +634,30 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     }),
   },
   'get /profiles/{id}': {
-    '200': ok({
-      kind: 'factory',
-      id: 'biz-workshop',
-      profile: {
-        name: sampleBusiness.name,
-        description: sampleBusiness.description,
-        verified: sampleBusiness.verified,
-        services: sampleBusiness.services,
-        imageUrl: sampleBusiness.imageUrl,
-        location: sampleBusiness.location,
-        phone: sampleBusiness.phone,
-        experience: sampleBusiness.experience,
-        categories: [] as { id: string; name: string; slug: string }[],
-      },
-      products: [sampleProduct],
-      posts: [samplePost],
-      similar: [sampleBusiness],
-    }),
-    '200_employee': {
-      description: 'Employee public profile',
+    '200': {
+      description: 'Public profile (factory or employee)',
       examples: {
+        factory: {
+          summary: 'Factory',
+          value: {
+            kind: 'factory',
+            id: 'biz-workshop',
+            profile: {
+              name: sampleBusiness.name,
+              description: sampleBusiness.description,
+              verified: sampleBusiness.verified,
+              services: sampleBusiness.services,
+              imageUrl: sampleBusiness.imageUrl,
+              location: sampleBusiness.location,
+              phone: sampleBusiness.phone,
+              experience: sampleBusiness.experience,
+              categories: [] as { id: string; name: string; slug: string }[],
+            },
+            products: [sampleProduct],
+            posts: [samplePost],
+            similar: [sampleBusiness],
+          },
+        },
         employee: {
           summary: 'Employee',
           value: {
