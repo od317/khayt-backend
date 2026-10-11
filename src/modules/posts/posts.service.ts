@@ -185,6 +185,35 @@ export class PostsService {
     return paginate(items, total, query.page, query.limit);
   }
 
+  /**
+   * Authenticated user's own posts (active + inactive), paginated.
+   */
+  async listMine(
+    actor: AuthenticatedUser,
+    query: { page: number; limit: number },
+  ): Promise<Paginated<PostResponse>> {
+    const where: Prisma.PostWhereInput = {
+      deletedAt: null,
+      authorId: actor.id,
+    };
+
+    const { skip, take } = skipTake(query.page, query.limit);
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.post.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: POST_INCLUDE,
+      }),
+      this.prisma.post.count({ where }),
+    ]);
+
+    const items = await this.attachCounts(rows, actor);
+    return paginate(items, total, query.page, query.limit);
+  }
+
   async detail(
     id: string,
     actor: AuthenticatedUser | undefined,

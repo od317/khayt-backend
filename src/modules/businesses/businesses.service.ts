@@ -24,6 +24,7 @@ import {
   toBusinessResponse,
   toSupplyLineResponse,
 } from './businesses.mapper';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { QueryBusinessesDto } from './dto/query-businesses.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
@@ -46,7 +47,6 @@ const BUSINESS_CATEGORY_SCOPES: CategoryApplies[] = [
 ];
 
 const FACTORY_POSTS_LIMIT = 20;
-const SIMILAR_FACTORIES_LIMIT = 6;
 
 export type BusinessDetailResponse = {
   business: BusinessResponse;
@@ -72,7 +72,6 @@ export type PublicFactoryProfileResponse = {
   };
   products: ProductResponse[];
   posts: PostResponse[];
-  similar: BusinessResponse[];
 };
 
 export type PublicEmployeeCard = {
@@ -253,6 +252,32 @@ export class BusinessesService {
     });
   }
 
+  /**
+   * Paginated similar workshops for a factory public profile.
+   * Accepts business id or factory owner user id.
+   */
+  async listSimilarFactories(
+    id: string,
+    query: PaginationDto,
+  ): Promise<Paginated<BusinessResponse>> {
+    const factory = await this.resolveWorkshop(id);
+    if (!factory) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Factory profile not found',
+      });
+    }
+
+    const categoryIds = factory.categories.map((row) => row.category.id);
+    return this.findSimilarFactoriesPage(
+      factory.id,
+      factory.location,
+      categoryIds,
+      query.page,
+      query.limit,
+    );
+  }
+
   private async buildFactoryProfile(
     factory: Business & {
       categories: {
@@ -260,9 +285,7 @@ export class BusinessesService {
       }[];
     },
   ): Promise<PublicFactoryProfileResponse> {
-    const categoryIds = factory.categories.map((row) => row.category.id);
-
-    const [products, posts, similarRows] = await Promise.all([
+    const [products, posts] = await Promise.all([
       this.prisma.product.findMany({
         where: {
           businessId: factory.id,
@@ -282,7 +305,6 @@ export class BusinessesService {
         take: FACTORY_POSTS_LIMIT,
         include: FACTORY_POST_INCLUDE,
       }),
-      this.findSimilarFactories(factory.id, factory.location, categoryIds),
     ]);
 
     const mapped = toBusinessResponse(factory);
@@ -303,7 +325,6 @@ export class BusinessesService {
       },
       products: products.map(toProductResponse),
       posts: await this.toPublicPostResponses(posts),
-      similar: similarRows.map(toBusinessResponse),
     };
   }
 
@@ -522,58 +543,95 @@ export class BusinessesService {
     }
   }
 
-  private async findSimilarFactories(
+  private async findSimilarFactoriesPage(
     factoryId: string,
     location: string,
     categoryIds: string[],
-  ): Promise<
-    Array<
-      Business & {
-        categories: {
-          category: { id: string; name: string; slug: string };
-        }[];
-      }
-    >
-  > {
+    page: number,
+    limit: number,
+  ): Promise<Paginated<BusinessResponse>> {
+    const orderBy = [
+      { verified: 'desc' as const },
+      { createdAt: 'desc' as const },
+    ];
     const baseWhere: Prisma.BusinessWhereInput = {
       type: BusinessType.workshop,
       id: { not: factoryId },
     };
 
+    const preferredOr: Prisma.BusinessWhereInput[] = [
+      ...(categoryIds.length > 0
+        ? [{ categories: { some: { categoryId: { in: categoryIds } } } }]
+        : []),
+      { location: { equals: location, mode: 'insensitive' } },
+    ];
+
     const preferredWhere: Prisma.BusinessWhereInput = {
       ...baseWhere,
-      OR: [
-        ...(categoryIds.length > 0
-          ? [{ categories: { some: { categoryId: { in: categoryIds } } } }]
-          : []),
-        { location: { equals: location, mode: 'insensitive' } },
-      ],
+      OR: preferredOr,
+    };
+    const fillerWhere: Prisma.BusinessWhereInput = {
+      ...baseWhere,
+      NOT: { OR: preferredOr },
     };
 
-    const preferred = await this.prisma.business.findMany({
-      where: preferredWhere,
-      orderBy: [{ verified: 'desc' }, { createdAt: 'desc' }],
-      take: SIMILAR_FACTORIES_LIMIT,
-      include: BUSINESS_INCLUDE,
-    });
+    const [preferredTotal, fillerTotal] = await Promise.all([
+      this.prisma.business.count({ where: preferredWhere }),
+      this.prisma.business.count({ where: fillerWhere }),
+    ]);
+    const total = preferredTotal + fillerTotal;
+    const { skip, take } = skipTake(page, limit);
 
-    if (preferred.length >= SIMILAR_FACTORIES_LIMIT) {
-      return preferred;
+    if (total === 0 || skip >= total) {
+      return paginate([], total, page, limit);
     }
 
-    const missing = SIMILAR_FACTORIES_LIMIT - preferred.length;
-    const excludeIds = [factoryId, ...preferred.map((row) => row.id)];
-    const fillers = await this.prisma.business.findMany({
-      where: {
-        ...baseWhere,
-        id: { notIn: excludeIds },
-      },
-      orderBy: [{ verified: 'desc' }, { createdAt: 'desc' }],
-      take: missing,
-      include: BUSINESS_INCLUDE,
-    });
+    let rows: Array<
+      Business & {
+        categories: {
+          category: { id: string; name: string; slug: string };
+        }[];
+      }
+    > = [];
 
-    return [...preferred, ...fillers];
+    if (skip + take <= preferredTotal) {
+      rows = await this.prisma.business.findMany({
+        where: preferredWhere,
+        orderBy,
+        skip,
+        take,
+        include: BUSINESS_INCLUDE,
+      });
+    } else if (skip >= preferredTotal) {
+      rows = await this.prisma.business.findMany({
+        where: fillerWhere,
+        orderBy,
+        skip: skip - preferredTotal,
+        take,
+        include: BUSINESS_INCLUDE,
+      });
+    } else {
+      const preferredTake = preferredTotal - skip;
+      const [preferred, fillers] = await Promise.all([
+        this.prisma.business.findMany({
+          where: preferredWhere,
+          orderBy,
+          skip,
+          take: preferredTake,
+          include: BUSINESS_INCLUDE,
+        }),
+        this.prisma.business.findMany({
+          where: fillerWhere,
+          orderBy,
+          skip: 0,
+          take: take - preferredTake,
+          include: BUSINESS_INCLUDE,
+        }),
+      ]);
+      rows = [...preferred, ...fillers];
+    }
+
+    return paginate(rows.map(toBusinessResponse), total, page, limit);
   }
 
   private async findSimilarEmployees(

@@ -958,7 +958,34 @@ async function main(): Promise<void> {
       locationId: 'loc-rural-damascus-duma',
       onboardingCompleted: true,
     },
+    {
+      id: 'user-workshop-idlib',
+      phone: '0994000019',
+      name: 'مشغل إدلب للخياطة',
+      role: UserRole.workshop,
+      locationId: 'loc-idlib',
+      onboardingCompleted: true,
+    },
+    {
+      id: 'user-workshop-daraa',
+      phone: '0994000020',
+      name: 'معمل درعا للألبسة',
+      role: UserRole.workshop,
+      locationId: 'loc-daraa',
+      onboardingCompleted: true,
+    },
+    {
+      id: 'user-workshop-sweida',
+      phone: '0994000021',
+      name: 'مشغل السويداء للتطريز',
+      role: UserRole.workshop,
+      locationId: 'loc-sweida',
+      onboardingCompleted: true,
+    },
   ];
+
+  const SHARED_AVATAR_URL =
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgl6XLGmKN4GX1drT9TmSldDW2TZCpG2p3tEIiJWY7QQ&s=10';
 
   for (const u of users) {
     await prisma.user.upsert({
@@ -971,6 +998,7 @@ async function main(): Promise<void> {
         locationId: u.locationId,
         onboardingCompleted: u.onboardingCompleted,
         verified: u.role !== UserRole.employee,
+        avatarUrl: SHARED_AVATAR_URL,
       },
       update: {
         phone: u.phone,
@@ -978,6 +1006,7 @@ async function main(): Promise<void> {
         role: u.role,
         locationId: u.locationId,
         onboardingCompleted: u.onboardingCompleted,
+        avatarUrl: SHARED_AVATAR_URL,
       },
     });
   }
@@ -1069,7 +1098,7 @@ async function main(): Promise<void> {
     },
 
     // ═════════════════════════════════════════
-    // New workshops (6)
+    // Workshops / مشاغل (9 more → 10 total with biz-workshop)
     // ═════════════════════════════════════════
     {
       id: 'biz-workshop-halep',
@@ -1153,7 +1182,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'biz-workshop-damascus-rural',
-      ownerId: 'user-workshop-rural-damascus', // reuse? NO — see note below
+      ownerId: 'user-workshop-rural-damascus',
       type: BusinessType.workshop,
       name: 'معمل ريف دمشق للخياطة',
       location: 'ريف دمشق - دوما',
@@ -1166,6 +1195,54 @@ async function main(): Promise<void> {
       minOrder: '80 قطعة',
       experience: '9 سنوات',
       services: ['خياطة قمصان', 'خياطة بناطيل', 'خياطة فساتين', 'قص ليزر'],
+    },
+    {
+      id: 'biz-workshop-idlib',
+      ownerId: 'user-workshop-idlib',
+      type: BusinessType.workshop,
+      name: 'مشغل إدلب للخياطة',
+      location: 'إدلب - سراقب',
+      description: 'خياطة ألبسة رجالية ونسائية بكميات متوسطة',
+      phone: '0994000019',
+      imageUrl: SHARED_IMAGE_URL,
+      verified: false,
+      capacity: '1200 قطعة شهرياً',
+      equipment: '7 ماكينات خياطة',
+      minOrder: '25 قطعة',
+      experience: '8 سنوات',
+      services: ['خياطة رجالية', 'خياطة نسائية', 'تعديلات', 'قص'],
+    },
+    {
+      id: 'biz-workshop-daraa',
+      ownerId: 'user-workshop-daraa',
+      type: BusinessType.workshop,
+      name: 'معمل درعا للألبسة',
+      location: 'درعا - المدينة',
+      description: 'إنتاج ألبسة جاهزة للأسواق المحلية',
+      phone: '0994000020',
+      imageUrl: SHARED_IMAGE_URL,
+      verified: true,
+      capacity: '2500 قطعة شهرياً',
+      equipment: '10 ماكينات خياطة صناعية',
+      minOrder: '40 قطعة',
+      experience: '11 سنة',
+      services: ['خياطة قمصان', 'خياطة بناطيل', 'خياطة أطفال', 'تغليف'],
+    },
+    {
+      id: 'biz-workshop-sweida',
+      ownerId: 'user-workshop-sweida',
+      type: BusinessType.workshop,
+      name: 'مشغل السويداء للتطريز',
+      location: 'السويداء - المركز',
+      description: 'تطريز تقليدي وآلي على الألبسة والمفروشات',
+      phone: '0994000021',
+      imageUrl: SHARED_IMAGE_URL,
+      verified: true,
+      capacity: '800 قطعة شهرياً',
+      equipment: '4 ماكينات تطريز + 3 ماكينات خياطة',
+      minOrder: '15 قطعة',
+      experience: '14 سنة',
+      services: ['تطريز تقليدي', 'تطريز آلي', 'مفروشات', 'ألبسة مطرزة'],
     },
 
     // ═════════════════════════════════════════
@@ -1303,6 +1380,9 @@ async function main(): Promise<void> {
     { businessId: 'biz-workshop-tartous', categoryId: 'cat-biz-factory' },
     { businessId: 'biz-workshop-hama', categoryId: 'cat-biz-factory' },
     { businessId: 'biz-workshop-damascus-rural', categoryId: 'cat-biz-factory' },
+    { businessId: 'biz-workshop-idlib', categoryId: 'cat-biz-factory' },
+    { businessId: 'biz-workshop-daraa', categoryId: 'cat-biz-factory' },
+    { businessId: 'biz-workshop-sweida', categoryId: 'cat-biz-factory' },
 
     // Institutes (معاهد تدريب) → cat-biz-institute
     { businessId: 'biz-institute', categoryId: 'cat-biz-institute' },

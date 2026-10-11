@@ -155,13 +155,6 @@ describe('BusinessesService', () => {
         { category: { id: 'cat-biz-factory', name: 'مصنع', slug: 'factory' } },
       ],
     });
-    const similar = makeBusiness({
-      id: 'biz-workshop-2',
-      ownerId: 'user-2',
-      type: BusinessType.workshop,
-      name: 'معمل آخر',
-      categories: [],
-    });
     prisma.business.findUnique.mockResolvedValueOnce(factory);
     prisma.product.findMany.mockResolvedValue([
       {
@@ -186,7 +179,6 @@ describe('BusinessesService', () => {
       },
     ]);
     prisma.post.findMany.mockResolvedValue([]);
-    prisma.business.findMany.mockResolvedValue([similar]);
 
     const result = await service.publicProfile('biz-workshop');
 
@@ -197,7 +189,7 @@ describe('BusinessesService', () => {
     expect(result.profile.services).toEqual(['خياطة']);
     expect(result.products).toHaveLength(1);
     expect(result.posts).toEqual([]);
-    expect(result.similar[0]?.id).toBe('biz-workshop-2');
+    expect(result).not.toHaveProperty('similar');
   });
 
   it('returns a public factory profile by owner user id', async () => {
@@ -213,13 +205,42 @@ describe('BusinessesService', () => {
       .mockResolvedValueOnce(factory);
     prisma.product.findMany.mockResolvedValue([]);
     prisma.post.findMany.mockResolvedValue([]);
-    prisma.business.findMany.mockResolvedValue([]);
 
     const result = await service.publicProfile('user-workshop');
 
     expect(result.kind).toBe('factory');
     expect(result.id).toBe('biz-workshop');
     expect(result.profile.name).toBe('معمل النسيج');
+  });
+
+  it('paginates similar workshops for a factory profile', async () => {
+    const factory = makeBusiness({
+      id: 'biz-workshop',
+      ownerId: 'user-workshop',
+      type: BusinessType.workshop,
+      categories: [],
+    });
+    const similar = makeBusiness({
+      id: 'biz-workshop-2',
+      ownerId: 'user-2',
+      type: BusinessType.workshop,
+      name: 'معمل آخر',
+      categories: [],
+    });
+    prisma.business.findUnique.mockResolvedValue(factory);
+    prisma.business.count.mockResolvedValueOnce(2).mockResolvedValueOnce(1);
+    prisma.business.findMany.mockResolvedValue([similar]);
+
+    const result = await service.listSimilarFactories('biz-workshop', {
+      page: 1,
+      limit: 1,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.id).toBe('biz-workshop-2');
+    expect(result.total).toBe(3);
+    expect(result.page).toBe(1);
+    expect(result.limit).toBe(1);
   });
 
   it('returns a public employee profile by user id', async () => {

@@ -633,6 +633,15 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       isOwner: false,
     }),
   },
+  'get /profiles/{id}/similar': {
+    '200': ok(paginated(sampleBusiness)),
+    '404': errors('Not found', {
+      not_found: {
+        summary: 'Factory profile missing',
+        value: errorBody(404, 'not_found', 'Factory profile not found'),
+      },
+    }),
+  },
   'get /profiles/{id}': {
     '200': {
       description: 'Public profile (factory or employee)',
@@ -655,7 +664,6 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
             },
             products: [sampleProduct],
             posts: [samplePost],
-            similar: [sampleBusiness],
           },
         },
         employee: {
@@ -756,6 +764,15 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
 
   'get /posts': {
     '200': ok(paginated(samplePost)),
+  },
+  'get /posts/mine': {
+    '200': ok(paginated(samplePost)),
+    '401': errors('Unauthorized', {
+      unauthorized: {
+        summary: 'Missing or invalid token',
+        value: errorBody(401, 'unauthorized', 'Unauthorized'),
+      },
+    }),
   },
   'get /posts/{id}': {
     '200': ok({ post: samplePost }),

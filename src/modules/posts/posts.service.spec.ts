@@ -185,6 +185,28 @@ describe('PostsService', () => {
     );
   });
 
+  describe('listMine', () => {
+    it('lists the current user’s posts with pagination', async () => {
+      const mine = makePost({ authorId: actor.id });
+      prisma.post.findMany.mockResolvedValue([mine]);
+      prisma.post.count.mockResolvedValue(1);
+
+      const result = await service.listMine(actor, { page: 1, limit: 10 });
+
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { deletedAt: null, authorId: actor.id },
+          skip: 0,
+          take: 10,
+        }),
+      );
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+    });
+  });
+
   describe('create', () => {
     it('creates a post', async () => {
       const created = makePost();

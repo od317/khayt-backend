@@ -106,6 +106,24 @@ export class PostsController {
     return this.posts.list(query, user);
   }
 
+  @Get('mine')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'List my posts',
+    description:
+      'Authenticated. Returns the current user’s posts (active and inactive), newest first. Paginated via page & limit.',
+  })
+  @ApiOkResponse({
+    description: 'Paginated list of the current user’s posts',
+    schema: { example: paginated(samplePost) },
+  })
+  listMine(
+    @RequireUser() user: AuthenticatedUser,
+    @Query() query: PaginationDto,
+  ): Promise<Paginated<PostResponse>> {
+    return this.posts.listMine(user, query);
+  }
+
   @Public()
   @Get(':id')
   @ApiSecurity({})
