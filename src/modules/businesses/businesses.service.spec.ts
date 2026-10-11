@@ -41,8 +41,15 @@ type PrismaMock = {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
   };
+  user: {
+    findUnique: ReturnType<typeof vi.fn>;
+    findMany: ReturnType<typeof vi.fn>;
+  };
   product: { findMany: ReturnType<typeof vi.fn> };
   supply: { findMany: ReturnType<typeof vi.fn> };
+  post: { findMany: ReturnType<typeof vi.fn> };
+  like: { groupBy: ReturnType<typeof vi.fn> };
+  comment: { groupBy: ReturnType<typeof vi.fn> };
   $transaction: ReturnType<typeof vi.fn>;
 };
 
@@ -59,8 +66,15 @@ describe('BusinessesService', () => {
         create: vi.fn(),
         update: vi.fn(),
       },
+      user: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
       product: { findMany: vi.fn().mockResolvedValue([]) },
       supply: { findMany: vi.fn().mockResolvedValue([]) },
+      post: { findMany: vi.fn().mockResolvedValue([]) },
+      like: { groupBy: vi.fn().mockResolvedValue([]) },
+      comment: { groupBy: vi.fn().mockResolvedValue([]) },
       $transaction: vi.fn(),
     };
 
@@ -85,6 +99,7 @@ describe('BusinessesService', () => {
         name: 'متجر',
         location: 'دمشق',
       }),
+      include: expect.any(Object),
     });
     expect(result.business.id).toBe('biz-1');
   });
@@ -124,6 +139,143 @@ describe('BusinessesService', () => {
     expect(prisma.product.findMany).toHaveBeenCalledWith({
       where: { businessId: 'biz-1', deletedAt: null },
       orderBy: { createdAt: 'desc' },
+    });
+  });
+
+  it('returns a public factory profile by business id', async () => {
+    const factory = makeBusiness({
+      id: 'biz-workshop',
+      ownerId: 'user-workshop',
+      type: BusinessType.workshop,
+      name: 'معمل النسيج',
+      description: 'وصف',
+      verified: true,
+      services: ['خياطة'],
+      categories: [
+        { category: { id: 'cat-biz-factory', name: 'مصنع', slug: 'factory' } },
+      ],
+    });
+    const similar = makeBusiness({
+      id: 'biz-workshop-2',
+      ownerId: 'user-2',
+      type: BusinessType.workshop,
+      name: 'معمل آخر',
+      categories: [],
+    });
+    prisma.business.findUnique.mockResolvedValueOnce(factory);
+    prisma.product.findMany.mockResolvedValue([
+      {
+        id: 'prod-1',
+        businessId: 'biz-workshop',
+        name: 'قميص',
+        category: 'ملابس',
+        description: null,
+        images: [],
+        unit: 'قطعة',
+        price: 10,
+        inWarehouse: true,
+        available: true,
+        guarantee: false,
+        variants: null,
+        packaging: null,
+        discount: null,
+        offer: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        deletedAt: null,
+      },
+    ]);
+    prisma.post.findMany.mockResolvedValue([]);
+    prisma.business.findMany.mockResolvedValue([similar]);
+
+    const result = await service.publicProfile('biz-workshop');
+
+    expect(result.kind).toBe('factory');
+    expect(result.id).toBe('biz-workshop');
+    expect(result.profile.name).toBe('معمل النسيج');
+    expect(result.profile.verified).toBe(true);
+    expect(result.profile.services).toEqual(['خياطة']);
+    expect(result.products).toHaveLength(1);
+    expect(result.posts).toEqual([]);
+    expect(result.similar[0]?.id).toBe('biz-workshop-2');
+  });
+
+  it('returns a public factory profile by owner user id', async () => {
+    const factory = makeBusiness({
+      id: 'biz-workshop',
+      ownerId: 'user-workshop',
+      type: BusinessType.workshop,
+      name: 'معمل النسيج',
+      categories: [],
+    });
+    prisma.business.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(factory);
+    prisma.product.findMany.mockResolvedValue([]);
+    prisma.post.findMany.mockResolvedValue([]);
+    prisma.business.findMany.mockResolvedValue([]);
+
+    const result = await service.publicProfile('user-workshop');
+
+    expect(result.kind).toBe('factory');
+    expect(result.id).toBe('biz-workshop');
+    expect(result.profile.name).toBe('معمل النسيج');
+  });
+
+  it('returns a public employee profile by user id', async () => {
+    prisma.business.findUnique.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-employee',
+      role: UserRole.employee,
+      name: 'أحمد الخياط',
+      phone: '0994000001',
+      bio: 'خياط محترف',
+      avatarUrl: null,
+      verified: false,
+      availableForWork: true,
+      suspended: false,
+      onboardingCompleted: true,
+      locationId: 'loc-damascus-mazzeh',
+      location: { id: 'loc-damascus-mazzeh', name: 'المزة' },
+    });
+    prisma.post.findMany.mockResolvedValue([]);
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: 'user-employee-2',
+        name: 'سامي',
+        bio: null,
+        avatarUrl: null,
+        verified: true,
+        availableForWork: true,
+        location: { name: 'المزة' },
+      },
+    ]);
+
+    const result = await service.publicProfile('user-employee');
+
+    expect(result.kind).toBe('employee');
+    if (result.kind !== 'employee') return;
+    expect(result.id).toBe('user-employee');
+    expect(result.profile.name).toBe('أحمد الخياط');
+    expect(result.profile.bio).toBe('خياط محترف');
+    expect(result.profile.availableForWork).toBe(true);
+    expect(result.similar[0]?.id).toBe('user-employee-2');
+  });
+
+  it('rejects public profile when id matches nothing public', async () => {
+    prisma.business.findUnique
+      .mockResolvedValueOnce(makeBusiness())
+      .mockResolvedValueOnce(null);
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    const error = await service
+      .publicProfile('biz-1')
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(NotFoundException);
+    expect((error as NotFoundException).getResponse()).toMatchObject({
+      error: 'not_found',
+      message: 'Profile not found',
     });
   });
 });

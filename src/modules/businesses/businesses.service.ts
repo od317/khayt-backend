@@ -5,7 +5,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Business, CategoryApplies, Prisma } from '@prisma/client';
+import {
+  Business,
+  BusinessType,
+  CategoryApplies,
+  Location,
+  PostType,
+  Prisma,
+  User,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
@@ -22,6 +31,12 @@ import {
   ProductResponse,
   toProductResponse,
 } from '../products/products.mapper';
+import {
+  PostCounts,
+  PostResponse,
+  PostWithRelationsForMapper,
+  toPostResponse,
+} from '../posts/posts.mapper';
 
 const BUSINESS_CATEGORY_SCOPES: CategoryApplies[] = [
   CategoryApplies.business,
@@ -30,6 +45,9 @@ const BUSINESS_CATEGORY_SCOPES: CategoryApplies[] = [
   CategoryApplies.store,
 ];
 
+const FACTORY_POSTS_LIMIT = 20;
+const SIMILAR_FACTORIES_LIMIT = 6;
+
 export type BusinessDetailResponse = {
   business: BusinessResponse;
   products: ProductResponse[];
@@ -37,7 +55,74 @@ export type BusinessDetailResponse = {
   isOwner: boolean;
 };
 
+export type PublicFactoryProfileResponse = {
+  kind: 'factory';
+  /** Business id (canonical), even if the request used the owner user id. */
+  id: string;
+  profile: {
+    name: string;
+    description: string | null;
+    verified: boolean;
+    services: string[];
+    imageUrl: string | null;
+    location: string;
+    phone: string | null;
+    experience: string | null;
+    categories: BusinessResponse['categories'];
+  };
+  products: ProductResponse[];
+  posts: PostResponse[];
+  similar: BusinessResponse[];
+};
+
+export type PublicEmployeeCard = {
+  id: string;
+  name: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  verified: boolean;
+  availableForWork: boolean;
+  location: string | null;
+};
+
+export type PublicEmployeeProfileResponse = {
+  kind: 'employee';
+  id: string;
+  profile: PublicEmployeeCard & {
+    phone: string | null;
+  };
+  posts: PostResponse[];
+  similar: PublicEmployeeCard[];
+};
+
+export type PublicProfileResponse =
+  | PublicFactoryProfileResponse
+  | PublicEmployeeProfileResponse;
+
+const EMPLOYEE_POSTS_LIMIT = 20;
+const SIMILAR_EMPLOYEES_LIMIT = 6;
+
 const BUSINESS_INCLUDE = {
+  categories: {
+    include: {
+      category: { select: { id: true, name: true, slug: true } },
+    },
+  },
+} as const;
+
+const FACTORY_POST_INCLUDE = {
+  author: { include: { location: true } },
+  business: true,
+  product: {
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      images: true,
+      businessId: true,
+      deletedAt: true,
+    },
+  },
   categories: {
     include: {
       category: { select: { id: true, name: true, slug: true } },
@@ -144,6 +229,162 @@ export class BusinessesService {
     }
 
     return response;
+  }
+
+  /**
+   * Resolve a public profile from:
+   * - factory business id / factory owner user id
+   * - employee user id
+   */
+  async publicProfile(id: string): Promise<PublicProfileResponse> {
+    const factory = await this.resolveWorkshop(id);
+    if (factory) {
+      return this.buildFactoryProfile(factory);
+    }
+
+    const employee = await this.resolveEmployee(id);
+    if (employee) {
+      return this.buildEmployeeProfile(employee);
+    }
+
+    throw new NotFoundException({
+      error: 'not_found',
+      message: 'Profile not found',
+    });
+  }
+
+  private async buildFactoryProfile(
+    factory: Business & {
+      categories: {
+        category: { id: string; name: string; slug: string };
+      }[];
+    },
+  ): Promise<PublicFactoryProfileResponse> {
+    const categoryIds = factory.categories.map((row) => row.category.id);
+
+    const [products, posts, similarRows] = await Promise.all([
+      this.prisma.product.findMany({
+        where: {
+          businessId: factory.id,
+          deletedAt: null,
+          available: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.post.findMany({
+        where: {
+          deletedAt: null,
+          active: true,
+          type: { not: PostType.reel },
+          OR: [{ businessId: factory.id }, { authorId: factory.ownerId }],
+        },
+        orderBy: { createdAt: 'desc' },
+        take: FACTORY_POSTS_LIMIT,
+        include: FACTORY_POST_INCLUDE,
+      }),
+      this.findSimilarFactories(factory.id, factory.location, categoryIds),
+    ]);
+
+    const mapped = toBusinessResponse(factory);
+
+    return {
+      kind: 'factory',
+      id: factory.id,
+      profile: {
+        name: mapped.name,
+        description: mapped.description,
+        verified: mapped.verified,
+        services: mapped.services,
+        imageUrl: mapped.imageUrl,
+        location: mapped.location,
+        phone: mapped.phone,
+        experience: mapped.experience,
+        categories: mapped.categories,
+      },
+      products: products.map(toProductResponse),
+      posts: await this.toPublicPostResponses(posts),
+      similar: similarRows.map(toBusinessResponse),
+    };
+  }
+
+  private async buildEmployeeProfile(
+    employee: User & { location: Location | null },
+  ): Promise<PublicEmployeeProfileResponse> {
+    const [posts, similarRows] = await Promise.all([
+      this.prisma.post.findMany({
+        where: {
+          deletedAt: null,
+          active: true,
+          type: { not: PostType.reel },
+          authorId: employee.id,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: EMPLOYEE_POSTS_LIMIT,
+        include: FACTORY_POST_INCLUDE,
+      }),
+      this.findSimilarEmployees(employee.id, employee.locationId),
+    ]);
+
+    return {
+      kind: 'employee',
+      id: employee.id,
+      profile: {
+        id: employee.id,
+        name: employee.name,
+        bio: employee.bio,
+        avatarUrl: employee.avatarUrl,
+        verified: employee.verified,
+        availableForWork: employee.availableForWork,
+        location: employee.location?.name ?? null,
+        phone: employee.phone,
+      },
+      posts: await this.toPublicPostResponses(posts),
+      similar: similarRows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        bio: row.bio,
+        avatarUrl: row.avatarUrl,
+        verified: row.verified,
+        availableForWork: row.availableForWork,
+        location: row.location?.name ?? null,
+      })),
+    };
+  }
+
+  private async resolveWorkshop(id: string) {
+    const byBusinessId = await this.prisma.business.findUnique({
+      where: { id },
+      include: BUSINESS_INCLUDE,
+    });
+    if (byBusinessId?.type === BusinessType.workshop) {
+      return byBusinessId;
+    }
+
+    const byOwnerId = await this.prisma.business.findUnique({
+      where: { ownerId: id },
+      include: BUSINESS_INCLUDE,
+    });
+    if (byOwnerId?.type === BusinessType.workshop) {
+      return byOwnerId;
+    }
+
+    return null;
+  }
+
+  private async resolveEmployee(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { location: true },
+    });
+    if (
+      !user ||
+      user.suspended ||
+      user.role !== UserRole.employee ||
+      !user.onboardingCompleted
+    ) {
+      return null;
+    }
+    return user;
   }
 
   async create(
@@ -279,5 +520,133 @@ export class BusinessesService {
         HttpStatus.BAD_REQUEST,
       );
     }
+  }
+
+  private async findSimilarFactories(
+    factoryId: string,
+    location: string,
+    categoryIds: string[],
+  ): Promise<
+    Array<
+      Business & {
+        categories: {
+          category: { id: string; name: string; slug: string };
+        }[];
+      }
+    >
+  > {
+    const baseWhere: Prisma.BusinessWhereInput = {
+      type: BusinessType.workshop,
+      id: { not: factoryId },
+    };
+
+    const preferredWhere: Prisma.BusinessWhereInput = {
+      ...baseWhere,
+      OR: [
+        ...(categoryIds.length > 0
+          ? [{ categories: { some: { categoryId: { in: categoryIds } } } }]
+          : []),
+        { location: { equals: location, mode: 'insensitive' } },
+      ],
+    };
+
+    const preferred = await this.prisma.business.findMany({
+      where: preferredWhere,
+      orderBy: [{ verified: 'desc' }, { createdAt: 'desc' }],
+      take: SIMILAR_FACTORIES_LIMIT,
+      include: BUSINESS_INCLUDE,
+    });
+
+    if (preferred.length >= SIMILAR_FACTORIES_LIMIT) {
+      return preferred;
+    }
+
+    const missing = SIMILAR_FACTORIES_LIMIT - preferred.length;
+    const excludeIds = [factoryId, ...preferred.map((row) => row.id)];
+    const fillers = await this.prisma.business.findMany({
+      where: {
+        ...baseWhere,
+        id: { notIn: excludeIds },
+      },
+      orderBy: [{ verified: 'desc' }, { createdAt: 'desc' }],
+      take: missing,
+      include: BUSINESS_INCLUDE,
+    });
+
+    return [...preferred, ...fillers];
+  }
+
+  private async findSimilarEmployees(
+    employeeId: string,
+    locationId: string | null,
+  ): Promise<Array<User & { location: Location | null }>> {
+    const baseWhere: Prisma.UserWhereInput = {
+      role: UserRole.employee,
+      suspended: false,
+      onboardingCompleted: true,
+      id: { not: employeeId },
+    };
+
+    const preferred = locationId
+      ? await this.prisma.user.findMany({
+          where: { ...baseWhere, locationId },
+          orderBy: [{ verified: 'desc' }, { createdAt: 'desc' }],
+          take: SIMILAR_EMPLOYEES_LIMIT,
+          include: { location: true },
+        })
+      : [];
+
+    if (preferred.length >= SIMILAR_EMPLOYEES_LIMIT) {
+      return preferred;
+    }
+
+    const missing = SIMILAR_EMPLOYEES_LIMIT - preferred.length;
+    const excludeIds = [employeeId, ...preferred.map((row) => row.id)];
+    const fillers = await this.prisma.user.findMany({
+      where: {
+        ...baseWhere,
+        id: { notIn: excludeIds },
+      },
+      orderBy: [{ verified: 'desc' }, { createdAt: 'desc' }],
+      take: missing,
+      include: { location: true },
+    });
+
+    return [...preferred, ...fillers];
+  }
+
+  private async toPublicPostResponses(
+    posts: PostWithRelationsForMapper[],
+  ): Promise<PostResponse[]> {
+    if (posts.length === 0) return [];
+
+    const postIds = posts.map((post) => post.id);
+    const [likeCounts, commentCounts] = await Promise.all([
+      this.prisma.like.groupBy({
+        by: ['postId'],
+        where: { postId: { in: postIds } },
+        _count: { _all: true },
+      }),
+      this.prisma.comment.groupBy({
+        by: ['postId'],
+        where: { postId: { in: postIds } },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const likeMap = new Map(likeCounts.map((row) => [row.postId, row._count._all]));
+    const commentMap = new Map(
+      commentCounts.map((row) => [row.postId, row._count._all]),
+    );
+
+    return posts.map((post) => {
+      const counts: PostCounts = {
+        likes: likeMap.get(post.id) ?? 0,
+        comments: commentMap.get(post.id) ?? 0,
+        likedByMe: false,
+        savedByMe: false,
+      };
+      return toPostResponse(post, counts);
+    });
   }
 }

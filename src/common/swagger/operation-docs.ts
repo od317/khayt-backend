@@ -633,6 +633,66 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       isOwner: false,
     }),
   },
+  'get /profiles/{id}': {
+    '200': ok({
+      kind: 'factory',
+      id: 'biz-workshop',
+      profile: {
+        name: sampleBusiness.name,
+        description: sampleBusiness.description,
+        verified: sampleBusiness.verified,
+        services: sampleBusiness.services,
+        imageUrl: sampleBusiness.imageUrl,
+        location: sampleBusiness.location,
+        phone: sampleBusiness.phone,
+        experience: sampleBusiness.experience,
+        categories: [] as { id: string; name: string; slug: string }[],
+      },
+      products: [sampleProduct],
+      posts: [samplePost],
+      similar: [sampleBusiness],
+    }),
+    '200_employee': {
+      description: 'Employee public profile',
+      examples: {
+        employee: {
+          summary: 'Employee',
+          value: {
+            kind: 'employee',
+            id: 'user-employee',
+            profile: {
+              id: 'user-employee',
+              name: 'أحمد الخياط',
+              bio: 'خياط محترف',
+              avatarUrl: null,
+              verified: false,
+              availableForWork: true,
+              location: 'المزة',
+              phone: '0994000001',
+            },
+            posts: [samplePost],
+            similar: [
+              {
+                id: 'user-employee-2',
+                name: 'سامي',
+                bio: null,
+                avatarUrl: null,
+                verified: true,
+                availableForWork: true,
+                location: 'المزة',
+              },
+            ],
+          },
+        },
+      },
+    },
+    '404': errors('Not found', {
+      not_found: {
+        summary: 'No public profile for this business/user id',
+        value: errorBody(404, 'not_found', 'Profile not found'),
+      },
+    }),
+  },
   'post /businesses': {
     '201': created({ business: sampleBusiness }),
     '409': errors('Conflict', {
