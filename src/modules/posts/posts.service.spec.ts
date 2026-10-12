@@ -103,6 +103,7 @@ type PrismaMock = {
     count: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     findUnique: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
     groupBy: ReturnType<typeof vi.fn>;
   };
@@ -151,6 +152,7 @@ describe('PostsService', () => {
         count: vi.fn().mockResolvedValue(0),
         create: vi.fn(),
         findUnique: vi.fn(),
+        update: vi.fn(),
         delete: vi.fn().mockResolvedValue(undefined),
         groupBy: vi.fn().mockResolvedValue([]),
       },
@@ -749,6 +751,48 @@ describe('PostsService', () => {
         .catch((err: unknown) => err);
 
       expect(error).toBeInstanceOf(NotFoundException);
+    });
+
+    it('the comment author can update their comment', async () => {
+      prisma.comment.findUnique.mockResolvedValue({
+        id: 'comment-1',
+        authorId: actor.id,
+      });
+      prisma.comment.update.mockResolvedValue({
+        id: 'comment-1',
+        body: 'تعليق محدّث',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        author: {
+          id: actor.id,
+          name: 'أحمد',
+          avatarUrl: null,
+        },
+      });
+
+      const result = await service.updateComment('comment-1', actor, {
+        body: 'تعليق محدّث',
+      });
+
+      expect(prisma.comment.update).toHaveBeenCalledWith({
+        where: { id: 'comment-1' },
+        data: { body: 'تعليق محدّث' },
+        include: { author: true },
+      });
+      expect(result.comment.body).toBe('تعليق محدّث');
+    });
+
+    it('a stranger cannot update someone else’s comment', async () => {
+      prisma.comment.findUnique.mockResolvedValue({
+        id: 'comment-1',
+        authorId: other.id,
+      });
+
+      const error = await service
+        .updateComment('comment-1', actor, { body: 'اختراق' })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(prisma.comment.update).not.toHaveBeenCalled();
     });
 
     it('the post author can delete any comment on their post', async () => {

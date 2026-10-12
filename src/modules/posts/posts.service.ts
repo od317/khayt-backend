@@ -28,6 +28,7 @@ import { PostOptionsService } from '../post-options/post-options.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { join } from 'node:path';
 import { parse as parsePath } from 'node:path';
@@ -696,6 +697,39 @@ export class PostsService {
     }
 
     return { comment: toCommentResponse(comment) };
+  }
+
+  async updateComment(
+    commentId: string,
+    actor: AuthenticatedUser,
+    dto: UpdateCommentDto,
+  ): Promise<{ comment: CommentResponse }> {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      select: { id: true, authorId: true },
+    });
+
+    if (!comment) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Comment not found',
+      });
+    }
+
+    if (comment.authorId !== actor.id) {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'Not the author of this comment',
+      });
+    }
+
+    const updated = await this.prisma.comment.update({
+      where: { id: commentId },
+      data: { body: dto.body },
+      include: { author: true },
+    });
+
+    return { comment: toCommentResponse(updated) };
   }
 
   async deleteComment(

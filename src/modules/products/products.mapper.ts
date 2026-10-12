@@ -1,5 +1,14 @@
 import { Product } from '@prisma/client';
 
+export type ColorImagesResponse = {
+  name: string;
+  hex: string | null;
+  /** Primary image for this color (same as images[0]). */
+  image: string;
+  /** All images for this color — FE switches gallery when color changes. */
+  images: string[];
+};
+
 export type ProductResponse = {
   id: string;
   businessId: string;
@@ -13,6 +22,8 @@ export type ProductResponse = {
   available: boolean;
   guarantee: boolean;
   variants: unknown;
+  /** Color → images map derived from variants when the first axis is `color`. */
+  colorImages: ColorImagesResponse[];
   packaging: unknown;
   discount: unknown;
   offer: string | null;
@@ -20,6 +31,51 @@ export type ProductResponse = {
   businessName?: string;
   businessLocation?: string;
 };
+
+type VariantOptionLike = {
+  name?: unknown;
+  hex?: unknown;
+  image?: unknown;
+  images?: unknown;
+};
+
+type VariantTreeLike = {
+  axes?: { key?: unknown }[];
+  options?: VariantOptionLike[];
+};
+
+export function toColorImages(variants: unknown): ColorImagesResponse[] {
+  if (!variants || typeof variants !== 'object') return [];
+  const tree = variants as VariantTreeLike;
+  const firstAxis = tree.axes?.[0]?.key;
+  if (firstAxis !== 'color' || !Array.isArray(tree.options)) return [];
+
+  return tree.options.flatMap((option) => {
+    if (typeof option.name !== 'string' || !option.name.trim()) return [];
+
+    const fromImages = Array.isArray(option.images)
+      ? option.images.filter(
+          (url): url is string => typeof url === 'string' && url.trim() !== '',
+        )
+      : [];
+    const primary =
+      typeof option.image === 'string' && option.image.trim()
+        ? option.image.trim()
+        : fromImages[0];
+    if (!primary) return [];
+
+    const images = fromImages.length > 0 ? fromImages : [primary];
+
+    return [
+      {
+        name: option.name,
+        hex: typeof option.hex === 'string' ? option.hex : null,
+        image: primary,
+        images,
+      },
+    ];
+  });
+}
 
 export function toProductResponse(product: Product): ProductResponse {
   return {
@@ -35,6 +91,7 @@ export function toProductResponse(product: Product): ProductResponse {
     available: product.available,
     guarantee: product.guarantee,
     variants: product.variants,
+    colorImages: toColorImages(product.variants),
     packaging: product.packaging,
     discount: product.discount,
     offer: product.offer,

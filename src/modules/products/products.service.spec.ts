@@ -64,6 +64,7 @@ type PrismaMock = {
   product: {
     findFirst: ReturnType<typeof vi.fn>;
     findMany: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
   };
@@ -81,6 +82,7 @@ describe('ProductsService', () => {
       product: {
         findFirst: vi.fn(),
         findMany: vi.fn(),
+        count: vi.fn().mockResolvedValue(0),
         create: vi.fn(),
         update: vi.fn(),
       },
@@ -147,7 +149,13 @@ describe('ProductsService', () => {
         images: ['/uploads/products/gallery.jpg'],
         variants: {
           axes: [{ key: 'color', label: 'لون' }],
-          options: [{ name: 'أحمر', image: '/uploads/products/red.jpg' }],
+          options: [
+            {
+              name: 'أحمر',
+              image: '/uploads/products/red.jpg',
+              images: ['/uploads/products/red.jpg'],
+            },
+          ],
         },
       }),
     });
@@ -277,5 +285,40 @@ describe('ProductsService', () => {
       where: { id: 'prod-1', deletedAt: null },
       include: { business: true },
     });
+  });
+
+  it('returns paginated similar products', async () => {
+    prisma.product.findFirst.mockResolvedValue({
+      id: 'prod-qamis-abyad',
+      category: 'قمصان',
+      businessId: 'biz-workshop',
+    });
+    prisma.product.count.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
+    prisma.product.findMany
+      .mockResolvedValueOnce([
+        makeProduct({ id: 'prod-qamis-kaki', name: 'قميص كاكي' }),
+      ])
+      .mockResolvedValueOnce([]);
+
+    const result = await service.listSimilar('prod-qamis-abyad', {
+      page: 1,
+      limit: 10,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.id).toBe('prod-qamis-kaki');
+    expect(result.total).toBe(1);
+    expect(result.page).toBe(1);
+    expect(result.limit).toBe(10);
+  });
+
+  it('rejects similar products for an unknown product', async () => {
+    prisma.product.findFirst.mockResolvedValue(null);
+
+    const error = await service
+      .listSimilar('missing', { page: 1, limit: 10 })
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(NotFoundException);
   });
 });

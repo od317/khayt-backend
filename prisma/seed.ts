@@ -1403,6 +1403,38 @@ async function main(): Promise<void> {
   // ------------------------------------------------------------
   // Products
   // ------------------------------------------------------------
+  const SEED_PRODUCT_IMAGES = [
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMDNAwqo9isR6f7Vdq-QzjLkUXmnhAzGIerW3CQXgw6qH4V2T-winspHk&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtjcJGk6AUoGLl4LWJOEe-JCK9SDAelSZp07ogS8s7QcFGeqwLdXXA9sVI&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-VSroW1ZnXM4cABXizYmEQUqsgFH0bjIqwQetqaxLN71cc-QsqSe6oK5D&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ9kxU-8FLqYwwPusrMDSMFuYwQOwX5rtFzlf2wzLJPCGzwLsy1Eh9prC1l&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQfFKA_9HYaFyFDMgeqYUj6RpFMeu7SCdMIkz0QCiamw&s',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTytqH6f1FH7f7rZQDbB0C95J04rpwBI1VHY_xnZBQSza9oHOcA2Mipsyk&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtMOvcctToh0EHjt6y8NQnKc_mTL6UeAypwBjqZ7Etiw&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ46F8a2m5AnDEChFvV-yEdAfPmpvHPavp7qULPPwSqyA&s',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLoegp4lc8OxaZo_LOitBOudo8Cs4_DNRhG9T3n_2RLw&s',
+  ] as const;
+
+  /** Same workshop + category as prod-qamis-abyad for similar-products demos */
+  const similarQamisAbyadSeed = [
+    { id: 'prod-qamis-sim-01', name: 'قميص كاروهات كلاسيك', img: 0, price: 42000 },
+    { id: 'prod-qamis-sim-02', name: 'قميص بني قصير الكم', img: 1, price: 38000 },
+    { id: 'prod-qamis-sim-03', name: 'قميص أزرق مخملي', img: 2, price: 41000 },
+    { id: 'prod-qamis-sim-04', name: 'قميص أخضر ريب', img: 3, price: 39500 },
+    { id: 'prod-qamis-sim-05', name: 'قميص وردي صيفي', img: 4, price: 44000 },
+    { id: 'prod-qamis-sim-06', name: 'قميص فوشيا طويل', img: 5, price: 46000 },
+    { id: 'prod-qamis-sim-07', name: 'قميص بيج أكسفورد', img: 6, price: 43000 },
+    { id: 'prod-qamis-sim-08', name: 'قميص أسود رسمي', img: 7, price: 47000 },
+    { id: 'prod-qamis-sim-09', name: 'قميص بولو أسود', img: 8, price: 36000 },
+    {
+      id: 'prod-qamis-sim-10',
+      name: 'قميص مخلوط ألوان',
+      img: 0,
+      price: 40500,
+      extraImg: 2,
+    },
+  ] as const;
+
   const products = [
     {
       id: 'prod-qamis-abyad',
@@ -1410,7 +1442,7 @@ async function main(): Promise<void> {
       name: 'قميص أبيض رجالي',
       category: 'قمصان',
       description: 'قميص قطن 100%',
-      images: ['https://placehold.co/600x400?text=Qamis'],
+      images: [...SEED_PRODUCT_IMAGES],
       unit: 'قطعة',
       price: 45000,
       inWarehouse: true,
@@ -1422,24 +1454,68 @@ async function main(): Promise<void> {
         ],
         options: [
           {
-            name: 'أبيض',
-            hex: '#FFFFFF',
-            image: 'https://placehold.co/600x400?text=White',
+            name: 'كاروهات',
+            hex: '#2563EB',
+            image: SEED_PRODUCT_IMAGES[0],
+            images: [SEED_PRODUCT_IMAGES[0]],
             children: [
-              { name: 'S', image: 'https://placehold.co/600x400?text=White' },
-              { name: 'M', image: 'https://placehold.co/600x400?text=White' },
-              { name: 'L', image: 'https://placehold.co/600x400?text=White' },
-              { name: 'XL', image: 'https://placehold.co/600x400?text=White' },
+              { name: 'S', image: SEED_PRODUCT_IMAGES[0] },
+              { name: 'M', image: SEED_PRODUCT_IMAGES[0] },
+              { name: 'L', image: SEED_PRODUCT_IMAGES[0] },
+              { name: 'XL', image: SEED_PRODUCT_IMAGES[0] },
+            ],
+          },
+          {
+            name: 'بني',
+            hex: '#92400E',
+            image: SEED_PRODUCT_IMAGES[1],
+            images: [SEED_PRODUCT_IMAGES[1]],
+            children: [
+              { name: 'S', image: SEED_PRODUCT_IMAGES[1] },
+              { name: 'M', image: SEED_PRODUCT_IMAGES[1] },
+              { name: 'L', image: SEED_PRODUCT_IMAGES[1] },
+              { name: 'XL', image: SEED_PRODUCT_IMAGES[1] },
             ],
           },
           {
             name: 'أزرق',
             hex: '#1E3A8A',
-            image: 'https://placehold.co/600x400?text=Blue',
+            image: SEED_PRODUCT_IMAGES[2],
+            images: [SEED_PRODUCT_IMAGES[2]],
             children: [
-              { name: 'M', image: 'https://placehold.co/600x400?text=Blue' },
-              { name: 'L', image: 'https://placehold.co/600x400?text=Blue' },
-              { name: 'XL', image: 'https://placehold.co/600x400?text=Blue' },
+              { name: 'M', image: SEED_PRODUCT_IMAGES[2] },
+              { name: 'L', image: SEED_PRODUCT_IMAGES[2] },
+              { name: 'XL', image: SEED_PRODUCT_IMAGES[2] },
+            ],
+          },
+          {
+            name: 'أخضر',
+            hex: '#166534',
+            image: SEED_PRODUCT_IMAGES[3],
+            images: [SEED_PRODUCT_IMAGES[3]],
+            children: [
+              { name: 'M', image: SEED_PRODUCT_IMAGES[3] },
+              { name: 'L', image: SEED_PRODUCT_IMAGES[3] },
+            ],
+          },
+          {
+            name: 'وردي',
+            hex: '#DB2777',
+            image: SEED_PRODUCT_IMAGES[4],
+            images: [SEED_PRODUCT_IMAGES[4]],
+            children: [
+              { name: 'M', image: SEED_PRODUCT_IMAGES[4] },
+              { name: 'L', image: SEED_PRODUCT_IMAGES[4] },
+            ],
+          },
+          {
+            name: 'أسود',
+            hex: '#111827',
+            image: SEED_PRODUCT_IMAGES[6],
+            images: [SEED_PRODUCT_IMAGES[6], SEED_PRODUCT_IMAGES[7]],
+            children: [
+              { name: 'M', image: SEED_PRODUCT_IMAGES[6] },
+              { name: 'L', image: SEED_PRODUCT_IMAGES[6] },
             ],
           },
         ],
@@ -1455,7 +1531,7 @@ async function main(): Promise<void> {
       name: 'قميص كاكي',
       category: 'قمصان',
       description: 'قميص كاكي عملي',
-      images: ['https://placehold.co/600x400?text=Kaki'],
+      images: [SEED_PRODUCT_IMAGES[5], SEED_PRODUCT_IMAGES[1]],
       unit: 'قطعة',
       price: 40000,
       inWarehouse: false,
@@ -1468,7 +1544,11 @@ async function main(): Promise<void> {
       name: 'بنطال جينز',
       category: 'بنطال',
       description: 'جينز رجالي',
-      images: ['https://placehold.co/600x400?text=Jeans'],
+      images: [
+        SEED_PRODUCT_IMAGES[0],
+        SEED_PRODUCT_IMAGES[7],
+        SEED_PRODUCT_IMAGES[8],
+      ],
       unit: 'قطعة',
       price: 65000,
       inWarehouse: true,
@@ -1477,13 +1557,35 @@ async function main(): Promise<void> {
       variants: {
         axes: [{ key: 'size', label: 'قياس' }],
         options: [
-          { name: '30', image: 'https://placehold.co/600x400?text=Jeans' },
-          { name: '32', image: 'https://placehold.co/600x400?text=Jeans' },
-          { name: '34', image: 'https://placehold.co/600x400?text=Jeans' },
-          { name: '36', image: 'https://placehold.co/600x400?text=Jeans' },
+          { name: '30', image: SEED_PRODUCT_IMAGES[0] },
+          { name: '32', image: SEED_PRODUCT_IMAGES[0] },
+          { name: '34', image: SEED_PRODUCT_IMAGES[7] },
+          { name: '36', image: SEED_PRODUCT_IMAGES[8] },
         ],
       },
     },
+    ...similarQamisAbyadSeed.map((s) => {
+      const images =
+        'extraImg' in s
+          ? [
+              SEED_PRODUCT_IMAGES[s.img],
+              SEED_PRODUCT_IMAGES[s.extraImg],
+            ]
+          : [SEED_PRODUCT_IMAGES[s.img]];
+      return {
+        id: s.id,
+        businessId: 'biz-workshop',
+        name: s.name,
+        category: 'قمصان',
+        description: 'قميص رجالي — مشابه لقميص أبيض رجالي',
+        images,
+        unit: 'قطعة',
+        price: s.price,
+        inWarehouse: true,
+        available: true,
+        guarantee: true,
+      };
+    }),
   ];
 
   for (const p of products) {

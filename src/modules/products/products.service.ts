@@ -4,7 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, UserRole } from '@prisma/client';
+import { Prisma, Product, UserRole } from '@prisma/client';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
@@ -156,6 +157,117 @@ export class ProductsService {
     }
 
     return response;
+  }
+
+  /**
+   * Similar products for a product detail page.
+   * Prefers same category / same business, then fills with other available products.
+   */
+  async listSimilar(
+    id: string,
+    query: PaginationDto,
+  ): Promise<Paginated<ProductResponse>> {
+    const product = await this.prisma.product.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, category: true, businessId: true },
+    });
+    if (!product) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Product not found',
+      });
+    }
+
+    const orderBy = [{ createdAt: 'desc' as const }];
+    const include = {
+      business: { select: { name: true, location: true } },
+    } as const;
+
+    const baseWhere: Prisma.ProductWhereInput = {
+      deletedAt: null,
+      available: true,
+      id: { not: product.id },
+    };
+
+    const preferredWhere: Prisma.ProductWhereInput = {
+      ...baseWhere,
+      OR: [
+        { category: { equals: product.category, mode: 'insensitive' } },
+        { businessId: product.businessId },
+      ],
+    };
+    const fillerWhere: Prisma.ProductWhereInput = {
+      ...baseWhere,
+      NOT: {
+        OR: [
+          { category: { equals: product.category, mode: 'insensitive' } },
+          { businessId: product.businessId },
+        ],
+      },
+    };
+
+    const [preferredTotal, fillerTotal] = await Promise.all([
+      this.prisma.product.count({ where: preferredWhere }),
+      this.prisma.product.count({ where: fillerWhere }),
+    ]);
+    const total = preferredTotal + fillerTotal;
+    const { skip, take } = skipTake(query.page, query.limit);
+
+    if (total === 0 || skip >= total) {
+      return paginate([], total, query.page, query.limit);
+    }
+
+    type Row = Product & {
+      business: { name: string; location: string };
+    };
+
+    let rows: Row[] = [];
+
+    if (skip + take <= preferredTotal) {
+      rows = (await this.prisma.product.findMany({
+        where: preferredWhere,
+        orderBy,
+        skip,
+        take,
+        include,
+      })) as Row[];
+    } else if (skip >= preferredTotal) {
+      rows = (await this.prisma.product.findMany({
+        where: fillerWhere,
+        orderBy,
+        skip: skip - preferredTotal,
+        take,
+        include,
+      })) as Row[];
+    } else {
+      const preferredTake = preferredTotal - skip;
+      const [preferred, fillers] = await Promise.all([
+        this.prisma.product.findMany({
+          where: preferredWhere,
+          orderBy,
+          skip,
+          take: preferredTake,
+          include,
+        }),
+        this.prisma.product.findMany({
+          where: fillerWhere,
+          orderBy,
+          skip: 0,
+          take: take - preferredTake,
+          include,
+        }),
+      ]);
+      rows = [...preferred, ...fillers] as Row[];
+    }
+
+    return paginate(
+      rows.map((row) =>
+        withBusiness(row, row.business.name, row.business.location),
+      ),
+      total,
+      query.page,
+      query.limit,
+    );
   }
 
 

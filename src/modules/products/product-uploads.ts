@@ -1,6 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 
-const VARIANT_FIELD = /^variant_(\d+)(?:_child_(\d+))?$/;
+/** Primary / extra color images: variant_0, variant_0_img_1, variant_0_img_2 */
+const VARIANT_IMG_FIELD = /^variant_(\d+)(?:_img_(\d+))?$/;
+/** Size child under a color: variant_0_child_1 */
+const VARIANT_CHILD_FIELD = /^variant_(\d+)_child_(\d+)$/;
 
 export function filePublicPath(file: Express.Multer.File): string {
   return `/uploads/products/${file.filename}`;
@@ -16,14 +19,15 @@ export function galleryPaths(files: Express.Multer.File[]): string[] {
     .map(filePublicPath);
 }
 
-type VariantChild = { name: string; image?: string; hex?: string };
-type VariantOption = {
+export type VariantChild = { name: string; image?: string; hex?: string };
+export type VariantOption = {
   name: string;
   image?: string;
+  images?: string[];
   hex?: string;
   children?: VariantChild[];
 };
-type VariantTree = {
+export type VariantTree = {
   axes: { key: string; label: string }[];
   options: VariantOption[];
 };
@@ -34,6 +38,36 @@ function storedOptions(previous: unknown): VariantOption[] {
   }
   const options = (previous as VariantTree).options;
   return Array.isArray(options) ? options : [];
+}
+
+function collectOptionImages(
+  optionIndex: number,
+  byField: Map<string, Express.Multer.File>,
+  stored: VariantOption | undefined,
+): string[] {
+  const uploaded: { index: number; path: string }[] = [];
+
+  for (const [field, file] of byField.entries()) {
+    const match = VARIANT_IMG_FIELD.exec(field);
+    if (!match || Number(match[1]) !== optionIndex) continue;
+    const imgIndex = match[2] === undefined ? 0 : Number(match[2]);
+    uploaded.push({ index: imgIndex, path: filePublicPath(file) });
+  }
+
+  if (uploaded.length > 0) {
+    uploaded.sort((a, b) => a.index - b.index);
+    return uploaded.map((row) => row.path);
+  }
+
+  if (stored?.images && stored.images.length > 0) {
+    return stored.images.filter((url) => typeof url === 'string' && url.trim());
+  }
+
+  if (stored?.image?.trim()) {
+    return [stored.image.trim()];
+  }
+
+  return [];
 }
 
 export function applyVariantImageFiles(
@@ -47,7 +81,10 @@ export function applyVariantImageFiles(
 
   const byField = new Map<string, Express.Multer.File>();
   for (const file of files) {
-    if (VARIANT_FIELD.test(file.fieldname)) {
+    if (
+      VARIANT_IMG_FIELD.test(file.fieldname) ||
+      VARIANT_CHILD_FIELD.test(file.fieldname)
+    ) {
       byField.set(file.fieldname, file);
     }
   }
@@ -55,30 +92,30 @@ export function applyVariantImageFiles(
   const previousOptions = storedOptions(previous);
 
   const options = variants.options.map((option, optionIndex) => {
-    const optionFile = byField.get(`variant_${optionIndex}`);
     const stored = previousOptions[optionIndex];
-    const image = optionFile
-      ? filePublicPath(optionFile)
-      : stored?.image?.trim() || '';
+    const images = collectOptionImages(optionIndex, byField, stored);
+    const image = images[0] ?? '';
 
     const children = option.children?.map((child, childIndex) => {
-      const childFile = byField.get(`variant_${optionIndex}_child_${childIndex}`);
+      const childFile = byField.get(
+        `variant_${optionIndex}_child_${childIndex}`,
+      );
       const childImage = childFile
         ? filePublicPath(childFile)
         : stored?.children?.[childIndex]?.image?.trim() || image;
       return { ...child, image: childImage };
     });
 
-    return { ...option, image, children };
+    return { ...option, image, images, children };
   });
 
   const merged: VariantTree = { ...variants, options };
 
   for (const [index, option] of merged.options.entries()) {
-    if (!option.image) {
+    if (!option.image || !option.images?.length) {
       throw new BadRequestException({
         error: 'validation_failed',
-        message: 'Each variant option needs an uploaded image',
+        message: 'Each variant option needs at least one uploaded image',
         fields: { [`variants.options.${index}.image`]: 'required' },
       });
     }

@@ -74,6 +74,10 @@ export const sampleProduct = {
         name: 'أحمر',
         hex: '#FF0000',
         image: '/uploads/products/red.jpg',
+        images: [
+          '/uploads/products/red.jpg',
+          '/uploads/products/red-2.jpg',
+        ],
         children: [
           { name: 'M', image: '/uploads/products/red.jpg' },
           { name: 'L', image: '/uploads/products/red.jpg' },
@@ -81,6 +85,17 @@ export const sampleProduct = {
       },
     ],
   } as unknown,
+  colorImages: [
+    {
+      name: 'أحمر',
+      hex: '#FF0000',
+      image: '/uploads/products/red.jpg',
+      images: [
+        '/uploads/products/red.jpg',
+        '/uploads/products/red-2.jpg',
+      ],
+    },
+  ],
   packaging: null as unknown,
   discount: null as unknown,
   offer: null as string | null,

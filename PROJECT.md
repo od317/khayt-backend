@@ -148,7 +148,10 @@ All routes are under `/api/...`.
 ### Products
 
 - Belong to a `Business`.
-- `images: string[]`, optional variants/packaging/discount JSON.
+- `images: string[]` (general gallery), optional variants/packaging/discount JSON.
+- Color variants: first axis `key: "color"`; each option has `image` + `images[]`.
+  Product responses also expose `colorImages` for the FE to switch gallery by color.
+  Upload color photos as `variant_0`, `variant_0_img_1`, … (sizes: `variant_0_child_0`).
 - `inWarehouse` gates warehouse ordering.
 - `guarantee: boolean` (default `false`) — whether the product has guarantee.
 - Soft-delete via `deletedAt`.

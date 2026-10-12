@@ -65,6 +65,16 @@ export class ProductVariantOptionDto {
   @IsString()
   hex?: string;
 
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Optional. Prefer uploading files as variant_0, variant_0_img_1, … — stored as images[] on the color option.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  images?: string[];
+
   @ApiPropertyOptional({ type: () => [ProductVariantLeafDto] })
   @IsOptional()
   @IsArray()

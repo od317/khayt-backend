@@ -730,6 +730,15 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   'get /products': {
     '200': ok(paginated(sampleProduct)),
   },
+  'get /products/{id}/similar': {
+    '200': ok(paginated(sampleProduct)),
+    '404': errors('Not found', {
+      not_found: {
+        summary: 'Product missing',
+        value: errorBody(404, 'not_found', 'Product not found'),
+      },
+    }),
+  },
   'get /products/{id}': {
     '200': ok({
       product: sampleProduct,
@@ -803,6 +812,21 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'post /posts/{id}/comments': {
     '201': created({ comment: sampleComment }),
+  },
+  'patch /comments/{id}': {
+    '200': ok({ comment: sampleComment }),
+    '403': errors('Forbidden', {
+      forbidden: {
+        summary: 'Not the comment author',
+        value: errorBody(403, 'forbidden', 'Not the author of this comment'),
+      },
+    }),
+    '404': errors('Not found', {
+      not_found: {
+        summary: 'Comment missing',
+        value: errorBody(404, 'not_found', 'Comment not found'),
+      },
+    }),
   },
   'delete /comments/{id}': {
     '204': { description: 'Comment deleted', empty: true },

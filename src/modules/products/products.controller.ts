@@ -27,9 +27,14 @@ import { extname } from 'node:path';
 import { diskStorage } from 'multer';
 import { RequireUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import type { AuthenticatedUser } from '../../common/types/auth';
 import { Paginated } from '../../common/utils/pagination';
-import { sampleProductNamesResponse } from '../../common/swagger/samples';
+import {
+  paginated,
+  sampleProduct,
+  sampleProductNamesResponse,
+} from '../../common/swagger/samples';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductNamesQueryDto } from './dto/product-names-query.dto';
 import { QueryProductsDto } from './dto/query-products.dto';
@@ -91,6 +96,25 @@ export class ProductsController {
   @ApiOkResponse({ description: 'Paginated list of products' })
   list(@Query() query: QueryProductsDto): Promise<Paginated<ProductResponse>> {
     return this.products.list(query);
+  }
+
+  @Public()
+  @Get(':id/similar')
+  @ApiSecurity({})
+  @ApiOperation({
+    summary: 'Similar products',
+    description:
+      'Paginated similar products: same category or same business first, then other available products.',
+  })
+  @ApiOkResponse({
+    description: 'Paginated similar products',
+    schema: { example: paginated(sampleProduct) },
+  })
+  similar(
+    @Param('id') id: string,
+    @Query() query: PaginationDto,
+  ): Promise<Paginated<ProductResponse>> {
+    return this.products.listSimilar(id, query);
   }
 
   @Public()

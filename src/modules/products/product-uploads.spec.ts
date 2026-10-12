@@ -26,12 +26,34 @@ describe('applyVariantImageFiles', () => {
     );
 
     expect(variants?.options[0]?.image).toBe('/uploads/products/red.jpg');
+    expect(variants?.options[0]?.images).toEqual(['/uploads/products/red.jpg']);
     expect(variants?.options[0]?.children?.[0]?.image).toBe(
       '/uploads/products/red.jpg',
     );
     expect(variants?.options[0]?.children?.[1]?.image).toBe(
       '/uploads/products/red-l.jpg',
     );
+  });
+
+  it('maps multiple images for one color', () => {
+    const variants = applyVariantImageFiles(
+      {
+        axes: [{ key: 'color', label: 'لون' }],
+        options: [{ name: 'أحمر' }],
+      },
+      [
+        file('variant_0', 'red-1.jpg'),
+        file('variant_0_img_1', 'red-2.jpg'),
+        file('variant_0_img_2', 'red-3.jpg'),
+      ],
+    );
+
+    expect(variants?.options[0]?.image).toBe('/uploads/products/red-1.jpg');
+    expect(variants?.options[0]?.images).toEqual([
+      '/uploads/products/red-1.jpg',
+      '/uploads/products/red-2.jpg',
+      '/uploads/products/red-3.jpg',
+    ]);
   });
 
   it('rejects a variant option with no uploaded image', () => {
@@ -43,7 +65,7 @@ describe('applyVariantImageFiles', () => {
         },
         [],
       ),
-    ).toThrow(/Each variant option needs an uploaded image/);
+    ).toThrow(/Each variant option needs at least one uploaded image/);
   });
 
   it('keeps stored variant images when no new file is uploaded', () => {
@@ -55,10 +77,23 @@ describe('applyVariantImageFiles', () => {
       [],
       {
         axes: [{ key: 'color', label: 'لون' }],
-        options: [{ name: 'أحمر', image: '/uploads/products/red.jpg' }],
+        options: [
+          {
+            name: 'أحمر',
+            image: '/uploads/products/red.jpg',
+            images: [
+              '/uploads/products/red.jpg',
+              '/uploads/products/red-2.jpg',
+            ],
+          },
+        ],
       },
     );
 
     expect(variants?.options[0]?.image).toBe('/uploads/products/red.jpg');
+    expect(variants?.options[0]?.images).toEqual([
+      '/uploads/products/red.jpg',
+      '/uploads/products/red-2.jpg',
+    ]);
   });
 });
