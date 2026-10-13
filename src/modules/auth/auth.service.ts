@@ -34,7 +34,6 @@ import {
   otpAttemptsKey,
   otpKey,
   otpLimitKey,
-  otpNameKey,
   refreshKey,
   refreshKeysPattern,
 } from './auth.constants';
@@ -49,6 +48,7 @@ import { UpdateMeDto } from './dto/update-me.dto';
 import { normalizePhone } from './phone';
 import { SmsService } from './sms.service';
 import { FcmService } from '../notifications/fcm.service';
+import { isEmployeeLikeRole } from '../../common/roles/employee-like';
 
 const DEV_CODE = '000000';
 
@@ -99,22 +99,10 @@ export class AuthService {
     this.refreshTtlMs = this.refreshTtlSeconds * 1000;
   }
 
-  async requestCode(
-    rawPhone: string,
-    rawName: string,
-  ): Promise<{ sent: true }> {
+  async requestCode(rawPhone: string): Promise<{ sent: true }> {
     const phone = normalizePhone(rawPhone);
-    const name = rawName.trim();
     const nodeEnv = this.config.get('nodeEnv', { infer: true });
     const isDevelopment = nodeEnv === 'development';
-
-    const existing = await this.prisma.user.findUnique({
-      where: { phone },
-      select: { name: true },
-    });
-    if (existing) {
-      this.assertNameMatches(existing.name, name);
-    }
 
     // Temporary: send-code rate limit is off everywhere except unit tests.
     if (nodeEnv === 'test') {
@@ -139,7 +127,6 @@ export class AuthService {
     }
 
     await this.redis.set(otpKey(phone), code, OTP_TTL_SECONDS);
-    await this.redis.set(otpNameKey(phone), name, OTP_TTL_SECONDS);
     await this.redis.del(otpAttemptsKey(phone));
     await this.sms.send(phone, `رمز التحقق الخاص بك هو ${code}`);
 
@@ -168,7 +155,6 @@ export class AuthService {
       }
       if (failedAttempts >= OTP_MAX_ATTEMPTS) {
         await this.redis.del(otpKey(phone));
-        await this.redis.del(otpNameKey(phone));
         await this.redis.del(otpAttemptsKey(phone));
         throw new HttpException(
           {
@@ -185,19 +171,10 @@ export class AuthService {
       });
     }
 
-    const pendingName = await this.redis.get(otpNameKey(phone));
-    if (!pendingName?.trim()) {
-      throw new UnauthorizedException({
-        error: 'code_expired',
-        message: 'Verification code is missing or expired',
-      });
-    }
-
     await this.redis.del(otpKey(phone));
-    await this.redis.del(otpNameKey(phone));
     await this.redis.del(otpAttemptsKey(phone));
 
-    const user = await this.findOrCreateUser(phone, pendingName.trim());
+    const user = await this.findOrCreateUser(phone);
     if (user.suspended) {
       throw new ForbiddenException({
         error: 'account_suspended',
@@ -354,14 +331,16 @@ export class AuthService {
   ): Promise<{ user: UserResponse }> {
     if (
       dto.availableForWork !== undefined &&
-      actor.role !== UserRole.employee
+      !isEmployeeLikeRole(actor.role)
     ) {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'availableForWork is only allowed for employees',
+          message:
+            'availableForWork is only allowed for employee-like roles',
           fields: {
-            availableForWork: 'only allowed if role is employee',
+            availableForWork:
+              'only allowed for employee, marketer, or shipping_company',
           },
         },
         HttpStatus.BAD_REQUEST,
@@ -473,10 +452,11 @@ export class AuthService {
     actor: AuthenticatedUser,
     availableForWork: boolean,
   ): Promise<{ user: UserResponse }> {
-    if (actor.role !== UserRole.employee) {
+    if (!isEmployeeLikeRole(actor.role)) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Only employees can set availability for work',
+        message:
+          'Only employee, marketer, or shipping_company can set availability',
       });
     }
 
@@ -657,26 +637,14 @@ export class AuthService {
     return DEV_CODE;
   }
 
-  private assertNameMatches(storedName: string, providedName: string): void {
-    if (storedName.trim() !== providedName) {
-      throw new UnauthorizedException({
-        error: 'invalid_name',
-        message: 'Name does not match this phone number',
-      });
-    }
-  }
-
   private async findOrCreateUser(
     phone: string,
-    name: string,
   ): Promise<User & { location: Location | null }> {
     const existing = await this.prisma.user.findUnique({
       where: { phone },
       include: { location: true },
     });
     if (existing) {
-      // Returning user: name must match what was registered for this phone.
-      this.assertNameMatches(existing.name, name);
       return existing;
     }
 
@@ -684,7 +652,6 @@ export class AuthService {
       return await this.prisma.user.create({
         data: {
           phone,
-          name,
           role: UserRole.employee,
         },
         include: { location: true },
@@ -699,7 +666,6 @@ export class AuthService {
           include: { location: true },
         });
         if (raced) {
-          this.assertNameMatches(raced.name, name);
           return raced;
         }
       }

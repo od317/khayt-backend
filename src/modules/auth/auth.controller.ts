@@ -53,7 +53,7 @@ export class AuthController {
   @Post('request-code')
   @HttpCode(HttpStatus.OK)
   requestCode(@Body() dto: RequestCodeDto): Promise<{ sent: true }> {
-    return this.auth.requestCode(dto.phone, dto.name);
+    return this.auth.requestCode(dto.phone);
   }
 
   @Public()

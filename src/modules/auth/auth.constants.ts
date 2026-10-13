@@ -8,7 +8,6 @@ export const AVAILABILITY_RATE_LIMIT_MAX = 3;
 export const AVAILABILITY_RATE_WINDOW_SECONDS = 5 * 60;
 
 export const otpKey = (phone: string): string => `otp:${phone}`;
-export const otpNameKey = (phone: string): string => `otp:name:${phone}`;
 export const otpLimitKey = (phone: string): string => `otp:limit:${phone}`;
 export const otpAttemptsKey = (phone: string): string =>
   `otp:attempts:${phone}`;

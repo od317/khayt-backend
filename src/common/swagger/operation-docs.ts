@@ -123,21 +123,10 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '200': ok({ sent: true }),
     '400': errors('Validation failed', {
       validation_failed: {
-        summary: 'Invalid phone or name',
+        summary: 'Invalid phone',
         value: validationFailed({
           phone: 'must be a Syrian phone number (09xxxxxxxx)',
-          name: 'must be longer than or equal to 2 characters',
         }),
-      },
-    }),
-    '401': errors('Unauthorized', {
-      invalid_name: {
-        summary: 'Name does not match this phone',
-        value: errorBody(
-          401,
-          'invalid_name',
-          'Name does not match this phone number',
-        ),
       },
     }),
     '429': errors('Too many requests', {
@@ -174,14 +163,6 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
           401,
           'code_expired',
           'Verification code is missing or expired',
-        ),
-      },
-      invalid_name: {
-        summary: 'Name does not match this phone',
-        value: errorBody(
-          401,
-          'invalid_name',
-          'Name does not match this phone number',
         ),
       },
     }),
@@ -282,10 +263,13 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '200': ok({ user: sampleUser }),
     '400': errors('Validation failed', {
       availableForWork: {
-        summary: 'availableForWork is employee-only',
+        summary: 'availableForWork is employee-like only',
         value: validationFailed(
-          { availableForWork: 'only allowed if role is employee' },
-          'availableForWork is only allowed for employees',
+          {
+            availableForWork:
+              'only allowed for employee, marketer, or shipping_company',
+          },
+          'availableForWork is only allowed for employee-like roles',
         ),
       },
       locationId: {
@@ -313,11 +297,11 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '200': ok({ user: { ...sampleUser, availableForWork: true } }),
     '403': errors('Forbidden', {
       not_employee: {
-        summary: 'Only employees can toggle availability',
+        summary: 'Only employee-like roles can toggle availability',
         value: errorBody(
           403,
           'forbidden',
-          'Only employees can set availability for work',
+          'Only employee, marketer, or shipping_company can set availability',
         ),
       },
     }),
@@ -823,6 +807,17 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'post /posts': {
     '201': created({ post: samplePost }),
+    '403': errors('Forbidden', {
+      profile_incomplete: {
+        summary: 'Display name required before posting',
+        value: errorBody(
+          403,
+          'profile_incomplete',
+          'Enter your name to continue',
+          { completedData: false, fields: { name: 'required' } },
+        ),
+      },
+    }),
   },
   'patch /posts/{id}': {
     '200': ok({ post: samplePost }),
@@ -832,6 +827,17 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'post /posts/{id}/like': {
     '200': ok({ liked: true, likes: 1 }),
+    '403': errors('Forbidden', {
+      profile_incomplete: {
+        summary: 'Display name required before liking',
+        value: errorBody(
+          403,
+          'profile_incomplete',
+          'Enter your name to continue',
+          { completedData: false, fields: { name: 'required' } },
+        ),
+      },
+    }),
   },
   'delete /posts/{id}/like': {
     '200': ok({ liked: false, likes: 0 }),
@@ -847,6 +853,17 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'post /posts/{id}/comments': {
     '201': created({ comment: sampleComment }),
+    '403': errors('Forbidden', {
+      profile_incomplete: {
+        summary: 'Display name required before commenting',
+        value: errorBody(
+          403,
+          'profile_incomplete',
+          'Enter your name to continue',
+          { completedData: false, fields: { name: 'required' } },
+        ),
+      },
+    }),
   },
   'get /comments/{id}/reply': {
     '200': ok({
@@ -861,6 +878,17 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'post /comments/{id}/reply': {
     '201': created({ comment: sampleComment }),
+    '403': errors('Forbidden', {
+      profile_incomplete: {
+        summary: 'Display name required before replying',
+        value: errorBody(
+          403,
+          'profile_incomplete',
+          'Enter your name to continue',
+          { completedData: false, fields: { name: 'required' } },
+        ),
+      },
+    }),
     '404': errors('Not found', {
       not_found: {
         summary: 'Parent comment missing',
@@ -942,6 +970,21 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       },
     }),
     '403': errors('Forbidden', {
+      profile_incomplete: {
+        summary: 'Saved delivery coordinates required before ordering',
+        value: errorBody(
+          403,
+          'profile_incomplete',
+          'Enter your delivery location to continue',
+          {
+            completedData: false,
+            fields: {
+              deliveryLat: 'required',
+              deliveryLng: 'required',
+            },
+          },
+        ),
+      },
       forbidden: {
         summary: 'Only stores can place orders',
         value: errorBody(403, 'forbidden', 'Only stores can place orders'),

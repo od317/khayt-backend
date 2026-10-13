@@ -36,14 +36,15 @@ export class ProfilesController {
   @Public()
   @Get(':id')
   @ApiOperation({
-    summary: 'Public profile by business id, factory owner id, or employee id',
+    summary:
+      'Public profile by business id, factory owner id, or individual user id',
     description:
-      'Returns kind=factory for workshops (business id or owner user id), or kind=employee for employee user ids. For similar workshops use GET /profiles/:id/similar.',
+      'Returns kind=factory for workshops, or kind=employee|marketer|shipping_company for those user ids (employee-like). For similar workshops use GET /profiles/:id/similar.',
   })
   @ApiParam({
     name: 'id',
     description:
-      'Factory business id (e.g. biz-workshop), factory owner id (e.g. user-workshop), or employee id (e.g. user-employee)',
+      'Factory business/owner id, or employee/marketer/shipping_company user id',
     example: 'user-employee',
   })
   profile(@Param('id') id: string): Promise<PublicProfileResponse> {

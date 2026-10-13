@@ -279,6 +279,7 @@ describe('BusinessesService', () => {
     expect(result.id).toBe('user-employee');
     expect(result.profile.name).toBe('أحمد الخياط');
     expect(result.profile.bio).toBe('خياط محترف');
+    expect(result.profile.role).toBe('employee');
     expect(result.profile.availableForWork).toBe(true);
     expect(result.similar[0]?.id).toBe('user-employee-2');
   });

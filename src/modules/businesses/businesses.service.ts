@@ -29,6 +29,11 @@ import { CreateBusinessDto } from './dto/create-business.dto';
 import { QueryBusinessesDto } from './dto/query-businesses.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import {
+  isEmployeeLikeRole,
+  toEmployeeLikeRole,
+  type EmployeeLikeRole,
+} from '../../common/roles/employee-like';
+import {
   ProductResponse,
   toProductResponse,
 } from '../products/products.mapper';
@@ -76,7 +81,7 @@ export type PublicFactoryProfileResponse = {
 
 export type PublicEmployeeCard = {
   id: string;
-  name: string;
+  name: string | null;
   bio: string | null;
   avatarUrl: string | null;
   verified: boolean;
@@ -85,10 +90,11 @@ export type PublicEmployeeCard = {
 };
 
 export type PublicEmployeeProfileResponse = {
-  kind: 'employee';
+  kind: 'employee' | 'marketer' | 'shipping_company';
   id: string;
   profile: PublicEmployeeCard & {
     phone: string | null;
+    role: 'employee' | 'marketer' | 'shipping_company';
   };
   posts: PostResponse[];
   similar: PublicEmployeeCard[];
@@ -343,11 +349,17 @@ export class BusinessesService {
         take: EMPLOYEE_POSTS_LIMIT,
         include: FACTORY_POST_INCLUDE,
       }),
-      this.findSimilarEmployees(employee.id, employee.locationId),
+      this.findSimilarEmployees(
+        employee.id,
+        employee.locationId,
+        toEmployeeLikeRole(employee.role),
+      ),
     ]);
 
+    const role = toEmployeeLikeRole(employee.role);
+
     return {
-      kind: 'employee',
+      kind: role,
       id: employee.id,
       profile: {
         id: employee.id,
@@ -358,6 +370,7 @@ export class BusinessesService {
         availableForWork: employee.availableForWork,
         location: employee.location?.name ?? null,
         phone: employee.phone,
+        role,
       },
       posts: await this.toPublicPostResponses(posts),
       similar: similarRows.map((row) => ({
@@ -400,7 +413,7 @@ export class BusinessesService {
     if (
       !user ||
       user.suspended ||
-      user.role !== UserRole.employee ||
+      !isEmployeeLikeRole(user.role) ||
       !user.onboardingCompleted
     ) {
       return null;
@@ -637,9 +650,10 @@ export class BusinessesService {
   private async findSimilarEmployees(
     employeeId: string,
     locationId: string | null,
+    role: EmployeeLikeRole = UserRole.employee,
   ): Promise<Array<User & { location: Location | null }>> {
     const baseWhere: Prisma.UserWhereInput = {
-      role: UserRole.employee,
+      role,
       suspended: false,
       onboardingCompleted: true,
       id: { not: employeeId },

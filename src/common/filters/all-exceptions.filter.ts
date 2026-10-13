@@ -33,6 +33,7 @@ const ALLOWED_EXTRA = new Set([
   'field',
   'fields',
   'code',
+  'completedData',
 ]);
 
 @Catch()

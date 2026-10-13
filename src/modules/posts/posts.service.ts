@@ -21,6 +21,7 @@ import {
 } from '@prisma/client';
 import { AdminQueryPostsDto } from './dto/admin-query-posts.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { assertHasDisplayName } from '../../common/profile/profile-complete';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -255,6 +256,8 @@ export class PostsService {
     dto: CreatePostDto,
     files: Express.Multer.File[] = [],
   ): Promise<{ post: PostResponse }> {
+    await this.assertActorHasDisplayName(actor.id);
+
     // 1. Resolve the type first (defaults if client omitted it).
     const type: PostType = dto.type ?? DEFAULT_POST_TYPE;
 
@@ -579,6 +582,7 @@ export class PostsService {
     postId: string,
     actor: AuthenticatedUser,
   ): Promise<{ liked: true; likes: number }> {
+    await this.assertActorHasDisplayName(actor.id);
     await this.assertPostVisible(postId);
 
     const post = await this.prisma.post.findUnique({
@@ -676,6 +680,7 @@ export class PostsService {
     actor: AuthenticatedUser,
     dto: CreateCommentDto,
   ): Promise<{ comment: CommentResponse }> {
+    await this.assertActorHasDisplayName(actor.id);
     await this.assertPostVisible(postId, { requireActive: true });
 
     const post = await this.prisma.post.findUnique({
@@ -732,6 +737,8 @@ export class PostsService {
     actor: AuthenticatedUser,
     dto: CreateCommentDto,
   ): Promise<{ comment: CommentResponse }> {
+    await this.assertActorHasDisplayName(actor.id);
+
     const parent = await this.prisma.comment.findUnique({
       where: { id: parentId },
       select: { id: true, postId: true, authorId: true },
@@ -833,12 +840,20 @@ export class PostsService {
     await this.prisma.comment.delete({ where: { id: commentId } });
   }
 
+  private async assertActorHasDisplayName(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+    assertHasDisplayName(user?.name);
+  }
+
   private async getActorName(userId: string): Promise<string> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { name: true },
     });
-    return user?.name ?? userId;
+    return user?.name?.trim() || userId;
   }
 
   private async assertPostVisible(

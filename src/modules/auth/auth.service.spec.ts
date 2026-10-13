@@ -22,7 +22,6 @@ import {
   otpAttemptsKey,
   otpKey,
   otpLimitKey,
-  otpNameKey,
 } from './auth.constants';
 import { AuthService } from './auth.service';
 import { SmsService } from './sms.service';
@@ -182,17 +181,15 @@ describe('AuthService', () => {
 
   const NAME = 'أحمد';
 
-  const mockOtpAndName = (code = '123456', name = NAME) => {
+  const mockOtp = (code = '123456') => {
     redis.get.mockImplementation(async (key: string) => {
       if (key === otpKey(PHONE)) return code;
-      if (key === otpNameKey(PHONE)) return name;
       return null;
     });
   };
 
   it('generates a 6-digit code', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
-    await service.requestCode(PHONE, NAME);
+    await service.requestCode(PHONE);
 
     const stored = redis.set.mock.calls.find(
       (call) => call[0] === otpKey(PHONE),
@@ -201,37 +198,17 @@ describe('AuthService', () => {
     expect(stored?.[1]).toMatch(/^\d{6}$/);
   });
 
-  it('stores the code and name in Redis with a TTL', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
-    await service.requestCode(PHONE, NAME);
+  it('stores the code in Redis with a TTL', async () => {
+    await service.requestCode(PHONE);
 
     expect(redis.set).toHaveBeenCalledWith(
       otpKey(PHONE),
       expect.stringMatching(/^\d{6}$/),
       OTP_TTL_SECONDS,
     );
-    expect(redis.set).toHaveBeenCalledWith(
-      otpNameKey(PHONE),
-      NAME,
-      OTP_TTL_SECONDS,
-    );
     expect(sms.send).toHaveBeenCalledTimes(1);
     expect(sms.send.mock.calls[0]?.[0]).toBe(PHONE);
     expect(sms.send.mock.calls[0]?.[1]).toMatch(/رمز التحقق الخاص بك هو \d{6}/);
-  });
-
-  it('rejects request-code when an existing phone sends the wrong name', async () => {
-    prisma.user.findUnique.mockResolvedValue({ name: NAME });
-
-    const error = await service
-      .requestCode(PHONE, 'محمد')
-      .catch((err: unknown) => err);
-
-    expect(error).toBeInstanceOf(UnauthorizedException);
-    expect((error as UnauthorizedException).getResponse()).toMatchObject({
-      error: 'invalid_name',
-    });
-    expect(sms.send).not.toHaveBeenCalled();
   });
 
   it('rejects an expired code', async () => {
@@ -248,7 +225,7 @@ describe('AuthService', () => {
   });
 
   it('rejects a wrong code', async () => {
-    mockOtpAndName();
+    mockOtp();
     redis.increment.mockResolvedValue(1);
 
     const error = await service
@@ -263,20 +240,17 @@ describe('AuthService', () => {
   });
 
   it('rate limits after 3 requests', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
     redis.increment
       .mockResolvedValueOnce(1)
       .mockResolvedValueOnce(2)
       .mockResolvedValueOnce(3)
       .mockResolvedValueOnce(4);
 
-    await service.requestCode(PHONE, NAME);
-    await service.requestCode(PHONE, NAME);
-    await service.requestCode(PHONE, NAME);
+    await service.requestCode(PHONE);
+    await service.requestCode(PHONE);
+    await service.requestCode(PHONE);
 
-    const error = await service
-      .requestCode(PHONE, NAME)
-      .catch((err: unknown) => err);
+    const error = await service.requestCode(PHONE).catch((err: unknown) => err);
 
     expect(error).toBeInstanceOf(HttpException);
     expect((error as HttpException).getStatus()).toBe(
@@ -317,20 +291,19 @@ describe('AuthService', () => {
       { registerToken: fcm.registerToken } as never,
     );
 
-    prisma.user.findUnique.mockResolvedValue(null);
-    await devService.requestCode(PHONE, NAME);
-    await devService.requestCode(PHONE, NAME);
-    await devService.requestCode(PHONE, NAME);
-    await devService.requestCode(PHONE, NAME);
+    await devService.requestCode(PHONE);
+    await devService.requestCode(PHONE);
+    await devService.requestCode(PHONE);
+    await devService.requestCode(PHONE);
 
     expect(sms.send).toHaveBeenCalledTimes(4);
     expect(redis.increment).not.toHaveBeenCalled();
   });
 
-  it('creates a user on first verify using the name from request-code', async () => {
-    mockOtpAndName();
+  it('creates a user on first verify without a name', async () => {
+    mockOtp();
     prisma.user.findUnique.mockResolvedValue(null);
-    const created = makeUser();
+    const created = makeUser({ name: null });
     prisma.user.create.mockResolvedValue(created);
 
     const result = await service.verify(PHONE, '123456');
@@ -338,12 +311,12 @@ describe('AuthService', () => {
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: {
         phone: PHONE,
-        name: NAME,
         role: UserRole.employee,
       },
       include: { location: true },
     });
     expect(result.user.id).toBe(created.id);
+    expect(result.user.name).toBeNull();
     expect(result.accessToken).toBe('access-token');
     expect(result.refreshToken).toBe('refresh-token');
     expect(result.accessTokenExpiresAt).toMatch(
@@ -351,9 +324,9 @@ describe('AuthService', () => {
     );
   });
 
-  it('returns the existing user on second verify when name matches', async () => {
+  it('returns the existing user on second verify', async () => {
     const existing = makeUser({ id: 'existing-user', name: NAME });
-    mockOtpAndName();
+    mockOtp();
     prisma.user.findUnique.mockResolvedValue(existing);
 
     const result = await service.verify(PHONE, '123456');
@@ -369,7 +342,7 @@ describe('AuthService', () => {
       name: NAME,
       onboardingCompleted: true,
     });
-    mockOtpAndName();
+    mockOtp();
     prisma.user.findUnique.mockResolvedValue(existing);
 
     await service.verify(PHONE, '123456', 'sample-fcm-token');
@@ -381,7 +354,7 @@ describe('AuthService', () => {
   });
 
   it('rejects a suspended user', async () => {
-    mockOtpAndName();
+    mockOtp();
     prisma.user.findUnique.mockResolvedValue(
       makeUser({
         name: NAME,
@@ -643,7 +616,7 @@ describe('AuthService', () => {
       expect(result.user.availableForWork).toBe(false);
     });
 
-    it('rejects non-employees', async () => {
+    it('rejects non employee-like roles', async () => {
       const storeActor: AuthenticatedUser = {
         ...actor,
         role: UserRole.store,
@@ -656,6 +629,23 @@ describe('AuthService', () => {
       expect(error).toBeInstanceOf(ForbiddenException);
       expect(redis.increment).not.toHaveBeenCalled();
       expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('allows marketer to set availability', async () => {
+      redis.increment.mockResolvedValue(1);
+      prisma.user.update.mockResolvedValue(
+        makeUser({ role: UserRole.marketer, availableForWork: true }),
+      );
+
+      const marketerActor: AuthenticatedUser = {
+        ...actor,
+        role: UserRole.marketer,
+      };
+
+      const result = await service.setAvailableForWork(marketerActor, true);
+
+      expect(result.user.availableForWork).toBe(true);
+      expect(prisma.user.update).toHaveBeenCalled();
     });
 
     it(`rate limits after ${AVAILABILITY_RATE_LIMIT_MAX} toggles in 5 minutes`, async () => {

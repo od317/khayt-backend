@@ -65,7 +65,7 @@ export type PaymentResponse = {
   amount: number;
   paidAt: string;
   recordedBy: string;
-  recordedByName: string;
+  recordedByName: string | null;
 };
 
 export type ReceivingSummary = {

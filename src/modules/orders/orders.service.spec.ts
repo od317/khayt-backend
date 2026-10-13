@@ -390,11 +390,11 @@ describe('OrdersService', () => {
       );
     });
 
-    it('saves the map pin on the first order and on the store', async () => {
+    it('updates the saved map pin when the order sends a new one', async () => {
       prisma.user.findUnique.mockResolvedValue({
-        deliveryAddress: null,
-        deliveryLat: null,
-        deliveryLng: null,
+        deliveryAddress: 'عنوان قديم',
+        deliveryLat: 33.5,
+        deliveryLng: 36.2,
       });
       prisma.product.findMany.mockResolvedValue([
         {
@@ -446,22 +446,29 @@ describe('OrdersService', () => {
       );
     });
 
-    it('rejects the first order without a map pin', async () => {
+    it('rejects an order when the store has no saved coordinates', async () => {
       prisma.user.findUnique.mockResolvedValue({
         deliveryAddress: null,
         deliveryLat: null,
         deliveryLng: null,
       });
 
-      const error = await service.create(store, dto).catch((e: unknown) => e);
+      const error = await service
+        .create(store, {
+          ...dto,
+          address: 'شارع بغداد، بناء 12',
+          lat: 33.51,
+          lng: 36.27,
+        })
+        .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(HttpException);
       expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'validation_failed',
+        error: 'profile_incomplete',
+        completedData: false,
         fields: {
-          address: 'required',
-          lat: 'required',
-          lng: 'required',
+          deliveryLat: 'required',
+          deliveryLng: 'required',
         },
       });
       expect(prisma.order.create).not.toHaveBeenCalled();

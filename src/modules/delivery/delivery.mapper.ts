@@ -3,7 +3,7 @@ import { orderStatusColor } from '../../common/order-status-labels';
 
 export type DriverResponse = {
   id: string;
-  name: string;
+  name: string | null;
   phone: string | null;
   lat: number | null;
   lng: number | null;
@@ -26,7 +26,7 @@ export type OrderSummary = {
   number: string;
   status: string;
   statusColor: string;
-  storeName: string;
+  storeName: string | null;
   pieces: number;
   total: number;
   address: string;
@@ -74,7 +74,7 @@ export function toOrderSummary(order: {
   address: string;
   lat: number | null;
   lng: number | null;
-  store: { name: string };
+  store: { name: string | null };
 }): OrderSummary {
   return {
     id: order.id,

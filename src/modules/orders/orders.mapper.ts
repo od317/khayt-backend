@@ -22,7 +22,7 @@ export type OrderListItemResponse = {
   lng: number | null;
   createdAt: string;
   updatedAt: string;
-  store: { id: string; name: string };
+  store: { id: string; name: string | null };
 };
 
 export type OrderLineResponse = {
@@ -42,7 +42,7 @@ export type OrderDeliveryResponse = {
   id: string;
   number: string;
   status: string;
-  driver: { id: string; name: string; phone: string | null } | null;
+  driver: { id: string; name: string | null; phone: string | null } | null;
 };
 
 export type OrderDetailResponse = {
@@ -61,7 +61,7 @@ export type OrderDetailResponse = {
     canCancel: boolean;
     canAdvance: boolean;
   };
-  store: { id: string; name: string; phone: string | null };
+  store: { id: string; name: string | null; phone: string | null };
   lines: OrderLineResponse[];
   delivery: OrderDeliveryResponse | null;
   whatsapp: string;

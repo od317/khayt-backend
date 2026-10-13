@@ -10,7 +10,7 @@ export { toBusinessResponse };
 export type UserResponse = {
   id: string;
   role: UserRole;
-  name: string;
+  name: string | null;
   phone: string | null;
   email: string | null;
   location: string | null;

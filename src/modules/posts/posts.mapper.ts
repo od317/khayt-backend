@@ -12,7 +12,7 @@ import {
 
 export type PostAuthorResponse = {
   id: string;
-  name: string;
+  name: string | null;
   role: UserRole;
   location: string | null;
   avatarUrl: string | null;
@@ -78,7 +78,7 @@ export type PostResponse = {
 
 export type CommentAuthorResponse = {
   id: string;
-  name: string;
+  name: string | null;
   avatarUrl: string | null;
 };
 

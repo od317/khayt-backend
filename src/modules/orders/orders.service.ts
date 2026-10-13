@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { assertHasDeliveryCoordinates } from '../../common/profile/profile-complete';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
 import { ORDER_STATUS_LABELS, orderStatusColor } from '../../common/order-status-labels';
@@ -207,6 +208,8 @@ export class OrdersService {
           message: 'User not found',
         });
       }
+
+      assertHasDeliveryCoordinates(storeUser);
 
       const { dropoff, persist } = resolveOrderDropoff(dto, storeUser);
 

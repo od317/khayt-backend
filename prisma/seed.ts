@@ -57,6 +57,22 @@ async function main(): Promise<void> {
       sortOrder: 30,
     },
     {
+      id: 'role-marketer',
+      value: 'marketer',
+      label: 'مسوق',
+      selectable: true,
+      system: true,
+      sortOrder: 35,
+    },
+    {
+      id: 'role-shipping-company',
+      value: 'shipping_company',
+      label: 'شركة شحن',
+      selectable: true,
+      system: true,
+      sortOrder: 36,
+    },
+    {
       id: 'role-institute',
       value: 'institute',
       label: 'معهد',
@@ -811,6 +827,22 @@ async function main(): Promise<void> {
       onboardingCompleted: true,
     },
     {
+      id: 'user-marketer',
+      phone: '0994000022',
+      name: 'سامر المسوق',
+      role: UserRole.marketer,
+      locationId: 'loc-damascus',
+      onboardingCompleted: true,
+    },
+    {
+      id: 'user-shipping',
+      phone: '0994000023',
+      name: 'شركة الشام للشحن',
+      role: UserRole.shipping_company,
+      locationId: 'loc-damascus',
+      onboardingCompleted: true,
+    },
+    {
       id: 'user-workshop',
       phone: '0994000002',
       name: 'معمل النسيج الدمشقي',
@@ -997,7 +1029,10 @@ async function main(): Promise<void> {
         role: u.role,
         locationId: u.locationId,
         onboardingCompleted: u.onboardingCompleted,
-        verified: u.role !== UserRole.employee,
+        verified:
+          u.role !== UserRole.employee &&
+          u.role !== UserRole.marketer &&
+          u.role !== UserRole.shipping_company,
         avatarUrl: SHARED_AVATAR_URL,
       },
       update: {
