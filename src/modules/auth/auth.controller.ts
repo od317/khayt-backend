@@ -30,6 +30,7 @@ import { OnboardingDto } from './dto/onboarding.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
 import { RequestCodeDto } from './dto/request-code.dto';
+import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { VerifyDto } from './dto/verify.dto';
 
@@ -100,6 +101,18 @@ export class AuthController {
   @Patch('me')
   updateMe(@RequireUser() user: AuthenticatedUser, @Body() dto: UpdateMeDto) {
     return this.auth.updateMe(user, dto);
+  }
+
+  @Patch('me/available-for-work')
+  @ApiOkResponse({
+    description:
+      'Employee-only. Sets profile availableForWork (true/false) for GET /profiles/:id.',
+  })
+  setAvailableForWork(
+    @RequireUser() user: AuthenticatedUser,
+    @Body() dto: UpdateAvailabilityDto,
+  ) {
+    return this.auth.setAvailableForWork(user, dto.availableForWork);
   }
 
   @Delete('me')

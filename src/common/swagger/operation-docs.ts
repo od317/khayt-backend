@@ -7,7 +7,9 @@ import {
   sampleBusiness,
   sampleComment,
   sampleDelivery,
+  inventoryListSample,
   sampleInventoryItem,
+  supplyListSample,
   sampleNotification,
   sampleOrderDetail,
   sampleOrderLine,
@@ -302,6 +304,39 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
             deliveryLng: 'required',
           },
           'Map pin and address are required together',
+        ),
+      },
+    }),
+  },
+
+  'patch /auth/me/available-for-work': {
+    '200': ok({ user: { ...sampleUser, availableForWork: true } }),
+    '403': errors('Forbidden', {
+      not_employee: {
+        summary: 'Only employees can toggle availability',
+        value: errorBody(
+          403,
+          'forbidden',
+          'Only employees can set availability for work',
+        ),
+      },
+    }),
+    '400': errors('Validation failed', {
+      availableForWork: {
+        summary: 'Boolean required',
+        value: validationFailed(
+          { availableForWork: 'must be a boolean' },
+          'Validation failed',
+        ),
+      },
+    }),
+    '429': errors('Too many requests', {
+      too_many_requests: {
+        summary: 'Max 3 toggles per 5 minutes',
+        value: errorBody(
+          429,
+          'too_many_requests',
+          'Too many availability changes. Try again in a few minutes.',
         ),
       },
     }),
@@ -813,6 +848,26 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   'post /posts/{id}/comments': {
     '201': created({ comment: sampleComment }),
   },
+  'get /comments/{id}/reply': {
+    '200': ok({
+      items: [{ ...sampleComment, replies: [sampleComment] }],
+    }),
+    '404': errors('Not found', {
+      not_found: {
+        summary: 'Parent comment missing',
+        value: errorBody(404, 'not_found', 'Comment not found'),
+      },
+    }),
+  },
+  'post /comments/{id}/reply': {
+    '201': created({ comment: sampleComment }),
+    '404': errors('Not found', {
+      not_found: {
+        summary: 'Parent comment missing',
+        value: errorBody(404, 'not_found', 'Comment not found'),
+      },
+    }),
+  },
   'patch /comments/{id}': {
     '200': ok({ comment: sampleComment }),
     '403': errors('Forbidden', {
@@ -829,7 +884,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     }),
   },
   'delete /comments/{id}': {
-    '204': { description: 'Comment deleted', empty: true },
+    '204': { description: 'Comment deleted (nested replies cascade)', empty: true },
   },
 
   'get /orders': {
@@ -1016,7 +1071,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
 
   'get /inventory': {
-    '200': ok(paginated(sampleInventoryItem)),
+    '200': ok(inventoryListSample()),
   },
   'get /inventory/{id}': {
     '200': ok({
@@ -1034,7 +1089,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     }),
   },
   'get /supply': {
-    '200': ok(paginated(sampleInventoryItem)),
+    '200': ok(supplyListSample()),
   },
 
   'get /bills/summary': {

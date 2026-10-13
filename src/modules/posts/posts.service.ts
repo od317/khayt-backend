@@ -34,11 +34,12 @@ import { join } from 'node:path';
 import { parse as parsePath } from 'node:path';
 import { extractVideoThumbnail } from './post-thumbnails';
 import {
+  buildCommentTree,
   CommentResponse,
   PostCounts,
   PostResponse,
-  toCommentResponse,
   PostWithRelationsForMapper,
+  toCommentResponse,
   toPostResponse,
 } from './posts.mapper';
 import { POST_TYPES_BY_ROLE } from './post-role-map';
@@ -653,18 +654,21 @@ export class PostsService {
 
     const { skip, take } = skipTake(page, limit);
 
-    const [rows, total] = await this.prisma.$transaction([
+    const [allRows, totalRoots] = await this.prisma.$transaction([
       this.prisma.comment.findMany({
         where: { postId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take,
+        orderBy: { createdAt: 'asc' },
         include: { author: true },
       }),
-      this.prisma.comment.count({ where: { postId } }),
+      this.prisma.comment.count({ where: { postId, parentId: null } }),
     ]);
 
-    return paginate(rows.map(toCommentResponse), total, page, limit);
+    const tree = buildCommentTree(allRows, null);
+    // Newest top-level comments first (children stay chronological).
+    tree.reverse();
+    const paged = tree.slice(skip, skip + take);
+
+    return paginate(paged, totalRoots, page, limit);
   }
 
   async createComment(
@@ -680,7 +684,7 @@ export class PostsService {
     });
 
     const comment = await this.prisma.comment.create({
-      data: { postId, authorId: actor.id, body: dto.body },
+      data: { postId, authorId: actor.id, body: dto.body, parentId: null },
       include: { author: true },
     });
 
@@ -692,6 +696,74 @@ export class PostsService {
         title: 'تعليق جديد',
         body: `${actorName} علّق على منشورك`,
         linkTo: `/posts/${postId}`,
+        actorId: actor.id,
+      });
+    }
+
+    return { comment: toCommentResponse(comment) };
+  }
+
+  async listReplies(commentId: string): Promise<{ items: CommentResponse[] }> {
+    const parent = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      select: { id: true, postId: true },
+    });
+
+    if (!parent) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Comment not found',
+      });
+    }
+
+    await this.assertPostVisible(parent.postId, { requireActive: false });
+
+    const rows = await this.prisma.comment.findMany({
+      where: { postId: parent.postId },
+      orderBy: { createdAt: 'asc' },
+      include: { author: true },
+    });
+
+    return { items: buildCommentTree(rows, commentId) };
+  }
+
+  async createReply(
+    parentId: string,
+    actor: AuthenticatedUser,
+    dto: CreateCommentDto,
+  ): Promise<{ comment: CommentResponse }> {
+    const parent = await this.prisma.comment.findUnique({
+      where: { id: parentId },
+      select: { id: true, postId: true, authorId: true },
+    });
+
+    if (!parent) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'Comment not found',
+      });
+    }
+
+    await this.assertPostVisible(parent.postId, { requireActive: true });
+
+    const comment = await this.prisma.comment.create({
+      data: {
+        postId: parent.postId,
+        authorId: actor.id,
+        parentId: parent.id,
+        body: dto.body,
+      },
+      include: { author: true },
+    });
+
+    if (parent.authorId !== actor.id) {
+      const actorName = await this.getActorName(actor.id);
+      await this.notifications.notify({
+        userId: parent.authorId,
+        type: NotificationType.new_comment,
+        title: 'رد جديد',
+        body: `${actorName} رد على تعليقك`,
+        linkTo: `/posts/${parent.postId}`,
         actorId: actor.id,
       });
     }
@@ -757,6 +829,7 @@ export class PostsService {
       });
     }
 
+    // Cascades to nested replies via Comment.parentId FK.
     await this.prisma.comment.delete({ where: { id: commentId } });
   }
 

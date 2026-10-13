@@ -280,18 +280,15 @@ export class PostOptionsService {
     const labelsOf = (kind: PostOptionKind): Set<string> =>
       new Set((byKind.get(kind) ?? []).map((r) => r.label));
 
-    if (kinds.includes(PostOptionKind.specialty) && values.specialty) {
-      if (!labelsOf(PostOptionKind.specialty).has(values.specialty)) {
-        fields.specialty = 'must be an active specialty option';
-      }
-    }
-
+    // Specialty is optional free-text. Catalog labels still enable skill
+    // parent checks below; custom specialties are stored as-is.
     if (kinds.includes(PostOptionKind.skill) && values.skills?.length) {
       const skillRows = byKind.get(PostOptionKind.skill) ?? [];
       const specialty = (byKind.get(PostOptionKind.specialty) ?? []).find(
         (r) => r.label === values.specialty,
       );
       // Catalog skills must belong to the specialty; free-text skills are allowed.
+      // If specialty is custom (not in catalog), skip parent checks.
       for (const skill of values.skills) {
         const match = skillRows.find((r) => r.label === skill);
         if (!match) continue;

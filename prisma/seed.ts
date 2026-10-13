@@ -1534,7 +1534,7 @@ async function main(): Promise<void> {
       images: [SEED_PRODUCT_IMAGES[5], SEED_PRODUCT_IMAGES[1]],
       unit: 'قطعة',
       price: 40000,
-      inWarehouse: false,
+      inWarehouse: true,
       available: true,
       guarantee: false,
     },
@@ -1599,7 +1599,7 @@ async function main(): Promise<void> {
   console.log(`  products: ${products.length}`);
 
   // ------------------------------------------------------------
-  // Supply (warehouse stock)
+  // Supply (warehouse stock) — معمل النسيج الدمشقي (0994000002 / biz-workshop)
   // ------------------------------------------------------------
   const supply = [
     {
@@ -1611,11 +1611,25 @@ async function main(): Promise<void> {
     },
     {
       businessId: 'biz-workshop',
+      productId: 'prod-qamis-kaki',
+      sent: 120,
+      remaining: 95,
+      unitPrice: 32000,
+    },
+    {
+      businessId: 'biz-workshop',
       productId: 'prod-bantal-jeans',
       sent: 80,
       remaining: 60,
       unitPrice: 50000,
     },
+    ...similarQamisAbyadSeed.map((s, i) => ({
+      businessId: 'biz-workshop',
+      productId: s.id,
+      sent: 100 + i * 10,
+      remaining: 70 + i * 5,
+      unitPrice: Math.max(25000, s.price - 8000),
+    })),
   ];
 
   for (const s of supply) {
@@ -1820,6 +1834,21 @@ async function main(): Promise<void> {
   // ------------------------------------------------------------
   // Posts
   // ------------------------------------------------------------
+  const SEED_POST_IMAGES = [
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRCaEiyENTwM0691yc2BOs5rXyrT5HLnIbfO8Q_S6K5X-y2DbB8kOEnX_I&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuBuFVV6vcWrTmYjB0080oLAW0fYaGlu44gB-lymQktFde_5V6RcUQEzZZ&s=10',
+    'https://cdnimg.co/ece03e48-a716-411d-bb8e-498840fa15ce/35ed3f6f-0165-4f22-9024-79f323071ed5/how-to-look-good-men-s-fashion-mens-outfit.jpg',
+    'https://nousa.nl/cdn/shop/collections/kleding_heren.jpg?v=1764013659',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNJQLxKPnMO13eOchsA-IrHakV-FwsAxmHvSj6qCZVecUbzOkyCQ_JIgQE&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_0xs03FEbqL3bGRMJyAkKIDvgjPWJo27djmhI9u88BA&s=10',
+  ] as const;
+
+  const seedPostImages = (count: number, offset = 0): string[] =>
+    Array.from(
+      { length: Math.min(8, Math.max(1, count)) },
+      (_, i) => SEED_POST_IMAGES[(offset + i) % SEED_POST_IMAGES.length]!,
+    );
+
   const posts = [
     {
       id: 'post-job-offer-1',
@@ -2561,7 +2590,29 @@ async function main(): Promise<void> {
     },
   ];
 
-  for (const p of posts) {
+  // Attach 1–8 fashion images to non-reel / non-job-seeking posts (URLs may repeat).
+  let imagePostIndex = 0;
+  const postsWithImages = posts.map((p) => {
+    if (p.type === PostType.reel) return p;
+    // Job seekers: text-only — no gallery photos
+    if (p.type === PostType.job_seeking) {
+      return {
+        ...p,
+        media: MediaType.none,
+        imageUrls: [],
+      };
+    }
+    const count = (imagePostIndex % 8) + 1;
+    const offset = imagePostIndex;
+    imagePostIndex += 1;
+    return {
+      ...p,
+      media: MediaType.image,
+      imageUrls: seedPostImages(count, offset),
+    };
+  });
+
+  for (const p of postsWithImages) {
     const { id, ...rest } = p;
     await prisma.post.upsert({
       where: { id },
@@ -2569,7 +2620,7 @@ async function main(): Promise<void> {
       update: rest,
     });
   }
-  console.log(`  posts: ${posts.length}`);
+  console.log(`  posts: ${postsWithImages.length}`);
 
   const shippingCompanies = [
     {
@@ -2718,87 +2769,141 @@ async function main(): Promise<void> {
   console.log(`  saved posts: ${saved.length}`);
 
   // ------------------------------------------------------------
-  // Comments
+  // Comments — every post gets a thread with nested replies
   // ------------------------------------------------------------
-  const comments = [
-    {
-      id: 'comment-1',
-      postId: 'post-job-offer-1',
-      authorId: 'user-employee',
-      body: 'أنا مهتم، كيف أتواصل؟',
-      createdAt: hoursAgo(1),
-    },
-    {
-      id: 'comment-2',
-      postId: 'post-product-offer-1',
-      authorId: 'user-store',
-      body: 'ما هو سعر الجملة؟',
-      createdAt: hoursAgo(2),
-    },
-    {
-      id: 'comment-3',
-      postId: 'post-service-offer-1',
-      authorId: 'user-store',
-      body: 'عمل جميل ما شاء الله',
-      createdAt: hoursAgo(3),
-    },
-    {
-      id: 'comment-midan-1',
-      postId: 'post-midan-1',
-      authorId: 'user-workshop-halep',
-      body: 'كم سعر المتر بالجملة؟',
-      createdAt: hoursAgo(8),
-    },
-    {
-      id: 'comment-midan-2',
-      postId: 'post-midan-3',
-      authorId: 'user-store-babtouma',
-      body: 'الحرير متوفر بالأبيض؟',
-      createdAt: hoursAgo(25),
-    },
-    {
-      id: 'comment-midan-3',
-      postId: 'post-midan-5',
-      authorId: 'user-institute-lattakia',
-      body: 'التطريز رائع، ما شاء الله',
-      createdAt: hoursAgo(45),
-    },
-    {
-      id: 'comment-reel-01',
-      postId: 'reel-01',
-      authorId: 'user-store-damascus-midan',
-      body: 'ما شاء الله، شغل نظيف!',
-      createdAt: hoursAgo(1),
-    },
-    {
-      id: 'comment-reel-02',
-      postId: 'reel-02',
-      authorId: 'user-store',
-      body: 'الموديلات كتير حلوة. الأسعار؟',
-      createdAt: hoursAgo(2),
-    },
-    {
-      id: 'comment-reel-03',
-      postId: 'reel-06',
-      authorId: 'user-institute-halep',
-      body: 'حرفة يدوية أصيلة، الله يعطيكم العافية.',
-      createdAt: hoursAgo(5),
-    },
-    {
-      id: 'comment-reel-04',
-      postId: 'reel-15',
-      authorId: 'user-workshop-halep',
-      body: 'مبروك على الآلة الجديدة!',
-      createdAt: hoursAgo(14),
-    },
-    {
-      id: 'comment-reel-05',
-      postId: 'reel-19',
-      authorId: 'user-store-homs',
-      body: 'مبروك للطلاب! 🎓',
-      createdAt: hoursAgo(18),
-    },
-  ];
+  const commentAuthors = [
+    'user-employee',
+    'user-workshop',
+    'user-institute',
+    'user-store',
+    'user-workshop-halep',
+    'user-workshop-homs',
+    'user-store-halep',
+    'user-store-babtouma',
+    'user-institute-halep',
+    'user-institute-lattakia',
+    'user-store-damascus-midan',
+    'user-store-homs',
+    'user-workshop-tartous',
+    'user-workshop-hama',
+  ] as const;
+
+  const rootBodies = [
+    'ما شاء الله، شغل نظيف!',
+    'كم السعر؟',
+    'مهتم، كيف أتواصل؟',
+    'متوفر بالجملة؟',
+    'تفاصيل أكثر لو سمحت',
+    'جودة ممتازة',
+    'هل فيه توصيل لحمص؟',
+    'الألوان المتوفرة؟',
+    'ممكن عينة؟',
+    'الله يعطيكم العافية',
+  ] as const;
+
+  const replyBodies = [
+    'تواصل معنا على الرقم في المنشور',
+    'نعم متوفر، أهلاً فيك',
+    'شكراً لاهتمامك',
+    'السعر حسب الكمية',
+    'نرد عليك بخاصة',
+  ] as const;
+
+  const nestedReplyBodies = [
+    'شكراً، سأتواصل قريباً',
+    'تمام، وصلني',
+    'ممتاز، شكراً لك',
+    'حاضر، بخبرك',
+  ] as const;
+
+  type SeedComment = {
+    id: string;
+    postId: string;
+    authorId: string;
+    body: string;
+    createdAt: Date;
+    parentId?: string;
+  };
+
+  const comments: SeedComment[] = [];
+
+  for (let i = 0; i < posts.length; i++) {
+    const post = posts[i]!;
+    const author = (id: number) =>
+      commentAuthors[(i + id) % commentAuthors.length]!;
+    const hours = 1 + (i % 48);
+
+    const rootId = `c-${post.id}-1`;
+    comments.push({
+      id: rootId,
+      postId: post.id,
+      authorId: author(0),
+      body: rootBodies[i % rootBodies.length]!,
+      createdAt: hoursAgo(hours),
+    });
+
+    const replyId = `c-${post.id}-1-r1`;
+    comments.push({
+      id: replyId,
+      postId: post.id,
+      authorId: author(1),
+      parentId: rootId,
+      body: replyBodies[i % replyBodies.length]!,
+      createdAt: hoursAgo(hours - 0.4),
+    });
+
+    const nestedId = `c-${post.id}-1-r1-r1`;
+    comments.push({
+      id: nestedId,
+      postId: post.id,
+      authorId: author(2),
+      parentId: replyId,
+      body: nestedReplyBodies[i % nestedReplyBodies.length]!,
+      createdAt: hoursAgo(hours - 0.7),
+    });
+
+    // Second top-level comment + one reply on every other post
+    if (i % 2 === 0) {
+      const root2Id = `c-${post.id}-2`;
+      comments.push({
+        id: root2Id,
+        postId: post.id,
+        authorId: author(3),
+        body: rootBodies[(i + 3) % rootBodies.length]!,
+        createdAt: hoursAgo(hours - 0.2),
+      });
+      comments.push({
+        id: `c-${post.id}-2-r1`,
+        postId: post.id,
+        authorId: author(4),
+        parentId: root2Id,
+        body: replyBodies[(i + 1) % replyBodies.length]!,
+        createdAt: hoursAgo(hours - 0.5),
+      });
+    }
+  }
+
+  // Bulk thread for pagination demos: post-job-offer-1 → 100 roots + 100 replies
+  const bulkPostId = 'post-job-offer-1';
+  for (let n = 1; n <= 100; n++) {
+    const pad = String(n).padStart(3, '0');
+    const rootId = `c-${bulkPostId}-bulk-${pad}`;
+    comments.push({
+      id: rootId,
+      postId: bulkPostId,
+      authorId: commentAuthors[n % commentAuthors.length]!,
+      body: `${rootBodies[n % rootBodies.length]!} (#${n})`,
+      createdAt: hoursAgo(0.01 * n),
+    });
+    comments.push({
+      id: `c-${bulkPostId}-bulk-${pad}-r1`,
+      postId: bulkPostId,
+      authorId: commentAuthors[(n + 1) % commentAuthors.length]!,
+      parentId: rootId,
+      body: `${replyBodies[n % replyBodies.length]!} (رد #${n})`,
+      createdAt: hoursAgo(0.01 * n - 0.005),
+    });
+  }
 
   for (const c of comments) {
     const { id, ...rest } = c;

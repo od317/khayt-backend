@@ -23,11 +23,14 @@ import { AuthenticatedUser } from '../../common/types/auth';
 import { AppConfig } from '../../config/configuration';
 import { durationToSeconds } from '../../common/utils/duration';
 import {
+  AVAILABILITY_RATE_LIMIT_MAX,
+  AVAILABILITY_RATE_WINDOW_SECONDS,
   OTP_MAX_ATTEMPTS,
   OTP_RATE_LIMIT_MAX,
   OTP_RATE_WINDOW_SECONDS,
   OTP_TTL_SECONDS,
   accessDenyKey,
+  availabilityLimitKey,
   otpAttemptsKey,
   otpKey,
   otpLimitKey,
@@ -456,6 +459,46 @@ export class AuthService {
     const user = await this.prisma.user.update({
       where: { id: actor.id },
       data,
+      include: { location: true },
+    });
+
+    return { user: toUserResponse(user) };
+  }
+
+  /**
+   * Employee-only toggle for public profile `availableForWork`.
+   * Rate limited: 3 requests per 5 minutes per user.
+   */
+  async setAvailableForWork(
+    actor: AuthenticatedUser,
+    availableForWork: boolean,
+  ): Promise<{ user: UserResponse }> {
+    if (actor.role !== UserRole.employee) {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'Only employees can set availability for work',
+      });
+    }
+
+    const limitKey = availabilityLimitKey(actor.id);
+    const attempts = await this.redis.increment(limitKey);
+    if (attempts === 1) {
+      await this.redis.expire(limitKey, AVAILABILITY_RATE_WINDOW_SECONDS);
+    }
+    if (attempts > AVAILABILITY_RATE_LIMIT_MAX) {
+      throw new HttpException(
+        {
+          error: 'too_many_requests',
+          message:
+            'Too many availability changes. Try again in a few minutes.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: actor.id },
+      data: { availableForWork },
       include: { location: true },
     });
 

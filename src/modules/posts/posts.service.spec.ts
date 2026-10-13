@@ -118,6 +118,10 @@ type PrismaMock = {
 describe('PostsService', () => {
   let prisma: PrismaMock;
   let service: PostsService;
+  let notifications: {
+    notify: ReturnType<typeof vi.fn>;
+    notifyLike: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     prisma = {
@@ -174,7 +178,7 @@ describe('PostsService', () => {
       return undefined;
     });
 
-    const notifications = {
+    notifications = {
       notify: vi.fn().mockResolvedValue(undefined),
       notifyLike: vi.fn().mockResolvedValue(undefined),
     };
@@ -377,27 +381,29 @@ describe('PostsService', () => {
       });
     });
 
-    it('rejects a job_offering without specialty', async () => {
-      const error = await service
-        .create(actor, {
-          type: PostType.job_offering,
-          title: 'مطلوب خياط',
-          body: 'نبحث عن خياط ماهر',
-          location: 'دمشق',
-          skills: ['خياطة'],
-          workType: ['كامل'],
-          salaryType: 'حسب الاتفاق',
-          categoryIds: ['cat-1'],
-        })
-        .catch((err: unknown) => err);
+    it('allows creating a job_offering without specialty', async () => {
+      prisma.post.create.mockResolvedValue(
+        makePost({ specialty: null }),
+      );
 
-      expect(error).toBeInstanceOf(HttpException);
-      expect((error as HttpException).getStatus()).toBe(HttpStatus.BAD_REQUEST);
-      expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'validation_failed',
-        fields: { specialty: expect.any(String) },
+      const result = await service.create(actor, {
+        type: PostType.job_offering,
+        title: 'مطلوب خياط',
+        body: 'نبحث عن خياط ماهر',
+        location: 'دمشق',
+        skills: ['خياطة'],
+        workType: ['كامل'],
+        salaryType: 'حسب الاتفاق',
       });
-      expect(prisma.post.create).not.toHaveBeenCalled();
+
+      expect(prisma.post.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          specialty: null,
+          type: PostType.job_offering,
+        }),
+        include: expect.any(Object),
+      });
+      expect(result.post.id).toBe('post-1');
     });
 
     it('rejects a job_offering without workType', async () => {
@@ -762,6 +768,7 @@ describe('PostsService', () => {
         id: 'comment-1',
         body: 'تعليق محدّث',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        parentId: null,
         author: {
           id: actor.id,
           name: 'أحمد',
@@ -779,6 +786,80 @@ describe('PostsService', () => {
         include: { author: true },
       });
       expect(result.comment.body).toBe('تعليق محدّث');
+    });
+
+    it('creates a nested reply under a comment', async () => {
+      prisma.comment.findUnique.mockResolvedValue({
+        id: 'comment-1',
+        postId: 'post-1',
+        authorId: other.id,
+      });
+      prisma.post.findFirst.mockResolvedValue({ active: true });
+      prisma.comment.create.mockResolvedValue({
+        id: 'reply-1',
+        body: 'رد',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        parentId: 'comment-1',
+        author: {
+          id: actor.id,
+          name: 'أحمد',
+          avatarUrl: null,
+        },
+      });
+      prisma.user.findUnique.mockResolvedValue({ name: 'أحمد' });
+
+      const result = await service.createReply('comment-1', actor, {
+        body: 'رد',
+      });
+
+      expect(prisma.comment.create).toHaveBeenCalledWith({
+        data: {
+          postId: 'post-1',
+          authorId: actor.id,
+          parentId: 'comment-1',
+          body: 'رد',
+        },
+        include: { author: true },
+      });
+      expect(result.comment.parentId).toBe('comment-1');
+      expect(notifications.notify).toHaveBeenCalled();
+    });
+
+    it('lists nested replies under a comment', async () => {
+      prisma.comment.findUnique.mockResolvedValue({
+        id: 'comment-1',
+        postId: 'post-1',
+      });
+      prisma.post.findFirst.mockResolvedValue({ active: true });
+      prisma.comment.findMany.mockResolvedValue([
+        {
+          id: 'comment-1',
+          body: 'أصل',
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          parentId: null,
+          author: { id: other.id, name: 'س', avatarUrl: null },
+        },
+        {
+          id: 'reply-1',
+          body: 'رد',
+          createdAt: new Date('2026-01-01T01:00:00.000Z'),
+          parentId: 'comment-1',
+          author: { id: actor.id, name: 'أحمد', avatarUrl: null },
+        },
+        {
+          id: 'reply-2',
+          body: 'رد على الرد',
+          createdAt: new Date('2026-01-01T02:00:00.000Z'),
+          parentId: 'reply-1',
+          author: { id: other.id, name: 'س', avatarUrl: null },
+        },
+      ]);
+
+      const result = await service.listReplies('comment-1');
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.id).toBe('reply-1');
+      expect(result.items[0]?.replies[0]?.id).toBe('reply-2');
     });
 
     it('a stranger cannot update someone else’s comment', async () => {

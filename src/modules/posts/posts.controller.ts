@@ -265,9 +265,13 @@ export class PostsController {
   @Public()
   @Get(':id/comments')
   @ApiSecurity({})
-  @ApiOperation({ summary: 'List comments on a post' })
+  @ApiOperation({
+    summary: 'List comments on a post',
+    description:
+      'Paginated top-level comments with nested replies (replies may themselves have replies).',
+  })
   @ApiOkResponse({
-    description: 'Paginated list of comments',
+    description: 'Paginated top-level comments with nested replies',
     schema: { example: paginated(sampleComment) },
   })
   listComments(

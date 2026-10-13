@@ -113,6 +113,23 @@ describe('PostOptionsService', () => {
     expect(result.byType.reel.fields).toEqual({});
   });
 
+  it('allows free-text specialty (not only catalog labels)', async () => {
+    prisma.postOption.findMany.mockResolvedValue([
+      {
+        id: 's1',
+        kind: PostOptionKind.specialty,
+        label: 'إنتاج/صناعة',
+        parentId: null,
+      },
+    ]);
+
+    const fields = await service.validateSelections(PostType.job_offering, {
+      specialty: 'خياطة حسب الطلب',
+    });
+
+    expect(fields).toEqual({});
+  });
+
   it('requires parentId when creating a skill', async () => {
     const error = await service
       .create({

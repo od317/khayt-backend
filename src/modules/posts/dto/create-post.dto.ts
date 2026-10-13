@@ -107,8 +107,15 @@ export class CreatePostDto {
   @IsString()
   businessId?: string;
 
-  @ApiPropertyOptional({ example: '' })
+  @ApiPropertyOptional({
+    example: 'إنتاج/صناعة',
+    description:
+      'Optional free-text. Catalog labels from GET /post-options are suggested but not required.',
+  })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && value.trim() === '' ? undefined : value,
+  )
   @IsString()
   @MaxLength(100)
   specialty?: string;

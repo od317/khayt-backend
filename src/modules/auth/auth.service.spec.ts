@@ -14,8 +14,11 @@ import { RedisService } from '../../common/redis/redis.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { AppConfig } from '../../config/configuration';
 import {
+  AVAILABILITY_RATE_LIMIT_MAX,
+  AVAILABILITY_RATE_WINDOW_SECONDS,
   OTP_RATE_WINDOW_SECONDS,
   OTP_TTL_SECONDS,
+  availabilityLimitKey,
   otpAttemptsKey,
   otpKey,
   otpLimitKey,
@@ -611,6 +614,63 @@ describe('AuthService', () => {
       expect(error).toBeInstanceOf(ForbiddenException);
       expect((error as ForbiddenException).getResponse()).toMatchObject({
         error: 'cannot_delete_account',
+      });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setAvailableForWork', () => {
+    it('sets availableForWork for an employee', async () => {
+      redis.increment.mockResolvedValue(1);
+      prisma.user.update.mockResolvedValue(
+        makeUser({ availableForWork: false }),
+      );
+
+      const result = await service.setAvailableForWork(actor, false);
+
+      expect(redis.increment).toHaveBeenCalledWith(
+        availabilityLimitKey(actor.id),
+      );
+      expect(redis.expire).toHaveBeenCalledWith(
+        availabilityLimitKey(actor.id),
+        AVAILABILITY_RATE_WINDOW_SECONDS,
+      );
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: actor.id },
+        data: { availableForWork: false },
+        include: { location: true },
+      });
+      expect(result.user.availableForWork).toBe(false);
+    });
+
+    it('rejects non-employees', async () => {
+      const storeActor: AuthenticatedUser = {
+        ...actor,
+        role: UserRole.store,
+      };
+
+      const error = await service
+        .setAvailableForWork(storeActor, true)
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect(redis.increment).not.toHaveBeenCalled();
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it(`rate limits after ${AVAILABILITY_RATE_LIMIT_MAX} toggles in 5 minutes`, async () => {
+      redis.increment.mockResolvedValue(AVAILABILITY_RATE_LIMIT_MAX + 1);
+
+      const error = await service
+        .setAvailableForWork(actor, true)
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'too_many_requests',
       });
       expect(prisma.user.update).not.toHaveBeenCalled();
     });

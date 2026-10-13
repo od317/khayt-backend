@@ -42,6 +42,7 @@ type PrismaMock = {
     count: ReturnType<typeof vi.fn>;
     findUnique: ReturnType<typeof vi.fn>;
   };
+  bill: { aggregate: ReturnType<typeof vi.fn> };
   stockMovement: { findMany: ReturnType<typeof vi.fn> };
   business: { findUnique: ReturnType<typeof vi.fn> };
   $transaction: ReturnType<typeof vi.fn>;
@@ -57,6 +58,9 @@ describe('InventoryService', () => {
         findMany: vi.fn().mockResolvedValue([]),
         count: vi.fn().mockResolvedValue(0),
         findUnique: vi.fn(),
+      },
+      bill: {
+        aggregate: vi.fn().mockResolvedValue({ _sum: { paid: 0 } }),
       },
       stockMovement: { findMany: vi.fn().mockResolvedValue([]) },
       business: { findUnique: vi.fn() },
@@ -98,6 +102,35 @@ describe('InventoryService', () => {
       expect(result.items[0]?.sold).toBe(90);
       expect(result.items[0]?.isLowStock).toBe(true);
       expect(result.items[1]?.isLowStock).toBe(false);
+    });
+
+    it('returns quantity totals and money totals', async () => {
+      prisma.supply.findMany.mockResolvedValue([
+        makeSupply({ sent: 100, remaining: 40, unitPrice: 5000 }),
+        makeSupply({
+          id: 'supply-2',
+          sent: 50,
+          remaining: 20,
+          unitPrice: 2000,
+        }),
+      ]);
+      prisma.supply.count.mockResolvedValue(2);
+      prisma.bill.aggregate.mockResolvedValue({ _sum: { paid: 150000 } });
+
+      const result = await service.listInventory(
+        { page: 1, limit: 20 },
+        internal,
+      );
+
+      // quantities
+      expect(result.totals.productCount).toBe(2);
+      expect(result.totals.sent).toBe(150);
+      expect(result.totals.remaining).toBe(60);
+      expect(result.totals.sold).toBe(90);
+      // money: اجمالي المرسل / المدفوع / المتبقي
+      expect(result.totals.money.sent).toBe(100 * 5000 + 50 * 2000); // 600000
+      expect(result.totals.money.paid).toBe(150000);
+      expect(result.totals.money.remaining).toBe(450000);
     });
 
     it('filters lowStock=true', async () => {
@@ -177,7 +210,7 @@ describe('InventoryService', () => {
       prisma.business.findUnique.mockResolvedValue(null);
 
       const error = await service
-        .listSupply({ page: 1, limit: 20 }, other)
+        .listSupply({}, other)
         .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(ForbiddenException);
@@ -187,7 +220,7 @@ describe('InventoryService', () => {
       prisma.business.findUnique.mockResolvedValue({ id: 'biz-1' });
 
       const error = await service
-        .listSupply({ page: 1, limit: 20, businessId: 'biz-other' }, owner)
+        .listSupply({ businessId: 'biz-other' }, owner)
         .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(ForbiddenException);
@@ -196,9 +229,8 @@ describe('InventoryService', () => {
     it('scopes to the owned business when no businessId is given', async () => {
       prisma.business.findUnique.mockResolvedValue({ id: 'biz-1' });
       prisma.supply.findMany.mockResolvedValue([]);
-      prisma.supply.count.mockResolvedValue(0);
 
-      await service.listSupply({ page: 1, limit: 20 }, owner);
+      await service.listSupply({}, owner);
 
       expect(prisma.supply.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -209,9 +241,8 @@ describe('InventoryService', () => {
 
     it('lets internal staff see all supply', async () => {
       prisma.supply.findMany.mockResolvedValue([]);
-      prisma.supply.count.mockResolvedValue(0);
 
-      await service.listSupply({ page: 1, limit: 20 }, internal);
+      await service.listSupply({}, internal);
 
       expect(prisma.business.findUnique).not.toHaveBeenCalled();
       expect(prisma.supply.findMany).toHaveBeenCalledWith(
@@ -219,6 +250,22 @@ describe('InventoryService', () => {
           where: {},
         }),
       );
+    });
+
+    it('returns every item without pagination', async () => {
+      prisma.business.findUnique.mockResolvedValue({ id: 'biz-1' });
+      prisma.supply.findMany.mockResolvedValue(
+        Array.from({ length: 25 }, (_, i) =>
+          makeSupply({ id: `supply-${i}`, sent: 10, remaining: 5 }),
+        ),
+      );
+
+      const result = await service.listSupply({}, owner);
+
+      expect(result.items).toHaveLength(25);
+      expect(result.total).toBe(25);
+      expect(result).not.toHaveProperty('page');
+      expect(result).not.toHaveProperty('limit');
     });
   });
 });

@@ -148,7 +148,9 @@ export const sampleComment = {
   id: '',
   body: '',
   createdAt: AT,
+  parentId: null as string | null,
   author: { id: '', name: '', avatarUrl: null as string | null },
+  replies: [] as unknown[],
 };
 
 export const sampleOrderListItem = {
@@ -252,6 +254,38 @@ export const sampleInventoryItem = {
   isLowStock: false,
   updatedAt: AT,
 };
+
+/** Supply/inventory list totals: quantities + money (اجمالي المرسل / المدفوع / المتبقي). */
+export const sampleInventoryTotals = {
+  productCount: 0,
+  sent: 0,
+  remaining: 0,
+  sold: 0,
+  money: {
+    sent: 0,
+    paid: 0,
+    remaining: 0,
+  },
+};
+
+export function inventoryListSample(item = sampleInventoryItem) {
+  return {
+    items: [item],
+    totals: sampleInventoryTotals,
+    total: 0,
+    page: 1,
+    limit: 20,
+  };
+}
+
+/** GET /supply — full list, no pagination. */
+export function supplyListSample(item = sampleInventoryItem) {
+  return {
+    items: [item],
+    totals: sampleInventoryTotals,
+    total: 0,
+  };
+}
 
 export const sampleDelivery = {
   id: '',

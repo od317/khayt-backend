@@ -86,7 +86,17 @@ export type CommentResponse = {
   id: string;
   body: string;
   createdAt: string;
+  parentId: string | null;
   author: CommentAuthorResponse;
+  replies: CommentResponse[];
+};
+
+export type CommentWithAuthor = {
+  id: string;
+  body: string;
+  createdAt: Date;
+  parentId: string | null;
+  author: User;
 };
 
 export type PostCounts = {
@@ -189,20 +199,41 @@ export function toPostResponse(
   };
 }
 
-export function toCommentResponse(comment: {
-  id: string;
-  body: string;
-  createdAt: Date;
-  author: User;
-}): CommentResponse {
+export function toCommentResponse(
+  comment: CommentWithAuthor,
+  replies: CommentResponse[] = [],
+): CommentResponse {
   return {
     id: comment.id,
     body: comment.body,
     createdAt: comment.createdAt.toISOString(),
+    parentId: comment.parentId,
     author: {
       id: comment.author.id,
       name: comment.author.name,
       avatarUrl: comment.author.avatarUrl,
     },
+    replies,
   };
+}
+
+/** Build a nested reply tree. Roots = comments whose parentId is `rootParentId`. */
+export function buildCommentTree(
+  comments: CommentWithAuthor[],
+  rootParentId: string | null = null,
+): CommentResponse[] {
+  const byParent = new Map<string | null, CommentWithAuthor[]>();
+  for (const comment of comments) {
+    const key = comment.parentId;
+    const bucket = byParent.get(key);
+    if (bucket) bucket.push(comment);
+    else byParent.set(key, [comment]);
+  }
+
+  const nest = (parentId: string | null): CommentResponse[] => {
+    const children = byParent.get(parentId) ?? [];
+    return children.map((child) => toCommentResponse(child, nest(child.id)));
+  };
+
+  return nest(rootParentId);
 }
