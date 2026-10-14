@@ -71,7 +71,6 @@ const POST_INCLUDE = {
       name: true,
       price: true,
       images: true,
-      businessId: true,
       deletedAt: true,
     },
   },
@@ -918,16 +917,13 @@ export class PostsService {
   }
 
   private async assertCanLinkProduct(
-    actor: AuthenticatedUser,
+    _actor: AuthenticatedUser,
     productId: string,
-    businessId: string | undefined,
+    _businessId: string | undefined,
   ): Promise<void> {
     const product = await this.prisma.product.findFirst({
       where: { id: productId, deletedAt: null },
-      select: {
-        businessId: true,
-        business: { select: { ownerId: true } },
-      },
+      select: { id: true },
     });
 
     if (!product) {
@@ -939,26 +935,6 @@ export class PostsService {
         },
         HttpStatus.BAD_REQUEST,
       );
-    }
-
-    if (businessId && product.businessId !== businessId) {
-      throw new HttpException(
-        {
-          error: 'validation_failed',
-          message: 'Product belongs to a different business',
-          fields: { productId: 'must belong to the same business as the post' },
-        },
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const isAdmin =
-      actor.role === UserRole.admin || actor.role === UserRole.super_admin;
-    if (!isAdmin && product.business.ownerId !== actor.id) {
-      throw new ForbiddenException({
-        error: 'forbidden',
-        message: 'Cannot link a post to a product you do not own',
-      });
     }
   }
 

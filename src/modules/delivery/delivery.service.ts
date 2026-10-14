@@ -362,27 +362,6 @@ export class DeliveryService {
           });
         }
 
-        // Notify each distinct supplier business owner.
-        const supplierLines = await this.prisma.orderLine.findMany({
-          where: { orderId: { in: orderIds } },
-          select: {
-            business: { select: { ownerId: true } },
-          },
-          distinct: ['businessId'],
-        });
-        const supplierOwnerIds = new Set(
-          supplierLines.map((l) => l.business.ownerId),
-        );
-
-        for (const ownerId of supplierOwnerIds) {
-          await this.notifications.notify({
-            userId: ownerId,
-            type: NotificationType.order_delivered,
-            title: 'تم بيع منتجاتك',
-            body: `تم بيع منتجات من طلب ${orderRows.map((o) => o.number).join(', ')}`,
-            linkTo: `/orders/${orderIds[0]}`,
-          });
-        }
       }
     }
 

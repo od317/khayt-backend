@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
@@ -12,8 +8,6 @@ import { QuerySupplyDto } from './dto/query-supply.dto';
 import {
   InventoryItemResponse,
   InventoryMovementResponse,
-  BusinessSummaryResponse,
-  toBusinessSummaryResponse,
   toInventoryItemResponse,
   toInventoryMovementResponse,
 } from './inventory.mapper';
@@ -63,14 +57,10 @@ export type SupplyListResponse = {
 
 export type InventoryDetailResponse = {
   item: InventoryItemResponse;
-  business: BusinessSummaryResponse;
   movements: InventoryMovementResponse[];
 };
 
-type SupplyQueryScope = { type: 'all' } | { type: 'business'; id: string };
-
 type SupplyQueryFilters = {
-  businessId?: string;
   q?: string;
   category?: string;
   lowStock?: string;
@@ -78,19 +68,12 @@ type SupplyQueryFilters = {
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   private async loadSupplyItems(
     query: SupplyQueryFilters,
-    scope: SupplyQueryScope,
   ): Promise<{ items: InventoryItemResponse[]; totals: InventoryTotals }> {
     const where: Prisma.SupplyWhereInput = {};
-
-    if (scope.type === 'business') {
-      where.businessId = scope.id;
-    } else if (query.businessId) {
-      where.businessId = query.businessId;
-    }
 
     if (query.q) {
       where.product = {
@@ -108,22 +91,15 @@ export class InventoryService {
       };
     }
 
-    const billWhere: Prisma.BillWhereInput = {};
-    if (typeof where.businessId === 'string') {
-      billWhere.businessId = where.businessId;
-    }
-
     const [rows, billAgg] = await this.prisma.$transaction([
       this.prisma.supply.findMany({
         where,
         orderBy: { updatedAt: 'desc' },
         include: {
           product: { select: { name: true, unit: true } },
-          business: { select: { name: true } },
         },
       }),
       this.prisma.bill.aggregate({
-        where: billWhere,
         _sum: { paid: true },
       }),
     ]);
@@ -167,9 +143,7 @@ export class InventoryService {
     actor: AuthenticatedUser,
   ): Promise<InventoryListResponse> {
     this.assertInternal(actor);
-    const { items, totals } = await this.loadSupplyItems(query, {
-      type: 'all',
-    });
+    const { items, totals } = await this.loadSupplyItems(query);
     const { skip, take } = skipTake(query.page, query.limit);
     return {
       items: items.slice(skip, skip + take),
@@ -190,7 +164,6 @@ export class InventoryService {
       where: { id },
       include: {
         product: { select: { name: true, unit: true } },
-        business: true,
       },
     });
 
@@ -208,7 +181,6 @@ export class InventoryService {
 
     return {
       item: toInventoryItemResponse(supply),
-      business: toBusinessSummaryResponse(supply.business),
       movements: movements.map(toInventoryMovementResponse),
     };
   }
@@ -217,42 +189,13 @@ export class InventoryService {
     query: QuerySupplyDto,
     actor: AuthenticatedUser,
   ): Promise<SupplyListResponse> {
-    const scope: SupplyQueryScope = this.isInternal(actor)
-      ? { type: 'all' }
-      : await this.ownedBusinessScope(actor, query.businessId);
-
-    const { items, totals } = await this.loadSupplyItems(query, scope);
+    this.assertInternal(actor);
+    const { items, totals } = await this.loadSupplyItems(query);
     return {
       items,
       totals,
       total: items.length,
     };
-  }
-
-  private async ownedBusinessScope(
-    actor: AuthenticatedUser,
-    businessId?: string,
-  ): Promise<{ type: 'business'; id: string }> {
-    const ownedBusiness = await this.prisma.business.findUnique({
-      where: { ownerId: actor.id },
-      select: { id: true },
-    });
-
-    if (!ownedBusiness) {
-      throw new ForbiddenException({
-        error: 'forbidden',
-        message: 'You do not own a business',
-      });
-    }
-
-    if (businessId && businessId !== ownedBusiness.id) {
-      throw new ForbiddenException({
-        error: 'forbidden',
-        message: 'You can only view your own supply',
-      });
-    }
-
-    return { type: 'business', id: ownedBusiness.id };
   }
 
   private isInternal(actor: AuthenticatedUser): boolean {

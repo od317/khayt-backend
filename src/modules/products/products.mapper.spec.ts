@@ -1,5 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { toColorImages } from './products.mapper';
+import { Product } from '@prisma/client';
+import { toColorImages, toProductResponse } from './products.mapper';
+
+const baseProduct = (): Product => ({
+  id: 'prod-1',
+  name: 'قميص',
+  category: 'قمصان',
+  description: null,
+  images: [],
+  unit: 'قطعة',
+  price: 5000,
+  inWarehouse: false,
+  available: true,
+  guarantee: false,
+  variants: null,
+  packaging: null,
+  discount: null,
+  offer: null,
+  deletedAt: null,
+  createdAt: new Date('2026-01-01T00:00:00.000Z'),
+  updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+});
 
 describe('toColorImages', () => {
   it('builds colorImages from a color-first variant tree', () => {
@@ -52,5 +73,20 @@ describe('toColorImages', () => {
         options: [{ name: 'M', image: '/uploads/products/m.jpg' }],
       }),
     ).toEqual([]);
+  });
+});
+
+describe('toProductResponse', () => {
+  it('maps a platform-owned product without business fields', () => {
+    const result = toProductResponse(baseProduct());
+
+    expect(result).toMatchObject({
+      id: 'prod-1',
+      name: 'قميص',
+      category: 'قمصان',
+      price: 5000,
+    });
+    expect(result).not.toHaveProperty('businessId');
+    expect(result).not.toHaveProperty('business');
   });
 });

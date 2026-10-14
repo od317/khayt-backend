@@ -66,17 +66,14 @@ const makeLine = (overrides: Record<string, unknown> = {}) => ({
   id: 'line-1',
   orderId: 'order-1',
   productId: 'prod-1',
-  businessId: 'biz-1',
   quantity: 2,
   unitPrice: 5000,
   picked: false,
   product: {
     id: 'prod-1',
     name: 'قميص',
-    businessId: 'biz-1',
     images: ['/uploads/products/shirt.jpg'],
   },
-  business: { id: 'biz-1', name: 'معمل' },
   ...overrides,
 });
 
@@ -302,7 +299,6 @@ describe('OrdersService', () => {
         {
           id: 'prod-1',
           name: 'قميص',
-          businessId: 'biz-1',
           price: 5000,
           inWarehouse: true,
           deletedAt: null,
@@ -339,7 +335,6 @@ describe('OrdersService', () => {
         {
           id: 'prod-1',
           name: 'قميص',
-          businessId: 'biz-1',
           price: 5000,
           inWarehouse: true,
           deletedAt: null,
@@ -400,7 +395,6 @@ describe('OrdersService', () => {
         {
           id: 'prod-1',
           name: 'قميص',
-          businessId: 'biz-1',
           price: 5000,
           inWarehouse: true,
           deletedAt: null,
@@ -478,7 +472,6 @@ describe('OrdersService', () => {
       prisma.product.findMany.mockResolvedValue([
         {
           id: 'prod-1',
-          businessId: 'biz-1',
           price: 5000,
           inWarehouse: false,
           deletedAt: null,
@@ -499,7 +492,6 @@ describe('OrdersService', () => {
       prisma.product.findMany.mockResolvedValue([
         {
           id: 'prod-1',
-          businessId: 'biz-1',
           price: 5000,
           inWarehouse: true,
           deletedAt: null,
@@ -680,7 +672,7 @@ describe('OrdersService', () => {
         .mockResolvedValueOnce(existing)
         .mockResolvedValueOnce({ ...existing, status: OrderStatus.delivered });
       prisma.orderLine.findMany.mockResolvedValue([
-        { productId: 'prod-1', businessId: 'biz-1', quantity: 2, picked: true },
+        { productId: 'prod-1', quantity: 2, picked: true },
       ]);
       prisma.order.update.mockResolvedValue({
         ...existing,
@@ -735,7 +727,7 @@ describe('OrdersService', () => {
         .mockResolvedValueOnce(existing)
         .mockResolvedValueOnce({ ...existing, status: OrderStatus.delivered });
       prisma.orderLine.findMany.mockResolvedValue([
-        { productId: 'prod-1', businessId: 'biz-1', quantity: 2, picked: true },
+        { productId: 'prod-1', quantity: 2, picked: true },
       ]);
       prisma.supply.update.mockResolvedValue({ id: 'supply-1' });
       prisma.stockMovement.createMany.mockResolvedValue({ count: 1 });
@@ -755,12 +747,7 @@ describe('OrdersService', () => {
       });
 
       expect(prisma.supply.update).toHaveBeenCalledWith({
-        where: {
-          businessId_productId: {
-            businessId: 'biz-1',
-            productId: 'prod-1',
-          },
-        },
+        where: { productId: 'prod-1' },
         data: { remaining: { decrement: 2 } },
         select: { id: true },
       });

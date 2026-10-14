@@ -5,7 +5,6 @@ export const sampleProductRef = {
   name: 'قميص أبيض رجالي',
   price: 45000,
   images: ['/uploads/products/example.jpg'],
-  businessId: 'biz-workshop',
 };
 
 export const sampleProductNamesResponse = {
@@ -31,6 +30,7 @@ export const sampleUser = {
   availableForWork: true,
   verified: false,
   onboardingCompleted: true,
+  canOrder: false,
 };
 
 export const sampleBusiness = {
@@ -54,7 +54,6 @@ export const sampleBusiness = {
 
 export const sampleProduct = {
   id: '',
-  businessId: '',
   name: '',
   category: '',
   description: null as string | null,
@@ -100,8 +99,6 @@ export const sampleProduct = {
   discount: null as unknown,
   offer: null as string | null,
   createdAt: AT,
-  businessName: '',
-  businessLocation: '',
 };
 
 export const samplePost = {
@@ -173,8 +170,6 @@ export const sampleOrderLine = {
   productId: '',
   productName: '',
   productImage: null as string | null,
-  businessId: '',
-  businessName: '',
   quantity: 1,
   unitPrice: 0,
   picked: false,
@@ -245,8 +240,6 @@ export const sampleInventoryItem = {
   productId: '',
   productName: '',
   productUnit: 'قطعة',
-  businessId: '',
-  businessName: '',
   sent: 0,
   remaining: 0,
   sold: 0,

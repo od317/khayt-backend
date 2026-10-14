@@ -186,18 +186,6 @@ export class BillingService {
           HttpStatus.BAD_REQUEST,
         );
       }
-      if (product.businessId !== dto.businessId) {
-        throw new HttpException(
-          {
-            error: 'validation_failed',
-            message: 'Product does not belong to this business',
-            fields: {
-              [`lines[${i}].productId`]: 'belongs to another business',
-            },
-          },
-          HttpStatus.BAD_REQUEST,
-        );
-      }
     }
 
     const billTotal = dto.lines.reduce(
@@ -230,14 +218,8 @@ export class BillingService {
 
       for (const line of dto.lines) {
         await tx.supply.upsert({
-          where: {
-            businessId_productId: {
-              businessId: dto.businessId,
-              productId: line.productId,
-            },
-          },
+          where: { productId: line.productId },
           create: {
-            businessId: dto.businessId,
             productId: line.productId,
             sent: line.quantity,
             remaining: line.quantity,
@@ -288,10 +270,7 @@ export class BillingService {
       });
 
       const supplies = await tx.supply.findMany({
-        where: {
-          businessId: dto.businessId,
-          productId: { in: productIds },
-        },
+        where: { productId: { in: productIds } },
         select: { id: true, productId: true },
       });
       const supplyByProduct = new Map(supplies.map((s) => [s.productId, s.id]));

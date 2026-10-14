@@ -637,18 +637,6 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   'get /businesses/{id}': {
     '200': ok({
       business: sampleBusiness,
-      products: [sampleProduct],
-      supply: [
-        {
-          productId: '',
-          productName: '',
-          sent: 0,
-          remaining: 0,
-          sold: 0,
-          unit: 'قطعة',
-          unitPrice: 0,
-        },
-      ],
       isOwner: false,
     }),
   },
@@ -681,7 +669,6 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
               experience: sampleBusiness.experience,
               categories: [] as { id: string; name: string; slug: string }[],
             },
-            products: [sampleProduct],
             posts: [samplePost],
           },
         },
@@ -986,8 +973,12 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         ),
       },
       forbidden: {
-        summary: 'Only stores can place orders',
-        value: errorBody(403, 'forbidden', 'Only stores can place orders'),
+        summary: 'Only stores and workshops can place orders',
+        value: errorBody(
+          403,
+          'forbidden',
+          'Only stores and workshops can place orders',
+        ),
       },
     }),
     '404': errors('Not found', {

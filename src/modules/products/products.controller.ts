@@ -22,11 +22,13 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { diskStorage } from 'multer';
 import { RequireUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import type { AuthenticatedUser } from '../../common/types/auth';
 import { Paginated } from '../../common/utils/pagination';
@@ -36,11 +38,16 @@ import {
   sampleProductNamesResponse,
 } from '../../common/swagger/samples';
 import { CreateProductDto } from './dto/create-product.dto';
-import { ProductNamesQueryDto } from './dto/product-names-query.dto';
 import { QueryProductsDto } from './dto/query-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductResponse } from './products.mapper';
 import { ProductDetailResponse, ProductsService } from './products.service';
+
+const PRODUCT_STAFF_ROLES = [
+  UserRole.admin,
+  UserRole.super_admin,
+  UserRole.inventory,
+] as const;
 
 const productImagesStorage = diskStorage({
   destination: './uploads/products',
@@ -58,14 +65,14 @@ const ProductFilesInterceptor = AnyFilesInterceptor({
 @ApiTags('products')
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly products: ProductsService) { }
+  constructor(private readonly products: ProductsService) {}
 
   // ⚠️ Order matters: 'names' must come BEFORE ':id'.
   @Get('names')
+  @Roles(...PRODUCT_STAFF_ROLES)
   @ApiOperation({
     summary: 'List product names',
-    description:
-      'Returns id/name pairs for products owned by the caller. Admins see all products. Optionally scope to one business.',
+    description: 'Staff only. Returns id/name pairs for the platform catalog.',
   })
   @ApiBearerAuth('access-token')
   @ApiOkResponse({
@@ -84,9 +91,8 @@ export class ProductsController {
   })
   names(
     @RequireUser() user: AuthenticatedUser,
-    @Query() query: ProductNamesQueryDto,
   ): Promise<{ items: { id: string; name: string }[] }> {
-    return this.products.names(user, query);
+    return this.products.names(user);
   }
 
   @Public()
@@ -104,7 +110,7 @@ export class ProductsController {
   @ApiOperation({
     summary: 'Similar products',
     description:
-      'Paginated similar products: same category or same business first, then other available products.',
+      'Paginated similar products: same category first, then other available products.',
   })
   @ApiOkResponse({
     description: 'Paginated similar products',
@@ -121,18 +127,19 @@ export class ProductsController {
   @Get(':id')
   @ApiSecurity({})
   @ApiOperation({ summary: 'Product detail' })
-  @ApiOkResponse({ description: 'Product with business + available quantity' })
+  @ApiOkResponse({ description: 'Product with optional available quantity' })
   detail(@Param('id') id: string): Promise<ProductDetailResponse> {
     return this.products.detail(id);
   }
 
   @Post()
+  @Roles(...PRODUCT_STAFF_ROLES)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(ProductFilesInterceptor)
   @ApiOperation({
     summary: 'Create product',
     description:
-      'multipart/form-data. Gallery images use the field name `images`. Variant images use `variant_<optionIndex>` and `variant_<optionIndex>_child_<childIndex>`.',
+      'Staff only. multipart/form-data. Gallery images use the field name `images`. Variant images use `variant_<optionIndex>` and `variant_<optionIndex>_child_<childIndex>`.',
   })
   @ApiBearerAuth('access-token')
   create(
@@ -144,9 +151,10 @@ export class ProductsController {
   }
 
   @Patch(':id')
+  @Roles(...PRODUCT_STAFF_ROLES)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(ProductFilesInterceptor)
-  @ApiOperation({ summary: 'Update product' })
+  @ApiOperation({ summary: 'Update product (staff only)' })
   @ApiBearerAuth('access-token')
   update(
     @Param('id') id: string,
@@ -158,8 +166,9 @@ export class ProductsController {
   }
 
   @Delete(':id')
+  @Roles(...PRODUCT_STAFF_ROLES)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Soft-delete product' })
+  @ApiOperation({ summary: 'Soft-delete product (staff only)' })
   @ApiBearerAuth('access-token')
   remove(
     @Param('id') id: string,

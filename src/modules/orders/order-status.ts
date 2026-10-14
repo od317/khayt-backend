@@ -100,7 +100,10 @@ export function canActorTransition(
   }
 
   if (to === OrderStatus.cancelled) {
-    if (actor.role === UserRole.store) {
+    if (
+      actor.role === UserRole.store ||
+      actor.role === UserRole.workshop
+    ) {
       return (
         actor.id === order.storeId &&
         (from === OrderStatus.review ||

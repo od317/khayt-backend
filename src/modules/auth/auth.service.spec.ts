@@ -317,11 +317,27 @@ describe('AuthService', () => {
     });
     expect(result.user.id).toBe(created.id);
     expect(result.user.name).toBeNull();
+    expect(result.user.canOrder).toBe(false);
     expect(result.accessToken).toBe('access-token');
     expect(result.refreshToken).toBe('refresh-token');
     expect(result.accessTokenExpiresAt).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
     );
+  });
+
+  it('returns canOrder true on verify for an onboarded store', async () => {
+    const existing = makeUser({
+      id: 'store-1',
+      name: NAME,
+      role: UserRole.store,
+      onboardingCompleted: true,
+    });
+    mockOtp();
+    prisma.user.findUnique.mockResolvedValue(existing);
+
+    const result = await service.verify(PHONE, '123456');
+
+    expect(result.user.canOrder).toBe(true);
   });
 
   it('returns the existing user on second verify', async () => {
@@ -408,8 +424,63 @@ describe('AuthService', () => {
       });
       expect(result.user.onboardingCompleted).toBe(true);
       expect(result.user.role).toBe(UserRole.employee);
+      expect(result.user.canOrder).toBe(false);
       expect(result.business).toBeNull();
       expect(prisma.business.create).not.toHaveBeenCalled();
+    });
+
+    it('sets canOrder true after store/workshop onboarding', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: false,
+      });
+      prisma.location.findFirst.mockResolvedValue({
+        id: LOCATION_ID,
+        name: 'دمشق',
+      });
+      prisma.role.findFirst.mockResolvedValue({ value: UserRole.store });
+      const updated = makeUser({
+        role: UserRole.store,
+        locationId: LOCATION_ID,
+        onboardingCompleted: true,
+      });
+      prisma.user.update.mockResolvedValue(updated);
+      prisma.business.create.mockResolvedValue({
+        id: 'biz-1',
+        ownerId: actor.id,
+        type: 'store',
+        name: 'متجر',
+        location: 'دمشق',
+        description: null,
+        phone: null,
+        imageUrl: null,
+        verified: false,
+        capacity: null,
+        equipment: null,
+        minOrder: null,
+        experience: null,
+        services: [],
+        duration: null,
+        topics: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        categories: [],
+      });
+
+      const result = await service.onboarding(
+        actor,
+        {
+          role: UserRole.store,
+          locationId: LOCATION_ID,
+          businessName: 'متجر',
+          description: 'وصف',
+          services: ['بيع'],
+          experienceYears: 1,
+        },
+        { filename: 'store.jpg' } as Express.Multer.File,
+      );
+
+      expect(result.user.canOrder).toBe(true);
+      expect(result.user.role).toBe(UserRole.store);
     });
 
     it('creates a business profile for store/workshop', async () => {

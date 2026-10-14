@@ -30,8 +30,6 @@ export type OrderLineResponse = {
   productId: string;
   productName: string;
   productImage: string | null;
-  businessId: string;
-  businessName: string;
   quantity: number;
   unitPrice: number;
   picked: boolean;
@@ -86,13 +84,11 @@ type OrderLineWithRelations = {
   id: string;
   orderId: string;
   productId: string;
-  businessId: string;
   quantity: number;
   unitPrice: number;
   picked: boolean;
-  variant?: unknown;                                 // 👈 add
+  variant?: unknown;
   product: { name: string; images: string[] };
-  business: { name: string };
 };
 
 export function toOrderListItem(order: OrderWithStore): OrderListItemResponse {
@@ -120,8 +116,6 @@ export function toOrderLineResponse(
     productId: line.productId,
     productName: line.product.name,
     productImage: line.product.images?.[0] ?? null,
-    businessId: line.businessId,
-    businessName: line.business.name,
     variant:
       line.variant && typeof line.variant === 'object' && !Array.isArray(line.variant)
         ? (line.variant as Record<string, string>)

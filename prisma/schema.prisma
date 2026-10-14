@@ -242,12 +242,9 @@ model Business {
 
   // relations
   owner      User            @relation("BusinessOwner", fields: [ownerId], references: [id])
-  products   Product[]
-  supply     Supply[]
   posts      Post[]
   receiving  Receiving[]
   bills      Bill[]
-  orderLines OrderLine[]
   savedBy    SavedBusiness[]
   categories BusinessCategory[]   // 👈 ADDED
 
@@ -272,7 +269,6 @@ model BusinessCategory {
 
 model Product {
   id          String   @id @default(uuid())
-  businessId  String
   name        String
   category    String
   cartItems CartItem[]
@@ -293,13 +289,11 @@ model Product {
   discount  Json?
   offer     String?
 
-  business      Business        @relation(fields: [businessId], references: [id])
-  supply        Supply[]
-  orderLines    OrderLine[]
+  supply         Supply?
+  orderLines     OrderLine[]
   receivingLines ReceivingLine[]
-  billLines     BillLine[]
+  billLines      BillLine[]
 
-  @@index([businessId])
   @@index([inWarehouse])
   @@index([category])
 }
@@ -310,18 +304,13 @@ model Product {
 
 model Supply {
   id        String   @id @default(uuid())
-  businessId String
-  productId String
+  productId String   @unique
   sent      Int
   remaining Int      @default(0)
   unitPrice Int
   updatedAt DateTime @updatedAt
 
-  business Business @relation(fields: [businessId], references: [id])
-  product  Product  @relation(fields: [productId], references: [id])
-
-  @@unique([businessId, productId])
-  @@index([businessId])
+  product Product @relation(fields: [productId], references: [id])
 }
 
 // ============================================================
@@ -521,18 +510,15 @@ model OrderLine {
   id         String  @id @default(uuid())
   orderId    String
   productId  String
-  businessId String
   quantity   Int
   unitPrice  Int
   picked     Boolean @default(false)
   variant    Json?
 
-  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id])
-  business Business @relation(fields: [businessId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
-  @@index([businessId])
 }
 
 // ============================================================

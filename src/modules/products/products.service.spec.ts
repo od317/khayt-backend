@@ -1,12 +1,12 @@
 import {
   ConflictException,
-  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { BusinessType, Product, UserRole } from '@prisma/client';
+import { Product } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
+import { UserRole } from '@prisma/client';
 import { ProductsService } from './products.service';
 
 const actor: AuthenticatedUser = {
@@ -15,31 +15,8 @@ const actor: AuthenticatedUser = {
   phone: '0994037669',
 };
 
-const makeBusiness = () => ({
-  id: 'biz-1',
-  ownerId: actor.id,
-  type: BusinessType.workshop,
-  name: 'معمل',
-  location: 'دمشق',
-  description: null,
-  phone: null,
-  imageUrl: null,
-  verified: false,
-  capacity: null,
-  equipment: null,
-  minOrder: null,
-  experience: null,
-  duration: null,
-  topics: [],
-  createdAt: new Date('2026-01-01T00:00:00.000Z'),
-  updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-});
-
-const makeProduct = (
-  overrides: Partial<Product> = {},
-): Product & { business: ReturnType<typeof makeBusiness> } => ({
+const makeProduct = (overrides: Partial<Product> = {}): Product => ({
   id: 'prod-1',
-  businessId: 'biz-1',
   name: 'قميص',
   category: 'قمصان',
   description: null,
@@ -57,7 +34,6 @@ const makeProduct = (
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   ...overrides,
-  business: makeBusiness(),
 });
 
 type PrismaMock = {
@@ -68,7 +44,6 @@ type PrismaMock = {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
   };
-  business: { findUnique: ReturnType<typeof vi.fn> };
   supply: { findUnique: ReturnType<typeof vi.fn> };
   orderLine: { count: ReturnType<typeof vi.fn> };
 };
@@ -86,7 +61,6 @@ describe('ProductsService', () => {
         create: vi.fn(),
         update: vi.fn(),
       },
-      business: { findUnique: vi.fn() },
       supply: { findUnique: vi.fn() },
       orderLine: { count: vi.fn() },
     };
@@ -95,11 +69,9 @@ describe('ProductsService', () => {
   });
 
   it('creates a product with inWarehouse false', async () => {
-    prisma.business.findUnique.mockResolvedValue({ ownerId: actor.id });
     prisma.product.create.mockResolvedValue(makeProduct());
 
     const result = await service.create(actor, {
-      businessId: 'biz-1',
       name: 'قميص',
       category: 'قمصان',
       unit: 'قطعة',
@@ -108,7 +80,7 @@ describe('ProductsService', () => {
 
     expect(prisma.product.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        businessId: 'biz-1',
+        name: 'قميص',
         inWarehouse: false,
       }),
     });
@@ -116,13 +88,11 @@ describe('ProductsService', () => {
   });
 
   it('stores uploaded variant images instead of URLs', async () => {
-    prisma.business.findUnique.mockResolvedValue({ ownerId: actor.id });
     prisma.product.create.mockResolvedValue(makeProduct());
 
     await service.create(
       actor,
       {
-        businessId: 'biz-1',
         name: 'قميص',
         category: 'قمصان',
         unit: 'قطعة',
@@ -161,49 +131,8 @@ describe('ProductsService', () => {
     });
   });
 
-  it('rejects creation by a non-owner', async () => {
-    prisma.business.findUnique.mockResolvedValue({ ownerId: 'someone-else' });
-
-    const error = await service
-      .create(actor, {
-        businessId: 'biz-1',
-        name: 'قميص',
-        category: 'قمصان',
-        unit: 'قطعة',
-        price: 5000,
-      })
-      .catch((err: unknown) => err);
-
-    expect(error).toBeInstanceOf(ForbiddenException);
-    expect(prisma.product.create).not.toHaveBeenCalled();
-  });
-
-  it('lets an admin create a product for any business', async () => {
-    const admin: AuthenticatedUser = {
-      id: 'admin-1',
-      role: UserRole.admin,
-      phone: '0994000001',
-    };
-    prisma.business.findUnique.mockResolvedValue({ ownerId: 'someone-else' });
-    prisma.product.create.mockResolvedValue(makeProduct());
-
-    await service.create(admin, {
-      businessId: 'biz-1',
-      name: 'قميص',
-      category: 'قمصان',
-      unit: 'قطعة',
-      price: 5000,
-    });
-
-    expect(prisma.product.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ businessId: 'biz-1' }),
-    });
-  });
-
   it('soft-deletes a product that has not been ordered', async () => {
-    const existing = makeProduct();
-    prisma.product.findFirst.mockResolvedValue(existing);
-    prisma.business.findUnique.mockResolvedValue({ ownerId: actor.id });
+    prisma.product.findFirst.mockResolvedValue({ id: 'prod-1' });
     prisma.orderLine.count.mockResolvedValue(0);
     const softDeleted = makeProduct({ deletedAt: new Date() });
     prisma.product.update.mockResolvedValue(softDeleted);
@@ -219,8 +148,7 @@ describe('ProductsService', () => {
   });
 
   it('rejects deletion when the product has orders', async () => {
-    prisma.product.findFirst.mockResolvedValue(makeProduct());
-    prisma.business.findUnique.mockResolvedValue({ ownerId: actor.id });
+    prisma.product.findFirst.mockResolvedValue({ id: 'prod-1' });
     prisma.orderLine.count.mockResolvedValue(3);
 
     const error = await service
@@ -244,12 +172,7 @@ describe('ProductsService', () => {
 
     expect(result.availableQuantity).toBe(42);
     expect(prisma.supply.findUnique).toHaveBeenCalledWith({
-      where: {
-        businessId_productId: {
-          businessId: 'biz-1',
-          productId: 'prod-1',
-        },
-      },
+      where: { productId: 'prod-1' },
       select: { remaining: true },
     });
   });
@@ -266,8 +189,6 @@ describe('ProductsService', () => {
   });
 
   it('suppresses a soft-deleted product on detail (404)', async () => {
-    // detail() filters deletedAt: null, so a soft-deleted product is
-    // not found. availableQuantity is never computed.
     prisma.product.findFirst.mockResolvedValue(null);
 
     const error = await service.detail('prod-1').catch((err: unknown) => err);
@@ -276,14 +197,13 @@ describe('ProductsService', () => {
     expect(prisma.supply.findUnique).not.toHaveBeenCalled();
   });
 
-  it('queries detail with deletedAt: null', async () => {
+  it('queries detail with deletedAt: null and no business embed', async () => {
     prisma.product.findFirst.mockResolvedValue(makeProduct());
 
     await service.detail('prod-1');
 
     expect(prisma.product.findFirst).toHaveBeenCalledWith({
       where: { id: 'prod-1', deletedAt: null },
-      include: { business: true },
     });
   });
 
@@ -291,7 +211,6 @@ describe('ProductsService', () => {
     prisma.product.findFirst.mockResolvedValue({
       id: 'prod-qamis-abyad',
       category: 'قمصان',
-      businessId: 'biz-workshop',
     });
     prisma.product.count.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
     prisma.product.findMany

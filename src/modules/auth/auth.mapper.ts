@@ -7,6 +7,22 @@ import {
 export type { BusinessResponse };
 export { toBusinessResponse };
 
+/** Roles allowed to place warehouse orders (cart / checkout). */
+export const ORDERING_ROLES: readonly UserRole[] = [
+  UserRole.store,
+  UserRole.workshop,
+] as const;
+
+export function canOrder(
+  role: string,
+  onboardingCompleted: boolean,
+): boolean {
+  return (
+    onboardingCompleted &&
+    (ORDERING_ROLES as readonly string[]).includes(role)
+  );
+}
+
 export type UserResponse = {
   id: string;
   role: UserRole;
@@ -22,14 +38,17 @@ export type UserResponse = {
   availableForWork: boolean;
   verified: boolean;
   onboardingCompleted: boolean;
+  /** True when onboarding is done and role is store or workshop. */
+  canOrder: boolean;
 };
 
 export function toUserResponse(
   user: User & { location: Location | null },
 ): UserResponse {
+  const role = user.role as UserRole;
   return {
     id: user.id,
-    role: user.role as UserRole,
+    role,
     name: user.name,
     phone: user.phone,
     email: user.email,
@@ -42,5 +61,6 @@ export function toUserResponse(
     availableForWork: user.availableForWork,
     verified: user.verified,
     onboardingCompleted: user.onboardingCompleted,
+    canOrder: canOrder(role, user.onboardingCompleted),
   };
 }

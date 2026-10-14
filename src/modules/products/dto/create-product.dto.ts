@@ -172,11 +172,6 @@ export class CreateProductDto {
   @ApiProperty({ example: '' })
   @IsString()
   @IsNotEmpty()
-  businessId!: string;
-
-  @ApiProperty({ example: '' })
-  @IsString()
-  @IsNotEmpty()
   @MaxLength(200)
   name!: string;
 

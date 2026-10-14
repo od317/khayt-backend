@@ -18,12 +18,7 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
-import {
-  BusinessResponse,
-  SupplyLineResponse,
-  toBusinessResponse,
-  toSupplyLineResponse,
-} from './businesses.mapper';
+import { BusinessResponse, toBusinessResponse } from './businesses.mapper';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { QueryBusinessesDto } from './dto/query-businesses.dto';
@@ -33,10 +28,6 @@ import {
   toEmployeeLikeRole,
   type EmployeeLikeRole,
 } from '../../common/roles/employee-like';
-import {
-  ProductResponse,
-  toProductResponse,
-} from '../products/products.mapper';
 import {
   PostCounts,
   PostResponse,
@@ -55,8 +46,6 @@ const FACTORY_POSTS_LIMIT = 20;
 
 export type BusinessDetailResponse = {
   business: BusinessResponse;
-  products: ProductResponse[];
-  supply?: SupplyLineResponse[];
   isOwner: boolean;
 };
 
@@ -75,7 +64,6 @@ export type PublicFactoryProfileResponse = {
     experience: string | null;
     categories: BusinessResponse['categories'];
   };
-  products: ProductResponse[];
   posts: PostResponse[];
 };
 
@@ -124,7 +112,6 @@ const FACTORY_POST_INCLUDE = {
       name: true,
       price: true,
       images: true,
-      businessId: true,
       deletedAt: true,
     },
   },
@@ -203,37 +190,12 @@ export class BusinessesService {
       });
     }
 
-    const products = await this.prisma.product.findMany({
-      where: { businessId: id, deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const supplies = await this.prisma.supply.findMany({
-      where: { businessId: id },
-      include: {
-        product: { select: { name: true, unit: true, deletedAt: true } },
-      },
-    });
-
-    const visibleSupplies = supplies.filter(
-      (s) => s.product.deletedAt === null,
-    );
-
     const isOwner = actor !== undefined && actor.id === business.ownerId;
 
-    const response: BusinessDetailResponse = {
+    return {
       business: toBusinessResponse(business),
-      products: products.map(toProductResponse),
       isOwner,
     };
-
-    if (visibleSupplies.length > 0) {
-      response.supply = visibleSupplies.map((s) =>
-        toSupplyLineResponse(s, s.product.name, s.product.unit),
-      );
-    }
-
-    return response;
   }
 
   /**
@@ -291,27 +253,17 @@ export class BusinessesService {
       }[];
     },
   ): Promise<PublicFactoryProfileResponse> {
-    const [products, posts] = await Promise.all([
-      this.prisma.product.findMany({
-        where: {
-          businessId: factory.id,
-          deletedAt: null,
-          available: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.post.findMany({
-        where: {
-          deletedAt: null,
-          active: true,
-          type: { not: PostType.reel },
-          OR: [{ businessId: factory.id }, { authorId: factory.ownerId }],
-        },
-        orderBy: { createdAt: 'desc' },
-        take: FACTORY_POSTS_LIMIT,
-        include: FACTORY_POST_INCLUDE,
-      }),
-    ]);
+    const posts = await this.prisma.post.findMany({
+      where: {
+        deletedAt: null,
+        active: true,
+        type: { not: PostType.reel },
+        OR: [{ businessId: factory.id }, { authorId: factory.ownerId }],
+      },
+      orderBy: { createdAt: 'desc' },
+      take: FACTORY_POSTS_LIMIT,
+      include: FACTORY_POST_INCLUDE,
+    });
 
     const mapped = toBusinessResponse(factory);
 
@@ -329,7 +281,6 @@ export class BusinessesService {
         experience: mapped.experience,
         categories: mapped.categories,
       },
-      products: products.map(toProductResponse),
       posts: await this.toPublicPostResponses(posts),
     };
   }

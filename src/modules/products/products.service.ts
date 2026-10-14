@@ -1,10 +1,9 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Product, UserRole } from '@prisma/client';
+import { Prisma, Product } from '@prisma/client';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
@@ -12,28 +11,11 @@ import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
 import { CreateProductDto } from './dto/create-product.dto';
 import { QueryProductsDto } from './dto/query-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import {
-  ProductResponse,
-  toProductResponse,
-  withBusiness,
-} from './products.mapper';
-import {
-  applyVariantImageFiles,
-  galleryPaths,
-} from './product-uploads';
+import { ProductResponse, toProductResponse } from './products.mapper';
+import { applyVariantImageFiles, galleryPaths } from './product-uploads';
 
 export type ProductDetailResponse = {
   product: ProductResponse;
-  business: {
-    id: string;
-    type: string;
-    name: string;
-    location: string;
-    description: string | null;
-    phone: string | null;
-    imageUrl: string | null;
-    verified: boolean;
-  };
   availableQuantity?: number;
 };
 
@@ -47,12 +29,11 @@ function toJson(value: unknown): Prisma.InputJsonValue {
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async list(query: QueryProductsDto): Promise<Paginated<ProductResponse>> {
     const where: Prisma.ProductWhereInput = { deletedAt: null };
 
-    if (query.businessId) where.businessId = query.businessId;
     if (query.category) where.category = query.category;
     if (query.q) {
       where.OR = [
@@ -63,11 +44,6 @@ export class ProductsService {
     if (query.inWarehouse !== undefined) {
       where.inWarehouse = query.inWarehouse === 'true';
     }
-    if (query.location) {
-      where.business = {
-        location: { contains: query.location, mode: 'insensitive' },
-      };
-    }
 
     const { skip, take } = skipTake(query.page, query.limit);
 
@@ -77,13 +53,12 @@ export class ProductsService {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
-        include: { business: { select: { name: true, location: true } } },
       }),
       this.prisma.product.count({ where }),
     ]);
 
     return paginate(
-      rows.map((p) => withBusiness(p, p.business.name, p.business.location)),
+      rows.map((p) => toProductResponse(p)),
       total,
       query.page,
       query.limit,
@@ -91,24 +66,10 @@ export class ProductsService {
   }
 
   async names(
-    actor: AuthenticatedUser,
-    query: { businessId?: string },
+    _actor: AuthenticatedUser,
   ): Promise<{ items: { id: string; name: string }[] }> {
-    const where: Prisma.ProductWhereInput = { deletedAt: null };
-
-    if (query.businessId) {
-      await this.assertCanManageBusiness(actor, query.businessId);
-      where.businessId = query.businessId;
-    } else if (
-      actor.role !== UserRole.admin &&
-      actor.role !== UserRole.super_admin
-    ) {
-      // Non-admins: only products from businesses they own
-      where.business = { ownerId: actor.id };
-    }
-
     const rows = await this.prisma.product.findMany({
-      where,
+      where: { deletedAt: null },
       orderBy: { name: 'asc' },
       select: { id: true, name: true },
     });
@@ -119,7 +80,6 @@ export class ProductsService {
   async detail(id: string): Promise<ProductDetailResponse> {
     const product = await this.prisma.product.findFirst({
       where: { id, deletedAt: null },
-      include: { business: true },
     });
 
     if (!product) {
@@ -131,26 +91,11 @@ export class ProductsService {
 
     const response: ProductDetailResponse = {
       product: toProductResponse(product),
-      business: {
-        id: product.business.id,
-        type: product.business.type,
-        name: product.business.name,
-        location: product.business.location,
-        description: product.business.description,
-        phone: product.business.phone,
-        imageUrl: product.business.imageUrl,
-        verified: product.business.verified,
-      },
     };
 
     if (product.inWarehouse) {
       const supply = await this.prisma.supply.findUnique({
-        where: {
-          businessId_productId: {
-            businessId: product.businessId,
-            productId: product.id,
-          },
-        },
+        where: { productId: product.id },
         select: { remaining: true },
       });
       response.availableQuantity = supply?.remaining ?? 0;
@@ -161,7 +106,7 @@ export class ProductsService {
 
   /**
    * Similar products for a product detail page.
-   * Prefers same category / same business, then fills with other available products.
+   * Prefers same category, then fills with other available products.
    */
   async listSimilar(
     id: string,
@@ -169,7 +114,7 @@ export class ProductsService {
   ): Promise<Paginated<ProductResponse>> {
     const product = await this.prisma.product.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true, category: true, businessId: true },
+      select: { id: true, category: true },
     });
     if (!product) {
       throw new NotFoundException({
@@ -179,9 +124,6 @@ export class ProductsService {
     }
 
     const orderBy = [{ createdAt: 'desc' as const }];
-    const include = {
-      business: { select: { name: true, location: true } },
-    } as const;
 
     const baseWhere: Prisma.ProductWhereInput = {
       deletedAt: null,
@@ -191,18 +133,12 @@ export class ProductsService {
 
     const preferredWhere: Prisma.ProductWhereInput = {
       ...baseWhere,
-      OR: [
-        { category: { equals: product.category, mode: 'insensitive' } },
-        { businessId: product.businessId },
-      ],
+      category: { equals: product.category, mode: 'insensitive' },
     };
     const fillerWhere: Prisma.ProductWhereInput = {
       ...baseWhere,
       NOT: {
-        OR: [
-          { category: { equals: product.category, mode: 'insensitive' } },
-          { businessId: product.businessId },
-        ],
+        category: { equals: product.category, mode: 'insensitive' },
       },
     };
 
@@ -217,28 +153,22 @@ export class ProductsService {
       return paginate([], total, query.page, query.limit);
     }
 
-    type Row = Product & {
-      business: { name: string; location: string };
-    };
-
-    let rows: Row[] = [];
+    let rows: Product[] = [];
 
     if (skip + take <= preferredTotal) {
-      rows = (await this.prisma.product.findMany({
+      rows = await this.prisma.product.findMany({
         where: preferredWhere,
         orderBy,
         skip,
         take,
-        include,
-      })) as Row[];
+      });
     } else if (skip >= preferredTotal) {
-      rows = (await this.prisma.product.findMany({
+      rows = await this.prisma.product.findMany({
         where: fillerWhere,
         orderBy,
         skip: skip - preferredTotal,
         take,
-        include,
-      })) as Row[];
+      });
     } else {
       const preferredTake = preferredTotal - skip;
       const [preferred, fillers] = await Promise.all([
@@ -247,44 +177,35 @@ export class ProductsService {
           orderBy,
           skip,
           take: preferredTake,
-          include,
         }),
         this.prisma.product.findMany({
           where: fillerWhere,
           orderBy,
           skip: 0,
           take: take - preferredTake,
-          include,
         }),
       ]);
-      rows = [...preferred, ...fillers] as Row[];
+      rows = [...preferred, ...fillers];
     }
 
     return paginate(
-      rows.map((row) =>
-        withBusiness(row, row.business.name, row.business.location),
-      ),
+      rows.map((row) => toProductResponse(row)),
       total,
       query.page,
       query.limit,
     );
   }
 
-
-
   async create(
-    actor: AuthenticatedUser,
+    _actor: AuthenticatedUser,
     dto: CreateProductDto,
     files?: Express.Multer.File[],
   ): Promise<{ product: ProductResponse }> {
-    await this.assertCanManageBusiness(actor, dto.businessId);
-
     const uploaded = galleryPaths(files ?? []);
     const variants = applyVariantImageFiles(dto.variants, files ?? []);
 
     const product = await this.prisma.product.create({
       data: {
-        businessId: dto.businessId,
         name: dto.name,
         category: dto.category,
         description: dto.description ?? null,
@@ -305,13 +226,13 @@ export class ProductsService {
 
   async update(
     id: string,
-    actor: AuthenticatedUser,
+    _actor: AuthenticatedUser,
     dto: UpdateProductDto,
     files?: Express.Multer.File[],
   ): Promise<{ product: ProductResponse }> {
     const existing = await this.prisma.product.findFirst({
       where: { id, deletedAt: null },
-      select: { businessId: true, variants: true },
+      select: { id: true, variants: true },
     });
     if (!existing) {
       throw new NotFoundException({
@@ -319,7 +240,6 @@ export class ProductsService {
         message: 'Product not found',
       });
     }
-    await this.assertCanManageBusiness(actor, existing.businessId);
 
     const uploaded = galleryPaths(files ?? []);
     const variants = applyVariantImageFiles(
@@ -351,11 +271,11 @@ export class ProductsService {
 
   async remove(
     id: string,
-    actor: AuthenticatedUser,
+    _actor: AuthenticatedUser,
   ): Promise<{ product: ProductResponse; softDeleted: true }> {
     const existing = await this.prisma.product.findFirst({
       where: { id, deletedAt: null },
-      select: { businessId: true },
+      select: { id: true },
     });
     if (!existing) {
       throw new NotFoundException({
@@ -363,7 +283,6 @@ export class ProductsService {
         message: 'Product not found',
       });
     }
-    await this.assertCanManageBusiness(actor, existing.businessId);
 
     const orderLineCount = await this.prisma.orderLine.count({
       where: { productId: id },
@@ -382,36 +301,5 @@ export class ProductsService {
     });
 
     return { product: toProductResponse(product), softDeleted: true };
-  }
-
-  private async assertCanManageBusiness(
-    actor: AuthenticatedUser,
-    businessId: string,
-  ): Promise<void> {
-    const business = await this.prisma.business.findUnique({
-      where: { id: businessId },
-      select: { ownerId: true },
-    });
-
-    if (!business) {
-      throw new NotFoundException({
-        error: 'not_found',
-        message: 'Business not found',
-      });
-    }
-
-    if (
-      actor.role === UserRole.admin ||
-      actor.role === UserRole.super_admin
-    ) {
-      return;
-    }
-
-    if (business.ownerId !== actor.id) {
-      throw new ForbiddenException({
-        error: 'forbidden',
-        message: 'Not the owner of this business',
-      });
-    }
   }
 }

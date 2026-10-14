@@ -11,7 +11,6 @@ export type ColorImagesResponse = {
 
 export type ProductResponse = {
   id: string;
-  businessId: string;
   name: string;
   category: string;
   description: string | null;
@@ -28,8 +27,6 @@ export type ProductResponse = {
   discount: unknown;
   offer: string | null;
   createdAt: string;
-  businessName?: string;
-  businessLocation?: string;
 };
 
 type VariantOptionLike = {
@@ -80,7 +77,6 @@ export function toColorImages(variants: unknown): ColorImagesResponse[] {
 export function toProductResponse(product: Product): ProductResponse {
   return {
     id: product.id,
-    businessId: product.businessId,
     name: product.name,
     category: product.category,
     description: product.description,
@@ -96,17 +92,5 @@ export function toProductResponse(product: Product): ProductResponse {
     discount: product.discount,
     offer: product.offer,
     createdAt: product.createdAt.toISOString(),
-  };
-}
-
-export function withBusiness(
-  product: Product,
-  businessName: string,
-  businessLocation: string,
-): ProductResponse {
-  return {
-    ...toProductResponse(product),
-    businessName,
-    businessLocation,
   };
 }

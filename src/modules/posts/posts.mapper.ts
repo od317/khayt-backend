@@ -37,7 +37,6 @@ export type PostProductResponse = {
   name: string;
   price: number;
   images: string[];
-  businessId: string;
 };
 
 
@@ -112,7 +111,6 @@ export type PostResponseProduct = {
   name: string;
   price: number;
   images: string[];
-  businessId: string;
   deletedAt: Date | null;
 };
 
@@ -193,7 +191,6 @@ export function toPostResponse(
         name: post.product.name,
         price: post.product.price,
         images: post.product.images,
-        businessId: post.product.businessId,
       }
       : null,
   };

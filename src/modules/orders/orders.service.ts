@@ -69,7 +69,10 @@ export class OrdersService {
   ): Promise<Paginated<OrderListItemResponse>> {
     const where: Prisma.OrderWhereInput = {};
 
-    if (actor.role === UserRole.store) {
+    if (
+      actor.role === UserRole.store ||
+      actor.role === UserRole.workshop
+    ) {
       where.storeId = actor.id;
     } else if (isInternal(actor.role)) {
       if (query.storeId) where.storeId = query.storeId;
@@ -130,7 +133,6 @@ export class OrdersService {
       where: { orderId: id },
       include: {
         product: { select: { name: true, images: true } },
-        business: { select: { name: true } },
       },
       orderBy: { id: 'asc' },
     });
@@ -182,10 +184,13 @@ export class OrdersService {
     actor: AuthenticatedUser,
     dto: CreateOrderDto,
   ): Promise<OrderDetailResponse> {
-    if (actor.role !== UserRole.store) {
+    if (
+      actor.role !== UserRole.store &&
+      actor.role !== UserRole.workshop
+    ) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Only stores can place orders',
+        message: 'Only stores and workshops can place orders',
       });
     }
 
@@ -257,12 +262,7 @@ export class OrdersService {
         if (!product) continue;
 
         const supply = await tx.supply.findUnique({
-          where: {
-            businessId_productId: {
-              businessId: product.businessId,
-              productId,
-            },
-          },
+          where: { productId },
           select: { remaining: true },
         });
 
@@ -338,7 +338,6 @@ export class OrdersService {
               }
               return {
                 productId: line.productId,
-                businessId: product.businessId,
                 quantity: line.quantity,
                 unitPrice: product.price,
                 variant: line.variant ?? Prisma.JsonNull,
@@ -538,7 +537,6 @@ export class OrdersService {
       where: { id: lineId, orderId },
       include: {
         product: { select: { name: true, images: true } },
-        business: { select: { name: true } },
         order: true,
       },
     });
@@ -565,7 +563,6 @@ export class OrdersService {
       data: { picked: dto.picked },
       include: {
         product: { select: { name: true, images: true } },
-        business: { select: { name: true } },
       },
     });
 
@@ -604,19 +601,14 @@ export class OrdersService {
   ): Promise<void> {
     const orderLines = await tx.orderLine.findMany({
       where: { orderId },
-      select: { productId: true, businessId: true, quantity: true },
+      select: { productId: true, quantity: true },
     });
 
     const supplyIds: string[] = [];
 
     for (const line of orderLines) {
       const supply = await tx.supply.update({
-        where: {
-          businessId_productId: {
-            businessId: line.businessId,
-            productId: line.productId,
-          },
-        },
+        where: { productId: line.productId },
         data: { remaining: { decrement: line.quantity } },
         select: { id: true },
       });
@@ -634,7 +626,10 @@ export class OrdersService {
   }
 
   ordersFeedChannel(actor: AuthenticatedUser): string | null {
-    if (actor.role === UserRole.store) {
+    if (
+      actor.role === UserRole.store ||
+      actor.role === UserRole.workshop
+    ) {
       return ORDERS_STORE_CHANNEL(actor.id);
     }
     if (isInternal(actor.role)) {
@@ -664,7 +659,12 @@ export class OrdersService {
     actor: AuthenticatedUser,
   ): void {
     if (isInternal(actor.role)) return;
-    if (actor.role === UserRole.store && order.storeId === actor.id) return;
+    if (
+      (actor.role === UserRole.store || actor.role === UserRole.workshop) &&
+      order.storeId === actor.id
+    ) {
+      return;
+    }
     throw new NotFoundException({
       error: 'order_not_accessible',
       message: 'Order not found',

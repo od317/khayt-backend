@@ -32,11 +32,11 @@ export class CartController {
 
     @Get()
     @ApiOperation({
-        summary: 'Get the current store\'s cart',
+        summary: 'Get the current cart',
         description:
-            'Store accounts only. Returns items grouped by business, with totals.',
+            'Store and workshop accounts only. Returns flat items + totals.',
     })
-    @ApiOkResponse({ description: 'The cart, grouped by business' })
+    @ApiOkResponse({ description: 'The cart' })
     getCart(@RequireUser() user: AuthenticatedUser): Promise<CartResponse> {
         return this.cart.getCart(user);
     }
@@ -46,7 +46,7 @@ export class CartController {
     @ApiOperation({
         summary: 'Add a product (with optional variant) to the cart',
         description:
-            'Store accounts only. If the same product + variant is already in the cart, quantities are summed.',
+            'Store and workshop accounts only. If the same product + variant is already in the cart, quantities are summed.',
     })
     @ApiOkResponse({ description: 'The created or updated cart item' })
     addItem(
@@ -59,7 +59,7 @@ export class CartController {
     @Patch('items/:id')
     @ApiOperation({
         summary: 'Update a cart item\'s quantity',
-        description: 'Store accounts only.',
+        description: 'Store and workshop accounts only.',
     })
     @ApiOkResponse({ description: 'The updated cart item' })
     updateItem(
@@ -74,7 +74,7 @@ export class CartController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: 'Remove one item from the cart',
-        description: 'Store accounts only.',
+        description: 'Store and workshop accounts only.',
     })
     @ApiOkResponse({ description: 'Removed' })
     removeItem(
@@ -88,7 +88,7 @@ export class CartController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: 'Empty the cart',
-        description: 'Store accounts only.',
+        description: 'Store and workshop accounts only.',
     })
     @ApiOkResponse({ description: 'Cleared' })
     clearCart(
@@ -102,7 +102,7 @@ export class CartController {
     @ApiOperation({
         summary: 'Place the cart as an order',
         description:
-            'Store accounts only. Creates an Order with status `review`. On the first order, `address`, `lat`, and `lng` are required; afterwards the store\'s saved address is reused.',
+            'Store and workshop accounts only. Creates an Order with status `review`. Requires saved delivery coordinates (`deliveryLat` / `deliveryLng`); optional `address`/`lat`/`lng` update the saved pin.',
     })
     @ApiOkResponse({ description: 'The created order with its lines' })
     checkout(

@@ -406,111 +406,25 @@ describe('PostsService', () => {
       expect(result.post.id).toBe('post-1');
     });
 
-    it('rejects a job_offering without workType', async () => {
-      const error = await service
-        .create(actor, {
-          type: PostType.job_offering,
-          title: 'مطلوب خياط',
-          body: 'نبحث عن خياط ماهر',
-          location: 'دمشق',
-          specialty: 'إنتاج/صناعة',
-          skills: ['خياطة'],
-          salaryType: 'حسب الاتفاق',
-          categoryIds: ['cat-1'],
-        })
-        .catch((err: unknown) => err);
-
-      expect(error).toBeInstanceOf(HttpException);
-      expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'validation_failed',
-        fields: { workType: expect.any(String) },
+    it('allows creating posts without type-specific optional fields', async () => {
+      const created = makePost({
+        type: PostType.job_offering,
+        workType: [],
+        skills: [],
+        salaryType: null,
       });
-    });
+      prisma.post.create.mockResolvedValue(created);
 
-    it('rejects a job_offering without skills or salaryType', async () => {
-      const error = await service
-        .create(actor, {
-          type: PostType.job_offering,
-          title: 'مطلوب خياط',
-          body: 'نبحث عن خياط ماهر',
-          location: 'دمشق',
-          specialty: 'إنتاج/صناعة',
-          workType: ['كامل'],
-          categoryIds: ['cat-1'],
-        })
-        .catch((err: unknown) => err);
-
-      expect(error).toBeInstanceOf(HttpException);
-      expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'validation_failed',
-        fields: {
-          skills: expect.any(String),
-          salaryType: expect.any(String),
-        },
+      const result = await service.create(actor, {
+        type: PostType.job_offering,
+        title: 'مطلوب خياط',
+        body: 'نبحث عن خياط ماهر',
+        location: 'دمشق',
+        categoryIds: ['cat-1'],
       });
-    });
 
-    it('rejects a material_offering without condition', async () => {
-      const error = await service
-        .create(actor, {
-          type: PostType.material_offering,
-          title: 'قماش للبيع',
-          body: 'قماش قطن',
-          location: 'دمشق',
-          specialty: 'أقمشة',
-          categoryIds: ['cat-1'],
-        })
-        .catch((err: unknown) => err);
-
-      expect(error).toBeInstanceOf(HttpException);
-      expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'validation_failed',
-        fields: { condition: expect.any(String) },
-      });
-    });
-
-    it('rejects a product_offering without sell/price methods', async () => {
-      const error = await service
-        .create(actor, {
-          type: PostType.product_offering,
-          title: 'منتج للبيع',
-          body: 'قميص',
-          location: 'دمشق',
-          specialty: 'ألبسة رجالية',
-          categoryIds: ['cat-1'],
-        })
-        .catch((err: unknown) => err);
-
-      expect(error).toBeInstanceOf(HttpException);
-      expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'validation_failed',
-        fields: {
-          sellMethod: expect.any(String),
-          priceMethod: expect.any(String),
-        },
-      });
-    });
-
-    it('rejects a service_offering without servicePlace or pricing', async () => {
-      const error = await service
-        .create(actor, {
-          type: PostType.service_offering,
-          title: 'خدمة خياطة',
-          body: 'أقدم خدمة خياطة',
-          location: 'دمشق',
-          specialty: 'خياطة',
-          categoryIds: ['cat-1'],
-        })
-        .catch((err: unknown) => err);
-
-      expect(error).toBeInstanceOf(HttpException);
-      expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'validation_failed',
-        fields: {
-          servicePlace: expect.any(String),
-          pricing: expect.any(String),
-        },
-      });
+      expect(result.post.id).toBe('post-1');
+      expect(prisma.post.create).toHaveBeenCalled();
     });
 
     it('rejects an image post without imageUrls', async () => {

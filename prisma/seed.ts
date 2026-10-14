@@ -1473,7 +1473,6 @@ async function main(): Promise<void> {
   const products = [
     {
       id: 'prod-qamis-abyad',
-      businessId: 'biz-workshop',
       name: 'قميص أبيض رجالي',
       category: 'قمصان',
       description: 'قميص قطن 100%',
@@ -1562,7 +1561,6 @@ async function main(): Promise<void> {
     },
     {
       id: 'prod-qamis-kaki',
-      businessId: 'biz-workshop',
       name: 'قميص كاكي',
       category: 'قمصان',
       description: 'قميص كاكي عملي',
@@ -1575,7 +1573,6 @@ async function main(): Promise<void> {
     },
     {
       id: 'prod-bantal-jeans',
-      businessId: 'biz-workshop',
       name: 'بنطال جينز',
       category: 'بنطال',
       description: 'جينز رجالي',
@@ -1609,7 +1606,6 @@ async function main(): Promise<void> {
           : [SEED_PRODUCT_IMAGES[s.img]];
       return {
         id: s.id,
-        businessId: 'biz-workshop',
         name: s.name,
         category: 'قمصان',
         description: 'قميص رجالي — مشابه لقميص أبيض رجالي',
@@ -1634,32 +1630,28 @@ async function main(): Promise<void> {
   console.log(`  products: ${products.length}`);
 
   // ------------------------------------------------------------
-  // Supply (warehouse stock) — معمل النسيج الدمشقي (0994000002 / biz-workshop)
+  // Supply (platform warehouse stock — one row per product)
   // ------------------------------------------------------------
   const supply = [
     {
-      businessId: 'biz-workshop',
       productId: 'prod-qamis-abyad',
       sent: 200,
       remaining: 150,
       unitPrice: 35000,
     },
     {
-      businessId: 'biz-workshop',
       productId: 'prod-qamis-kaki',
       sent: 120,
       remaining: 95,
       unitPrice: 32000,
     },
     {
-      businessId: 'biz-workshop',
       productId: 'prod-bantal-jeans',
       sent: 80,
       remaining: 60,
       unitPrice: 50000,
     },
     ...similarQamisAbyadSeed.map((s, i) => ({
-      businessId: 'biz-workshop',
       productId: s.id,
       sent: 100 + i * 10,
       remaining: 70 + i * 5,
@@ -1669,12 +1661,7 @@ async function main(): Promise<void> {
 
   for (const s of supply) {
     await prisma.supply.upsert({
-      where: {
-        businessId_productId: {
-          businessId: s.businessId,
-          productId: s.productId,
-        },
-      },
+      where: { productId: s.productId },
       create: s,
       update: s,
     });

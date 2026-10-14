@@ -27,7 +27,7 @@ const MAX_CART_ITEMS = 100;
 const MAX_QUANTITY_PER_ITEM = 10000;
 
 const CART_INCLUDE = {
-    product: { include: { business: true } },
+    product: true,
 } as const;
 
 @Injectable()
@@ -75,7 +75,6 @@ export class CartService {
 
         const product = await this.prisma.product.findFirst({
             where: { id: dto.productId, deletedAt: null },
-            include: { business: true },
         });
 
         if (!product) {

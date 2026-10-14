@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { CreateProductDto } from './create-product.dto';
 
 const valid = (overrides: Record<string, unknown> = {}) => ({
-  businessId: 'biz-1',
   name: 'قميص',
   category: 'قمصان',
   unit: 'قطعة',

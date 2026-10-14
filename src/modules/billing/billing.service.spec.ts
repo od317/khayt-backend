@@ -45,7 +45,6 @@ const makeBusiness = (overrides: Record<string, unknown> = {}) => ({
 
 const makeProduct = (overrides: Record<string, unknown> = {}) => ({
   id: 'prod-1',
-  businessId: 'biz-1',
   name: 'قميص',
   category: 'قمصان',
   description: null,
@@ -224,25 +223,6 @@ describe('BillingService', () => {
       });
     });
 
-    it('rejects a product belonging to another business', async () => {
-      prisma.business.findUnique.mockResolvedValue(makeBusiness());
-      prisma.product.findMany.mockResolvedValue([
-        makeProduct({ businessId: 'other-biz' }),
-      ]);
-
-      const error = await service
-        .createReceiving(actor, dto)
-        .catch((e: unknown) => e);
-
-      expect(error).toBeInstanceOf(HttpException);
-      expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'validation_failed',
-        fields: {
-          'lines[0].productId': 'belongs to another business',
-        },
-      });
-    });
-
     it('creates the receiving, bill, and stock movements', async () => {
       prisma.business.findUnique.mockResolvedValue(makeBusiness());
       prisma.product.findMany.mockResolvedValue([makeProduct()]);
@@ -281,12 +261,13 @@ describe('BillingService', () => {
 
       expect(prisma.supply.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {
-            businessId_productId: {
-              businessId: 'biz-1',
-              productId: 'prod-1',
-            },
-          },
+          where: { productId: 'prod-1' },
+          create: expect.objectContaining({
+            productId: 'prod-1',
+            sent: 10,
+            remaining: 10,
+            unitPrice: 5000,
+          }),
         }),
       );
       expect(prisma.product.updateMany).toHaveBeenCalledWith({

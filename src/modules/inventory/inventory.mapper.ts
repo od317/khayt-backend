@@ -1,4 +1,4 @@
-import { Business, Supply } from '@prisma/client';
+import { Supply } from '@prisma/client';
 import { LOW_STOCK_THRESHOLD } from './constants';
 
 export type InventoryItemResponse = {
@@ -6,8 +6,6 @@ export type InventoryItemResponse = {
   productId: string;
   productName: string;
   productUnit: string;
-  businessId: string;
-  businessName: string;
   sent: number;
   remaining: number;
   sold: number;
@@ -24,18 +22,9 @@ export type InventoryMovementResponse = {
   createdAt: string;
 };
 
-export type BusinessSummaryResponse = {
-  id: string;
-  name: string;
-  type: string;
-  location: string;
-  verified: boolean;
-};
-
 export function toInventoryItemResponse(
   supply: Supply & {
     product: { name: string; unit: string };
-    business: { name: string };
   },
 ): InventoryItemResponse {
   return {
@@ -43,26 +32,12 @@ export function toInventoryItemResponse(
     productId: supply.productId,
     productName: supply.product.name,
     productUnit: supply.product.unit,
-    businessId: supply.businessId,
-    businessName: supply.business.name,
     sent: supply.sent,
     remaining: supply.remaining,
     sold: supply.sent - supply.remaining,
     unitPrice: supply.unitPrice,
     isLowStock: supply.remaining < LOW_STOCK_THRESHOLD,
     updatedAt: supply.updatedAt.toISOString(),
-  };
-}
-
-export function toBusinessSummaryResponse(
-  business: Business,
-): BusinessSummaryResponse {
-  return {
-    id: business.id,
-    name: business.name,
-    type: business.type,
-    location: business.location,
-    verified: business.verified,
   };
 }
 

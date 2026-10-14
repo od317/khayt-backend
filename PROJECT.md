@@ -92,7 +92,8 @@ backend/
 ### Core ownership rules
 
 - One user → at most **one** `Business` (`Business.ownerId` unique).
-- Stores place `Order`s; factories own `Product` / `Supply`.
+- Stores and workshops place `Order`s against platform `Product` / `Supply`
+  (staff-managed catalog). `user.canOrder` reflects that after onboarding.
 - Onboarding: employee finishes with role + location; workshop/store must
   also submit business profile (name, image, description, services, years).
 
@@ -111,8 +112,8 @@ All routes are under `/api/...`.
 | `post-options` | `/post-options`, `/admin/post-options` | Publish-form chip catalogs |
 | `posts` | `/posts` | Feed, create/update, likes, saves, media |
 | `comments` | `/comments` | Comments on posts |
-| `businesses` | `/businesses` | Business profiles + products/supply views |
-| `products` | `/products` | Catalog CRUD, uploads, variants |
+| `businesses` | `/businesses` | Business profiles |
+| `products` | `/products` | Platform catalog (staff CRUD), uploads, variants |
 | `orders` | `/orders`, `/orders/stream` | Store orders, status, SSE |
 | `delivery` | `/deliveries`, `/drivers` | Delivery batches & drivers |
 | `inventory` | `/inventory`, `/supply` | Warehouse stock |
@@ -129,11 +130,13 @@ All routes are under `/api/...`.
 
 1. `POST /api/auth/request-code` `{ phone }` → OTP in Redis  
 2. `POST /api/auth/verify` `{ phone, code, fcmToken? }` → JWT + user  
-   (new users are created without a display name)  
+   (new users are created without a display name; `user.canOrder` is true only
+   when `onboardingCompleted` and role is `store` or `workshop`)  
 3. If `onboardingCompleted === false` → `POST /api/auth/onboarding`  
    - Employee-like roles: `role` + `locationId` only  
    - Factory (`workshop`) / store: extra multipart fields — `businessName`,
      `description`, `services[]`, `experienceYears`, `image` file  
+   - Response includes `user.canOrder` after first-time onboarding  
 4. `GET /api/auth/me` → user + optional business + unread count  
 5. Refresh via refresh token endpoint  
 
@@ -152,7 +155,11 @@ Order create without saved `deliveryLat`/`deliveryLng` → same shape with coord
 
 ### Products
 
-- Belong to a `Business`.
+- Platform-owned (no workshop `businessId`). Create/update/delete: `admin`,
+  `super_admin`, `inventory` only. Public list/detail/similar.
+- `Supply` is 1:1 with product (warehouse stock).
+- Cart is a flat list (not grouped by workshop). Checkout requires saved
+  store `deliveryLat` / `deliveryLng`.
 - `images: string[]` (general gallery), optional variants/packaging/discount JSON.
 - Color variants: first axis `key: "color"`; each option has `image` + `images[]`.
   Product responses also expose `colorImages` for the FE to switch gallery by color.

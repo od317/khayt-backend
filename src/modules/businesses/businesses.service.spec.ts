@@ -45,8 +45,6 @@ type PrismaMock = {
     findUnique: ReturnType<typeof vi.fn>;
     findMany: ReturnType<typeof vi.fn>;
   };
-  product: { findMany: ReturnType<typeof vi.fn> };
-  supply: { findMany: ReturnType<typeof vi.fn> };
   post: { findMany: ReturnType<typeof vi.fn> };
   like: { groupBy: ReturnType<typeof vi.fn> };
   comment: { groupBy: ReturnType<typeof vi.fn> };
@@ -70,8 +68,6 @@ describe('BusinessesService', () => {
         findUnique: vi.fn().mockResolvedValue(null),
         findMany: vi.fn().mockResolvedValue([]),
       },
-      product: { findMany: vi.fn().mockResolvedValue([]) },
-      supply: { findMany: vi.fn().mockResolvedValue([]) },
       post: { findMany: vi.fn().mockResolvedValue([]) },
       like: { groupBy: vi.fn().mockResolvedValue([]) },
       comment: { groupBy: vi.fn().mockResolvedValue([]) },
@@ -128,18 +124,15 @@ describe('BusinessesService', () => {
     // ... see note below
   });
 
-  it('does not include soft-deleted products in business detail', async () => {
+  it('returns business detail without loading products or supply', async () => {
     const business = makeBusiness();
     prisma.business.findUnique.mockResolvedValue(business);
-    prisma.product.findMany.mockResolvedValue([]);
-    prisma.supply.findMany.mockResolvedValue([]);
 
-    await service.detail('biz-1', undefined);
+    const result = await service.detail('biz-1', undefined);
 
-    expect(prisma.product.findMany).toHaveBeenCalledWith({
-      where: { businessId: 'biz-1', deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-    });
+    expect(result.business.id).toBe('biz-1');
+    expect(result.isOwner).toBe(false);
+    expect(prisma.business.findUnique).toHaveBeenCalledTimes(1);
   });
 
   it('returns a public factory profile by business id', async () => {
@@ -156,28 +149,6 @@ describe('BusinessesService', () => {
       ],
     });
     prisma.business.findUnique.mockResolvedValueOnce(factory);
-    prisma.product.findMany.mockResolvedValue([
-      {
-        id: 'prod-1',
-        businessId: 'biz-workshop',
-        name: 'قميص',
-        category: 'ملابس',
-        description: null,
-        images: [],
-        unit: 'قطعة',
-        price: 10,
-        inWarehouse: true,
-        available: true,
-        guarantee: false,
-        variants: null,
-        packaging: null,
-        discount: null,
-        offer: null,
-        createdAt: new Date('2026-01-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-        deletedAt: null,
-      },
-    ]);
     prisma.post.findMany.mockResolvedValue([]);
 
     const result = await service.publicProfile('biz-workshop');
@@ -187,7 +158,7 @@ describe('BusinessesService', () => {
     expect(result.profile.name).toBe('معمل النسيج');
     expect(result.profile.verified).toBe(true);
     expect(result.profile.services).toEqual(['خياطة']);
-    expect(result.products).toHaveLength(1);
+    expect(result).not.toHaveProperty('products');
     expect(result.posts).toEqual([]);
     expect(result).not.toHaveProperty('similar');
   });
@@ -203,7 +174,6 @@ describe('BusinessesService', () => {
     prisma.business.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(factory);
-    prisma.product.findMany.mockResolvedValue([]);
     prisma.post.findMany.mockResolvedValue([]);
 
     const result = await service.publicProfile('user-workshop');

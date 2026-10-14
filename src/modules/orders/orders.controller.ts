@@ -66,7 +66,7 @@ export class OrdersController {
   }
 
   @Post()
-  @Roles(UserRole.store)
+  @Roles(UserRole.store, UserRole.workshop)
   @HttpCode(HttpStatus.CREATED)
   create(
     @RequireUser() user: AuthenticatedUser,
