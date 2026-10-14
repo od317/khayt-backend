@@ -77,6 +77,7 @@ describe('AuthService', () => {
     business: {
       findUnique: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
+      updateMany: ReturnType<typeof vi.fn>;
     };
     notification: {
       count: ReturnType<typeof vi.fn>;
@@ -118,7 +119,11 @@ describe('AuthService', () => {
         create: vi.fn(),
         update: vi.fn(),
       },
-      business: { findUnique: vi.fn(), create: vi.fn() },
+      business: {
+        findUnique: vi.fn(),
+        create: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
       notification: { count: vi.fn(), deleteMany: vi.fn() },
       location: { findFirst: vi.fn() },
       role: { findFirst: vi.fn() },
@@ -732,6 +737,57 @@ describe('AuthService', () => {
       );
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'too_many_requests',
+      });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateMe', () => {
+    it('updates workshop business description and services', async () => {
+      const workshopActor: AuthenticatedUser = {
+        id: 'user-workshop',
+        role: UserRole.workshop,
+        phone: '+963994037669',
+      };
+      prisma.user.update.mockResolvedValue(
+        makeUser({ id: workshopActor.id, role: UserRole.workshop }),
+      );
+
+      await service.updateMe(workshopActor, {
+        name: 'معمل النسيج الدمشقي',
+        bio: 'وصف قصير',
+        availableForWork: true,
+        avatarUrl: 'https://example.com/avatar.jpg',
+        description: 'معمل متخصص',
+        services: ['خياطة قمصان', 'تطريز آلي'],
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.not.objectContaining({
+            availableForWork: expect.anything(),
+          }),
+        }),
+      );
+      expect(prisma.business.updateMany).toHaveBeenCalledWith({
+        where: { ownerId: workshopActor.id },
+        data: {
+          name: 'معمل النسيج الدمشقي',
+          description: 'معمل متخصص',
+          services: ['خياطة قمصان', 'تطريز آلي'],
+          imageUrl: 'https://example.com/avatar.jpg',
+        },
+      });
+    });
+
+    it('rejects description for non-business roles', async () => {
+      const error = await service
+        .updateMe(actor, { description: 'وصف' })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
       });
       expect(prisma.user.update).not.toHaveBeenCalled();
     });

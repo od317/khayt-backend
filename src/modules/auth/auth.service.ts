@@ -329,18 +329,26 @@ export class AuthService {
     actor: AuthenticatedUser,
     dto: UpdateMeDto,
   ): Promise<{ user: UserResponse }> {
+    const isBusinessOwner =
+      actor.role === UserRole.workshop || actor.role === UserRole.store;
+
     if (
-      dto.availableForWork !== undefined &&
-      !isEmployeeLikeRole(actor.role)
+      (dto.description !== undefined || dto.services !== undefined) &&
+      !isBusinessOwner
     ) {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message:
-            'availableForWork is only allowed for employee-like roles',
+          message: 'description/services are only for workshop or store',
           fields: {
-            availableForWork:
-              'only allowed for employee, marketer, or shipping_company',
+            description:
+              dto.description !== undefined
+                ? 'only allowed for workshop or store'
+                : undefined,
+            services:
+              dto.services !== undefined
+                ? 'only allowed for workshop or store'
+                : undefined,
           },
         },
         HttpStatus.BAD_REQUEST,
@@ -357,7 +365,11 @@ export class AuthService {
     if (dto.avatarUrl !== undefined) {
       data.avatarUrl = dto.avatarUrl;
     }
-    if (dto.availableForWork !== undefined) {
+    // Combined profile forms may send availableForWork; only employee-like roles apply it.
+    if (
+      dto.availableForWork !== undefined &&
+      isEmployeeLikeRole(actor.role)
+    ) {
       data.availableForWork = dto.availableForWork;
     }
 
@@ -440,6 +452,48 @@ export class AuthService {
       data,
       include: { location: true },
     });
+
+    if (
+      isBusinessOwner &&
+      (dto.description !== undefined ||
+        dto.services !== undefined ||
+        dto.name !== undefined ||
+        dto.avatarUrl !== undefined ||
+        dto.bio !== undefined)
+    ) {
+      const updated = await this.prisma.business.updateMany({
+        where: { ownerId: actor.id },
+        data: {
+          ...(dto.name !== undefined ? { name: dto.name } : {}),
+          ...(dto.description !== undefined
+            ? { description: dto.description }
+            : dto.bio !== undefined
+              ? { description: dto.bio }
+              : {}),
+          ...(dto.services !== undefined
+            ? {
+                services: dto.services
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0),
+              }
+            : {}),
+          // Workshop/store UI shows business.imageUrl, not user.avatarUrl.
+          ...(dto.avatarUrl !== undefined
+            ? { imageUrl: dto.avatarUrl }
+            : {}),
+        },
+      });
+
+      if (updated.count === 0) {
+        throw new HttpException(
+          {
+            error: 'not_found',
+            message: 'Business profile not found',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+    }
 
     return { user: toUserResponse(user) };
   }

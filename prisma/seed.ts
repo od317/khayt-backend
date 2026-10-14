@@ -1017,7 +1017,7 @@ async function main(): Promise<void> {
   ];
 
   const SHARED_AVATAR_URL =
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgl6XLGmKN4GX1drT9TmSldDW2TZCpG2p3tEIiJWY7QQ&s=10';
+    'https://media.istockphoto.com/id/2060009001/vector/avatar-user-profile-person-icon-profile-picture-for-social-media-profiles-icons-screensavers.jpg?s=612x612&w=0&k=20&c=onk7rmEoISSvHVlqc-SiBvcUr8ilCm2u9kcw3_Bm_SA=';
 
   for (const u of users) {
     await prisma.user.upsert({
@@ -1080,7 +1080,7 @@ async function main(): Promise<void> {
   }
 
   const SHARED_IMAGE_URL =
-    'https://images.pexels.com/photos/37080685/pexels-photo-37080685/free-photo-of-modern-fashion-store-interior-with-colorful-clothing-display.jpeg?h=1000&w=1500&fit=crop';
+    'https://media.istockphoto.com/id/2060009001/vector/avatar-user-profile-person-icon-profile-picture-for-social-media-profiles-icons-screensavers.jpg?s=612x612&w=0&k=20&c=onk7rmEoISSvHVlqc-SiBvcUr8ilCm2u9kcw3_Bm_SA=';
 
 
   const businesses = [
