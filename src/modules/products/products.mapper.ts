@@ -20,6 +20,8 @@ export type ProductResponse = {
   inWarehouse: boolean;
   available: boolean;
   guarantee: boolean;
+  /** Workshop the goods came from; null until set / received. */
+  supplierBusinessId: string | null;
   variants: unknown;
   /** Color → images map derived from variants when the first axis is `color`. */
   colorImages: ColorImagesResponse[];
@@ -86,6 +88,7 @@ export function toProductResponse(product: Product): ProductResponse {
     inWarehouse: product.inWarehouse,
     available: product.available,
     guarantee: product.guarantee,
+    supplierBusinessId: product.supplierBusinessId ?? null,
     variants: product.variants,
     colorImages: toColorImages(product.variants),
     packaging: product.packaging,

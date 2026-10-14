@@ -1,17 +1,17 @@
 import {
+  BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { Product } from '@prisma/client';
+import { BusinessType, Product, UserRole } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
-import { UserRole } from '@prisma/client';
 import { ProductsService } from './products.service';
 
 const actor: AuthenticatedUser = {
   id: 'user-1',
-  role: UserRole.workshop,
+  role: UserRole.inventory,
   phone: '0994037669',
 };
 
@@ -26,6 +26,7 @@ const makeProduct = (overrides: Partial<Product> = {}): Product => ({
   inWarehouse: false,
   available: true,
   guarantee: false,
+  supplierBusinessId: null,
   variants: null,
   packaging: null,
   discount: null,
@@ -44,6 +45,7 @@ type PrismaMock = {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
   };
+  business: { findUnique: ReturnType<typeof vi.fn> };
   supply: { findUnique: ReturnType<typeof vi.fn> };
   orderLine: { count: ReturnType<typeof vi.fn> };
 };
@@ -61,6 +63,7 @@ describe('ProductsService', () => {
         create: vi.fn(),
         update: vi.fn(),
       },
+      business: { findUnique: vi.fn() },
       supply: { findUnique: vi.fn() },
       orderLine: { count: vi.fn() },
     };
@@ -82,9 +85,55 @@ describe('ProductsService', () => {
       data: expect.objectContaining({
         name: 'قميص',
         inWarehouse: false,
+        supplierBusinessId: null,
       }),
     });
     expect(result.product.inWarehouse).toBe(false);
+  });
+
+  it('rejects a non-workshop supplierBusinessId', async () => {
+    prisma.business.findUnique.mockResolvedValue({
+      id: 'biz-store',
+      type: BusinessType.store,
+    });
+
+    const error = await service
+      .create(actor, {
+        name: 'قميص',
+        category: 'قمصان',
+        unit: 'قطعة',
+        price: 5000,
+        supplierBusinessId: 'biz-store',
+      })
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect(prisma.product.create).not.toHaveBeenCalled();
+  });
+
+  it('links a workshop supplier on create', async () => {
+    prisma.business.findUnique.mockResolvedValue({
+      id: 'biz-workshop',
+      type: BusinessType.workshop,
+    });
+    prisma.product.create.mockResolvedValue(
+      makeProduct({ supplierBusinessId: 'biz-workshop' }),
+    );
+
+    const result = await service.create(actor, {
+      name: 'قميص',
+      category: 'قمصان',
+      unit: 'قطعة',
+      price: 5000,
+      supplierBusinessId: 'biz-workshop',
+    });
+
+    expect(prisma.product.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        supplierBusinessId: 'biz-workshop',
+      }),
+    });
+    expect(result.product.supplierBusinessId).toBe('biz-workshop');
   });
 
   it('stores uploaded variant images instead of URLs', async () => {

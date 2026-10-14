@@ -11,7 +11,12 @@ export class SupplyController {
   constructor(private readonly inventory: InventoryService) {}
 
   @Get()
-  @Roles(UserRole.inventory, UserRole.admin, UserRole.super_admin)
+  @Roles(
+    UserRole.inventory,
+    UserRole.admin,
+    UserRole.super_admin,
+    UserRole.workshop,
+  )
   list(
     @Query() query: QuerySupplyDto,
     @RequireUser() user: AuthenticatedUser,

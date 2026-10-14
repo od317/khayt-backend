@@ -1125,7 +1125,10 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     }),
   },
   'get /supply': {
-    '200': ok(supplyListSample()),
+    '200': ok(
+      supplyListSample(),
+      'Staff see all warehouse supply. Workshops see only products linked to their business (supplierBusinessId).',
+    ),
   },
 
   'get /bills/summary': {

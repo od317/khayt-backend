@@ -63,6 +63,7 @@ export const sampleProduct = {
   inWarehouse: false,
   available: true,
   guarantee: false,
+  supplierBusinessId: null as string | null,
   variants: {
     axes: [
       { key: 'color', label: 'لون' },
@@ -240,6 +241,7 @@ export const sampleInventoryItem = {
   productId: '',
   productName: '',
   productUnit: 'قطعة',
+  supplierBusinessId: null as string | null,
   sent: 0,
   remaining: 0,
   sold: 0,

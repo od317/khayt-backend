@@ -1,9 +1,10 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Product } from '@prisma/client';
+import { BusinessType, Prisma, Product } from '@prisma/client';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
@@ -30,6 +31,27 @@ function toJson(value: unknown): Prisma.InputJsonValue {
 @Injectable()
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private async assertWorkshopSupplier(businessId: string): Promise<void> {
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      select: { id: true, type: true },
+    });
+    if (!business) {
+      throw new NotFoundException({
+        error: 'not_found',
+        resource: 'business',
+        message: 'Supplier business not found',
+      });
+    }
+    if (business.type !== BusinessType.workshop) {
+      throw new BadRequestException({
+        error: 'validation_failed',
+        message: 'Supplier must be a workshop business',
+        fields: { supplierBusinessId: 'must be a workshop' },
+      });
+    }
+  }
 
   async list(query: QueryProductsDto): Promise<Paginated<ProductResponse>> {
     const where: Prisma.ProductWhereInput = { deletedAt: null };
@@ -201,6 +223,10 @@ export class ProductsService {
     dto: CreateProductDto,
     files?: Express.Multer.File[],
   ): Promise<{ product: ProductResponse }> {
+    if (dto.supplierBusinessId) {
+      await this.assertWorkshopSupplier(dto.supplierBusinessId);
+    }
+
     const uploaded = galleryPaths(files ?? []);
     const variants = applyVariantImageFiles(dto.variants, files ?? []);
 
@@ -214,6 +240,7 @@ export class ProductsService {
         images: uploaded,
         inWarehouse: false,
         guarantee: dto.guarantee ?? false,
+        supplierBusinessId: dto.supplierBusinessId ?? null,
         variants: variants ? toJson(variants) : Prisma.JsonNull,
         packaging: dto.packaging ? toJson(dto.packaging) : Prisma.JsonNull,
         discount: dto.discount ? toJson(dto.discount) : Prisma.JsonNull,
@@ -248,6 +275,10 @@ export class ProductsService {
       existing.variants,
     );
 
+    if (dto.supplierBusinessId) {
+      await this.assertWorkshopSupplier(dto.supplierBusinessId);
+    }
+
     const data: Prisma.ProductUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.category !== undefined) data.category = dto.category;
@@ -260,6 +291,12 @@ export class ProductsService {
     if (dto.discount !== undefined) data.discount = toJson(dto.discount);
     if (dto.offer !== undefined) data.offer = dto.offer;
     if (dto.guarantee !== undefined) data.guarantee = dto.guarantee;
+    if (dto.supplierBusinessId !== undefined) {
+      data.supplier =
+        dto.supplierBusinessId === null
+          ? { disconnect: true }
+          : { connect: { id: dto.supplierBusinessId } };
+    }
 
     const product = await this.prisma.product.update({
       where: { id },

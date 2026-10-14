@@ -6,6 +6,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   ValidateNested,
@@ -89,4 +90,14 @@ export class UpdateProductDto {
   })
   @IsBoolean()
   guarantee?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'biz-workshop-uuid',
+    description:
+      'Workshop business that supplies this product (platform still owns it). Pass null to clear.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  supplierBusinessId?: string | null;
 }

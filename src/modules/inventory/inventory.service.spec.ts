@@ -1,5 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { BusinessType, UserRole } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
@@ -24,7 +24,11 @@ const makeSupply = (overrides: Record<string, unknown> = {}) => ({
   remaining: 40,
   unitPrice: 5000,
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-  product: { name: 'قميص', unit: 'قطعة' },
+  product: {
+    name: 'قميص',
+    unit: 'قطعة',
+    supplierBusinessId: 'biz-workshop',
+  },
   ...overrides,
 });
 
@@ -34,6 +38,7 @@ type PrismaMock = {
     count: ReturnType<typeof vi.fn>;
     findUnique: ReturnType<typeof vi.fn>;
   };
+  business: { findUnique: ReturnType<typeof vi.fn> };
   bill: { aggregate: ReturnType<typeof vi.fn> };
   stockMovement: { findMany: ReturnType<typeof vi.fn> };
   $transaction: ReturnType<typeof vi.fn>;
@@ -50,6 +55,7 @@ describe('InventoryService', () => {
         count: vi.fn().mockResolvedValue(0),
         findUnique: vi.fn(),
       },
+      business: { findUnique: vi.fn() },
       bill: {
         aggregate: vi.fn().mockResolvedValue({ _sum: { paid: 0 } }),
       },
@@ -184,12 +190,57 @@ describe('InventoryService', () => {
   });
 
   describe('listSupply', () => {
-    it('rejects a workshop owner', async () => {
+    it('rejects a store actor', async () => {
+      const store: AuthenticatedUser = {
+        id: 'user-store',
+        role: UserRole.store,
+        phone: '0994000001',
+      };
+
+      const error = await service
+        .listSupply({}, store)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects a workshop without a business profile', async () => {
+      prisma.business.findUnique.mockResolvedValue(null);
+
       const error = await service
         .listSupply({}, owner)
         .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(ForbiddenException);
+    });
+
+    it('lets a workshop see only their linked supply', async () => {
+      prisma.business.findUnique.mockResolvedValue({
+        id: 'biz-workshop',
+        type: BusinessType.workshop,
+      });
+      prisma.supply.findMany.mockResolvedValue([makeSupply()]);
+
+      const result = await service.listSupply({}, owner);
+
+      expect(prisma.supply.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            product: { supplierBusinessId: 'biz-workshop' },
+          },
+          include: {
+            product: {
+              select: { name: true, unit: true, supplierBusinessId: true },
+            },
+          },
+        }),
+      );
+      expect(prisma.bill.aggregate).toHaveBeenCalledWith({
+        where: { businessId: 'biz-workshop' },
+        _sum: { paid: true },
+      });
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.supplierBusinessId).toBe('biz-workshop');
     });
 
     it('lets internal staff see all platform supply', async () => {
@@ -201,10 +252,16 @@ describe('InventoryService', () => {
         expect.objectContaining({
           where: {},
           include: {
-            product: { select: { name: true, unit: true } },
+            product: {
+              select: { name: true, unit: true, supplierBusinessId: true },
+            },
           },
         }),
       );
+      expect(prisma.bill.aggregate).toHaveBeenCalledWith({
+        where: {},
+        _sum: { paid: true },
+      });
     });
 
     it('returns every item without pagination', async () => {

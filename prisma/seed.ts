@@ -1558,6 +1558,7 @@ async function main(): Promise<void> {
       discount: { percent: 10, originalPrice: 50000 },
       offer: 'عرض خاص',
       guarantee: true,
+      supplierBusinessId: 'biz-workshop',
     },
     {
       id: 'prod-qamis-kaki',
@@ -1570,6 +1571,7 @@ async function main(): Promise<void> {
       inWarehouse: true,
       available: true,
       guarantee: false,
+      supplierBusinessId: 'biz-workshop',
     },
     {
       id: 'prod-bantal-jeans',
@@ -1586,6 +1588,7 @@ async function main(): Promise<void> {
       inWarehouse: true,
       available: true,
       guarantee: true,
+      supplierBusinessId: 'biz-workshop',
       variants: {
         axes: [{ key: 'size', label: 'قياس' }],
         options: [
@@ -1615,6 +1618,7 @@ async function main(): Promise<void> {
         inWarehouse: true,
         available: true,
         guarantee: true,
+        supplierBusinessId: 'biz-workshop',
       };
     }),
   ];

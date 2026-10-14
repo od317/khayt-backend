@@ -53,6 +53,8 @@ const makeProduct = (overrides: Record<string, unknown> = {}) => ({
   price: 5000,
   inWarehouse: false,
   available: true,
+  guarantee: false,
+  supplierBusinessId: null,
   variants: null,
   packaging: null,
   discount: null,
@@ -223,6 +225,39 @@ describe('BillingService', () => {
       });
     });
 
+    it('rejects a non-workshop supplier business', async () => {
+      prisma.business.findUnique.mockResolvedValue(
+        makeBusiness({ type: BusinessType.store }),
+      );
+
+      const error = await service
+        .createReceiving(actor, dto)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+        fields: { businessId: 'must be a workshop' },
+      });
+    });
+
+    it('rejects a product linked to a different workshop', async () => {
+      prisma.business.findUnique.mockResolvedValue(makeBusiness());
+      prisma.product.findMany.mockResolvedValue([
+        makeProduct({ supplierBusinessId: 'biz-other' }),
+      ]);
+
+      const error = await service
+        .createReceiving(actor, dto)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+        fields: { 'lines[0].productId': 'supplier mismatch' },
+      });
+    });
+
     it('creates the receiving, bill, and stock movements', async () => {
       prisma.business.findUnique.mockResolvedValue(makeBusiness());
       prisma.product.findMany.mockResolvedValue([makeProduct()]);
@@ -271,7 +306,17 @@ describe('BillingService', () => {
         }),
       );
       expect(prisma.product.updateMany).toHaveBeenCalledWith({
-        where: { id: { in: ['prod-1'] } },
+        where: { id: { in: ['prod-1'] }, supplierBusinessId: null },
+        data: {
+          inWarehouse: true,
+          supplierBusinessId: 'biz-1',
+        },
+      });
+      expect(prisma.product.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: { in: ['prod-1'] },
+          supplierBusinessId: 'biz-1',
+        },
         data: { inWarehouse: true },
       });
       expect(prisma.stockMovement.createMany).toHaveBeenCalledWith({

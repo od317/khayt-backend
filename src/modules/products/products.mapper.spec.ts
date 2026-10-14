@@ -13,6 +13,7 @@ const baseProduct = (): Product => ({
   inWarehouse: false,
   available: true,
   guarantee: false,
+  supplierBusinessId: null,
   variants: null,
   packaging: null,
   discount: null,
@@ -77,7 +78,7 @@ describe('toColorImages', () => {
 });
 
 describe('toProductResponse', () => {
-  it('maps a platform-owned product without business fields', () => {
+  it('maps a platform-owned product with optional supplier link', () => {
     const result = toProductResponse(baseProduct());
 
     expect(result).toMatchObject({
@@ -85,6 +86,7 @@ describe('toProductResponse', () => {
       name: 'قميص',
       category: 'قمصان',
       price: 5000,
+      supplierBusinessId: null,
     });
     expect(result).not.toHaveProperty('businessId');
     expect(result).not.toHaveProperty('business');

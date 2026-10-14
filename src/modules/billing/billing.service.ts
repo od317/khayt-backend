@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   BillStatus,
+  BusinessType,
   NotificationType,
   PaymentType,
   Prisma,
@@ -153,7 +154,7 @@ export class BillingService {
       seen.add(line.productId);
     }
 
-    // Verify the business exists.
+    // Verify the business exists and is a workshop (supplier).
     const business = await this.prisma.business.findUnique({
       where: { id: dto.businessId },
     });
@@ -164,8 +165,18 @@ export class BillingService {
         message: 'Business not found',
       });
     }
+    if (business.type !== BusinessType.workshop) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'Receiving supplier must be a workshop',
+          fields: { businessId: 'must be a workshop' },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
 
-    // Verify every product exists and belongs to the business.
+    // Verify every product exists; link/validate supplier workshop.
     const productIds = dto.lines.map((l) => l.productId);
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds } },
@@ -182,6 +193,21 @@ export class BillingService {
             error: 'validation_failed',
             message: 'Unknown product',
             fields: { [`lines[${i}].productId`]: 'unknown product' },
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (
+        product.supplierBusinessId != null &&
+        product.supplierBusinessId !== dto.businessId
+      ) {
+        throw new HttpException(
+          {
+            error: 'validation_failed',
+            message: 'Product is linked to a different workshop',
+            fields: {
+              [`lines[${i}].productId`]: 'supplier mismatch',
+            },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -234,7 +260,18 @@ export class BillingService {
       }
 
       await tx.product.updateMany({
-        where: { id: { in: productIds } },
+        where: { id: { in: productIds }, supplierBusinessId: null },
+        data: {
+          inWarehouse: true,
+          supplierBusinessId: dto.businessId,
+        },
+      });
+
+      await tx.product.updateMany({
+        where: {
+          id: { in: productIds },
+          supplierBusinessId: dto.businessId,
+        },
         data: { inWarehouse: true },
       });
 

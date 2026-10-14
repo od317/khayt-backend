@@ -10,6 +10,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   Validate,
@@ -236,4 +237,13 @@ export class CreateProductDto {
   })
   @IsBoolean()
   guarantee?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'biz-workshop-uuid',
+    description:
+      'Workshop business that supplies this product (platform still owns it).',
+  })
+  @IsOptional()
+  @IsUUID()
+  supplierBusinessId?: string;
 }

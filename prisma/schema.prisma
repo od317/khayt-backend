@@ -241,12 +241,13 @@ model Business {
   topics      String[]
 
   // relations
-  owner      User            @relation("BusinessOwner", fields: [ownerId], references: [id])
-  posts      Post[]
-  receiving  Receiving[]
-  bills      Bill[]
-  savedBy    SavedBusiness[]
-  categories BusinessCategory[]   // 👈 ADDED
+  owner            User            @relation("BusinessOwner", fields: [ownerId], references: [id])
+  posts            Post[]
+  receiving        Receiving[]
+  bills            Bill[]
+  savedBy          SavedBusiness[]
+  categories       BusinessCategory[]
+  suppliedProducts Product[]
 
   @@index([type])
   @@index([location])
@@ -268,27 +269,30 @@ model BusinessCategory {
 // ============================================================
 
 model Product {
-  id          String   @id @default(uuid())
-  name        String
-  category    String
-  cartItems CartItem[]
-  description String?
-  images      String[]
-  unit        String
-  price       Int
-  posts Post[]
-  inWarehouse Boolean  @default(false)
-  available   Boolean  @default(true)
-  guarantee   Boolean  @default(false)
-  deletedAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String    @id @default(uuid())
+  name               String
+  category           String
+  cartItems          CartItem[]
+  description        String?
+  images             String[]
+  unit               String
+  price              Int
+  posts              Post[]
+  inWarehouse        Boolean   @default(false)
+  available          Boolean   @default(true)
+  guarantee          Boolean   @default(false)
+  /** Workshop the goods came from (platform still owns the product). */
+  supplierBusinessId String?
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   variants  Json?
   packaging Json?
   discount  Json?
   offer     String?
 
+  supplier       Business?       @relation(fields: [supplierBusinessId], references: [id])
   supply         Supply?
   orderLines     OrderLine[]
   receivingLines ReceivingLine[]
@@ -296,6 +300,7 @@ model Product {
 
   @@index([inWarehouse])
   @@index([category])
+  @@index([supplierBusinessId])
 }
 
 // ============================================================

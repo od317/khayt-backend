@@ -1,5 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { BusinessType, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { skipTake } from '../../common/utils/pagination';
@@ -64,6 +68,8 @@ type SupplyQueryFilters = {
   q?: string;
   category?: string;
   lowStock?: string;
+  /** When set, only products linked to this supplier workshop. */
+  supplierBusinessId?: string;
 };
 
 @Injectable()
@@ -75,31 +81,39 @@ export class InventoryService {
   ): Promise<{ items: InventoryItemResponse[]; totals: InventoryTotals }> {
     const where: Prisma.SupplyWhereInput = {};
 
+    const productWhere: Prisma.ProductWhereInput = {};
     if (query.q) {
-      where.product = {
-        OR: [
-          { name: { contains: query.q, mode: 'insensitive' } },
-          { description: { contains: query.q, mode: 'insensitive' } },
-        ],
-      };
+      productWhere.OR = [
+        { name: { contains: query.q, mode: 'insensitive' } },
+        { description: { contains: query.q, mode: 'insensitive' } },
+      ];
+    }
+    if (query.category) {
+      productWhere.category = query.category;
+    }
+    if (query.supplierBusinessId) {
+      productWhere.supplierBusinessId = query.supplierBusinessId;
+    }
+    if (Object.keys(productWhere).length > 0) {
+      where.product = productWhere;
     }
 
-    if (query.category) {
-      where.product = {
-        ...(where.product as Prisma.ProductWhereInput | undefined),
-        category: query.category,
-      };
-    }
+    const billWhere: Prisma.BillWhereInput = query.supplierBusinessId
+      ? { businessId: query.supplierBusinessId }
+      : {};
 
     const [rows, billAgg] = await this.prisma.$transaction([
       this.prisma.supply.findMany({
         where,
         orderBy: { updatedAt: 'desc' },
         include: {
-          product: { select: { name: true, unit: true } },
+          product: {
+            select: { name: true, unit: true, supplierBusinessId: true },
+          },
         },
       }),
       this.prisma.bill.aggregate({
+        where: billWhere,
         _sum: { paid: true },
       }),
     ]);
@@ -163,7 +177,9 @@ export class InventoryService {
     const supply = await this.prisma.supply.findUnique({
       where: { id },
       include: {
-        product: { select: { name: true, unit: true } },
+        product: {
+          select: { name: true, unit: true, supplierBusinessId: true },
+        },
       },
     });
 
@@ -189,8 +205,33 @@ export class InventoryService {
     query: QuerySupplyDto,
     actor: AuthenticatedUser,
   ): Promise<SupplyListResponse> {
-    this.assertInternal(actor);
-    const { items, totals } = await this.loadSupplyItems(query);
+    let supplierBusinessId: string | undefined;
+
+    if (this.isInternal(actor)) {
+      supplierBusinessId = undefined;
+    } else if (actor.role === UserRole.workshop) {
+      const business = await this.prisma.business.findUnique({
+        where: { ownerId: actor.id },
+        select: { id: true, type: true },
+      });
+      if (!business || business.type !== BusinessType.workshop) {
+        throw new ForbiddenException({
+          error: 'forbidden',
+          message: 'Workshop business profile required',
+        });
+      }
+      supplierBusinessId = business.id;
+    } else {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'Insufficient role',
+      });
+    }
+
+    const { items, totals } = await this.loadSupplyItems({
+      ...query,
+      supplierBusinessId,
+    });
     return {
       items,
       totals,
