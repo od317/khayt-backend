@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsOptional,
@@ -7,6 +8,11 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import {
+  normalizePhone,
+  PHONE_PATTERN,
+  PHONE_VALIDATION_MESSAGE,
+} from '../../auth/phone';
 
 export class CreateStaffUserDto {
   @ApiProperty({ example: '' })
@@ -37,11 +43,14 @@ export class CreateStaffUserDto {
   @MaxLength(200)
   password?: string;
 
-  @ApiPropertyOptional({ example: '' })
+  @ApiPropertyOptional({ example: '+963994000009' })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? normalizePhone(value) : value,
+  )
   @IsString()
-  @Matches(/^09\d{8}$/, {
-    message: 'must be a Syrian phone number (09xxxxxxxx)',
+  @Matches(PHONE_PATTERN, {
+    message: PHONE_VALIDATION_MESSAGE,
   })
   phone?: string;
 }

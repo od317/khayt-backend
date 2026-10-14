@@ -129,6 +129,7 @@ All routes are under `/api/...`.
 ### Mobile
 
 1. `POST /api/auth/request-code` `{ phone }` → OTP in Redis  
+   (`phone` is E.164 international; Syrian `09xxxxxxxx` is normalized to `+9639…`)  
 2. `POST /api/auth/verify` `{ phone, code, fcmToken? }` → JWT + user  
    (new users are created without a display name; `user.canOrder` is true only
    when `onboardingCompleted` and role is `store` or `workshop`)  

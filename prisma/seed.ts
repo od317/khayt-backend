@@ -1,4 +1,4 @@
-// prisma/seed.ts
+﻿// prisma/seed.ts
 //
 // Dummy data for local development. Idempotent — safe to re-run.
 //
@@ -820,7 +820,7 @@ async function main(): Promise<void> {
     // ─────────────────────────────────────────
     {
       id: 'user-employee',
-      phone: '0994000001',
+      phone: '+963994000001',
       name: 'أحمد الخياط',
       role: UserRole.employee,
       locationId: 'loc-damascus-mazzeh',
@@ -828,7 +828,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-marketer',
-      phone: '0994000022',
+      phone: '+963994000022',
       name: 'سامر المسوق',
       role: UserRole.marketer,
       locationId: 'loc-damascus',
@@ -836,7 +836,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-shipping',
-      phone: '0994000023',
+      phone: '+963994000023',
       name: 'شركة الشام للشحن',
       role: UserRole.shipping_company,
       locationId: 'loc-damascus',
@@ -844,7 +844,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-workshop',
-      phone: '0994000002',
+      phone: '+963994000002',
       name: 'معمل النسيج الدمشقي',
       role: UserRole.workshop,
       locationId: 'loc-damascus',
@@ -852,7 +852,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-institute',
-      phone: '0994000003',
+      phone: '+963994000003',
       name: 'معهد الخياطة',
       role: UserRole.institute,
       locationId: 'loc-damascus-midan',
@@ -860,7 +860,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-store',
-      phone: '0994000004',
+      phone: '+963994000004',
       name: 'متجر الأزياء',
       role: UserRole.store,
       locationId: 'loc-damascus',
@@ -868,7 +868,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-admin',
-      phone: '0994000005',
+      phone: '+963994000005',
       name: 'مدير النظام',
       role: UserRole.admin,
       locationId: null,
@@ -876,7 +876,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-delivery',
-      phone: '0994000006',
+      phone: '+963994000006',
       name: 'أبو محمد',
       role: UserRole.delivery,
       locationId: 'loc-damascus',
@@ -888,7 +888,7 @@ async function main(): Promise<void> {
     // ─────────────────────────────────────────
     {
       id: 'user-workshop-halep',
-      phone: '0994000007',
+      phone: '+963994000007',
       name: 'معمل الشهباء للخياطة',
       role: UserRole.workshop,
       locationId: 'loc-halep',
@@ -896,7 +896,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-workshop-homs',
-      phone: '0994000008',
+      phone: '+963994000008',
       name: 'مشغل حمص للجينز',
       role: UserRole.workshop,
       locationId: 'loc-homs',
@@ -904,7 +904,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-workshop-lattakia',
-      phone: '0994000009',
+      phone: '+963994000009',
       name: 'معمل الساحل للتطريز',
       role: UserRole.workshop,
       locationId: 'loc-lattakia',
@@ -912,7 +912,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-institute-halep',
-      phone: '0994000010',
+      phone: '+963994000010',
       name: 'معهد حلب للتدريب المهني',
       role: UserRole.institute,
       locationId: 'loc-halep',
@@ -920,7 +920,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-institute-homs',
-      phone: '0994000011',
+      phone: '+963994000011',
       name: 'معهد حمص للخياطة',
       role: UserRole.institute,
       locationId: 'loc-homs',
@@ -928,7 +928,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-store-halep',
-      phone: '0994000012',
+      phone: '+963994000012',
       name: 'متجر الشهباء للأقمشة',
       role: UserRole.store,
       locationId: 'loc-halep',
@@ -936,7 +936,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-store-babtouma',
-      phone: '0994000013',
+      phone: '+963994000013',
       name: 'مؤسسة باب توما للأزياء',
       role: UserRole.store,
       locationId: 'loc-damascus-bab-touma',
@@ -944,7 +944,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-workshop-tartous',
-      phone: '0994000014',
+      phone: '+963994000014',
       name: 'معمل طرطوس للسجاد',
       role: UserRole.workshop,
       locationId: 'loc-tartous',
@@ -952,7 +952,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-workshop-hama',
-      phone: '0994000015',
+      phone: '+963994000015',
       name: 'مشغل حماة للخياطة',
       role: UserRole.workshop,
       locationId: 'loc-hama',
@@ -960,7 +960,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-store-homs',
-      phone: '0994000016',
+      phone: '+963994000016',
       name: 'متجر حمص للأزياء',
       role: UserRole.store,
       locationId: 'loc-homs',
@@ -968,7 +968,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-institute-lattakia',
-      phone: '0994000017',
+      phone: '+963994000017',
       name: 'معهد الساحل للخياطة',
       role: UserRole.institute,
       locationId: 'loc-lattakia',
@@ -976,7 +976,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-store-damascus-midan',
-      phone: '0994000018',
+      phone: '+963994000018',
       name: 'متجر الميدان للأقمشة',
       role: UserRole.store,
       locationId: 'loc-damascus-midan',
@@ -984,7 +984,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-workshop-rural-damascus',
-      phone: '0995034013',
+      phone: '+963995034013',
       name: 'معمل ريف دمشق للخياطة',
       role: UserRole.workshop,
       locationId: 'loc-rural-damascus-duma',
@@ -992,7 +992,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-workshop-idlib',
-      phone: '0994000019',
+      phone: '+963994000019',
       name: 'مشغل إدلب للخياطة',
       role: UserRole.workshop,
       locationId: 'loc-idlib',
@@ -1000,7 +1000,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-workshop-daraa',
-      phone: '0994000020',
+      phone: '+963994000020',
       name: 'معمل درعا للألبسة',
       role: UserRole.workshop,
       locationId: 'loc-daraa',
@@ -1008,7 +1008,7 @@ async function main(): Promise<void> {
     },
     {
       id: 'user-workshop-sweida',
-      phone: '0994000021',
+      phone: '+963994000021',
       name: 'مشغل السويداء للتطريز',
       role: UserRole.workshop,
       locationId: 'loc-sweida',
@@ -1094,7 +1094,7 @@ async function main(): Promise<void> {
       name: 'معمل النسيج الدمشقي',
       location: 'دمشق - القدم',
       description: 'معمل متخصص بصناعة القمصان والبناطيل',
-      phone: '0994000002',
+      phone: '+963994000002',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       capacity: '5000 قطعة شهرياً',
@@ -1110,7 +1110,7 @@ async function main(): Promise<void> {
       name: 'معهد الخياطة',
       location: 'دمشق - الميدان',
       description: 'دورات تدريب على الخياطة والتطريز',
-      phone: '0994000003',
+      phone: '+963994000003',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       duration: '3 أشهر',
@@ -1125,7 +1125,7 @@ async function main(): Promise<void> {
       name: 'متجر الأزياء',
       location: 'دمشق - الحمرا',
       description: 'متجر لبيع الملابس بالجملة',
-      phone: '0994000004',
+      phone: '+963994000004',
       imageUrl: SHARED_IMAGE_URL,
       verified: false,
       services: ['بيع جملة', 'بيع مفرق', 'توصيل داخل دمشق'],
@@ -1142,7 +1142,7 @@ async function main(): Promise<void> {
       name: 'معمل الشهباء للخياطة',
       location: 'حلب - الشيخ نجار',
       description: 'معمل متخصص بالألبسة النسائية والأطفال',
-      phone: '0994000007',
+      phone: '+963994000007',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       capacity: '3000 قطعة شهرياً',
@@ -1158,7 +1158,7 @@ async function main(): Promise<void> {
       name: 'مشغل حمص للجينز',
       location: 'حمص - الوعر',
       description: 'متخصصون بصناعة الجينز بكل أنواعه',
-      phone: '0994000008',
+      phone: '+963994000008',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       capacity: '2000 قطعة شهرياً',
@@ -1174,7 +1174,7 @@ async function main(): Promise<void> {
       name: 'معمل الساحل للتطريز',
       location: 'اللاذقية - الرمل الجنوبي',
       description: 'تطريز يدوي وآلي بجودة عالية',
-      phone: '0994000009',
+      phone: '+963994000009',
       imageUrl: SHARED_IMAGE_URL,
       verified: false,
       capacity: '1500 قطعة شهرياً',
@@ -1190,7 +1190,7 @@ async function main(): Promise<void> {
       name: 'معمل طرطوس للسجاد',
       location: 'طرطوس - بانياس',
       description: 'صناعة السجاد اليدوي والآلي',
-      phone: '0994000014',
+      phone: '+963994000014',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       capacity: '500 متر مربع شهرياً',
@@ -1206,7 +1206,7 @@ async function main(): Promise<void> {
       name: 'مشغل حماة للخياطة',
       location: 'حماة - الحاضر',
       description: 'خياطة عامة وتعديلات',
-      phone: '0994000015',
+      phone: '+963994000015',
       imageUrl: SHARED_IMAGE_URL,
       verified: false,
       capacity: '1000 قطعة شهرياً',
@@ -1222,7 +1222,7 @@ async function main(): Promise<void> {
       name: 'معمل ريف دمشق للخياطة',
       location: 'ريف دمشق - دوما',
       description: 'خياطة كميات كبيرة للألبسة الجاهزة',
-      phone: '0995000013',
+      phone: '+963995000013',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       capacity: '4000 قطعة شهرياً',
@@ -1238,7 +1238,7 @@ async function main(): Promise<void> {
       name: 'مشغل إدلب للخياطة',
       location: 'إدلب - سراقب',
       description: 'خياطة ألبسة رجالية ونسائية بكميات متوسطة',
-      phone: '0994000019',
+      phone: '+963994000019',
       imageUrl: SHARED_IMAGE_URL,
       verified: false,
       capacity: '1200 قطعة شهرياً',
@@ -1254,7 +1254,7 @@ async function main(): Promise<void> {
       name: 'معمل درعا للألبسة',
       location: 'درعا - المدينة',
       description: 'إنتاج ألبسة جاهزة للأسواق المحلية',
-      phone: '0994000020',
+      phone: '+963994000020',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       capacity: '2500 قطعة شهرياً',
@@ -1270,7 +1270,7 @@ async function main(): Promise<void> {
       name: 'مشغل السويداء للتطريز',
       location: 'السويداء - المركز',
       description: 'تطريز تقليدي وآلي على الألبسة والمفروشات',
-      phone: '0994000021',
+      phone: '+963994000021',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       capacity: '800 قطعة شهرياً',
@@ -1290,7 +1290,7 @@ async function main(): Promise<void> {
       name: 'معهد حلب للتدريب المهني',
       location: 'حلب - العزيزية',
       description: 'دورات مهنية في الخياطة والتصميم',
-      phone: '0994000010',
+      phone: '+963994000010',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       duration: '6 أشهر',
@@ -1305,7 +1305,7 @@ async function main(): Promise<void> {
       name: 'معهد حمص للخياطة',
       location: 'حمص - الإنشاءات',
       description: 'تعليم الخياطة من الصفر حتى الاحتراف',
-      phone: '0994000011',
+      phone: '+963994000011',
       imageUrl: SHARED_IMAGE_URL,
       verified: false,
       duration: '4 أشهر',
@@ -1320,7 +1320,7 @@ async function main(): Promise<void> {
       name: 'معهد الساحل للخياطة',
       location: 'اللاذقية - الزراعة',
       description: 'دورات خياطة وتصميم للسيدات',
-      phone: '0994000017',
+      phone: '+963994000017',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       duration: '3 أشهر',
@@ -1339,7 +1339,7 @@ async function main(): Promise<void> {
       name: 'متجر الشهباء للأقمشة',
       location: 'حلب - الجميلية',
       description: 'أقمشة محلية ومستوردة بالجملة والمفرق',
-      phone: '0994000012',
+      phone: '+963994000012',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       services: ['بيع أقمشة', 'بيع جملة', 'توصيل'],
@@ -1352,7 +1352,7 @@ async function main(): Promise<void> {
       name: 'مؤسسة باب توما للأزياء',
       location: 'دمشق - باب توما',
       description: 'بيع الألبسة الرجالية والنسائية',
-      phone: '0994000013',
+      phone: '+963994000013',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       services: ['بيع ملابس رجالية', 'بيع ملابس نسائية', 'بيع مفرق'],
@@ -1365,7 +1365,7 @@ async function main(): Promise<void> {
       name: 'متجر حمص للأزياء',
       location: 'حمص - الزهراء',
       description: 'ملابس رجالية ونسائية وأطفال',
-      phone: '0994000016',
+      phone: '+963994000016',
       imageUrl: SHARED_IMAGE_URL,
       verified: false,
       services: ['بيع ملابس أطفال', 'بيع ملابس رجالية', 'بيع جملة'],
@@ -1378,7 +1378,7 @@ async function main(): Promise<void> {
       name: 'متجر الميدان للأقمشة',
       location: 'دمشق - الميدان',
       description: 'أقمشة متنوعة بالجملة',
-      phone: '0994000018',
+      phone: '+963994000018',
       imageUrl: SHARED_IMAGE_URL,
       verified: true,
       services: ['بيع أقمشة', 'بيع جملة', 'قص بالمتر'],
@@ -2654,7 +2654,7 @@ async function main(): Promise<void> {
       deliveryTime: '24 ساعة',
       pricing: 'يبدأ من 5000 ل.س',
       fleet: '5 شاحنات + 2 فان',
-      phone: '0994111001',
+      phone: '+963994111001',
     },
     {
       id: 'ship-syria-express',
@@ -2665,7 +2665,7 @@ async function main(): Promise<void> {
       deliveryTime: '48 ساعة',
       pricing: 'يبدأ من 7000 ل.س',
       fleet: '8 شاحنات',
-      phone: '0994111002',
+      phone: '+963994111002',
     },
     {
       id: 'ship-coastal-logistics',
@@ -2676,7 +2676,7 @@ async function main(): Promise<void> {
       deliveryTime: '24-48 ساعة',
       pricing: 'حسب الوزن والمسافة',
       fleet: '4 شاحنات صغيرة',
-      phone: '0994111003',
+      phone: '+963994111003',
     },
     {
       id: 'ship-homs-cargo',
@@ -2687,7 +2687,7 @@ async function main(): Promise<void> {
       deliveryTime: '48-72 ساعة',
       pricing: 'يبدأ من 6000 ل.س',
       fleet: '6 شاحنات',
-      phone: '0994111004',
+      phone: '+963994111004',
     },
   ];
 
@@ -3082,3 +3082,4 @@ main()
   .finally(() => {
     void prisma.$disconnect();
   });
+

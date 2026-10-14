@@ -26,7 +26,7 @@ import {
 import { AuthService } from './auth.service';
 import { SmsService } from './sms.service';
 
-const PHONE = '0955123456';
+const PHONE = '+963955123456';
 
 const actor: AuthenticatedUser = {
   id: 'user-1',

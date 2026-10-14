@@ -49,9 +49,11 @@ npm run dev                          # http://localhost:3000
 ## Auth (mobile)
 
 ```http
-POST /api/auth/request-code   { "phone": "0994000001" }
-POST /api/auth/verify         { "phone": "0994000001", "code": "000000" }
+POST /api/auth/request-code   { "phone": "+963994000001" }
+POST /api/auth/verify         { "phone": "+963994000001", "code": "000000" }
 ```
+
+Phones are international (E.164, e.g. `+12025550123`). Legacy Syrian `09xxxxxxxx` is still accepted and stored as `+9639…`.
 
 Display name is optional at signup — set it later with `PATCH /api/auth/me`. Post / like / comment require a name (`completedData: false` if missing). Creating an order requires saved `deliveryLat` / `deliveryLng` on the store profile (same gate).
 
@@ -59,12 +61,12 @@ Seeded demo phones (after `db:seed`):
 
 | Phone | Role | Name |
 | --- | --- | --- |
-| `0994000001` | employee | أحمد الخياط |
-| `0994000002` | workshop | معمل النسيج الدمشقي |
-| `0994000003` | institute | معهد الخياطة |
-| `0994000004` | store | متجر الأزياء |
-| `0994000022` | marketer | سامر المسوق |
-| `0994000023` | shipping_company | شركة الشام للشحن |
+| `+963994000001` | employee | أحمد الخياط |
+| `+963994000002` | workshop | معمل النسيج الدمشقي |
+| `+963994000003` | institute | معهد الخياطة |
+| `+963994000004` | store | متجر الأزياء |
+| `+963994000022` | marketer | سامر المسوق |
+| `+963994000023` | shipping_company | شركة الشام للشحن |
 
 ## Env
 

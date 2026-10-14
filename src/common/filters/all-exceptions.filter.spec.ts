@@ -33,7 +33,10 @@ describe('AllExceptionsFilter', () => {
     filter.catch(
       new BadRequestException({
         error: 'validation_failed',
-        fields: { phone: 'must be a Syrian phone number (09xxxxxxxx)' },
+        fields: {
+          phone:
+            'must be an international phone number in E.164 form (+countrycode…)',
+        },
       }),
       host as never,
     );

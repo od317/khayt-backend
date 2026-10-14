@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
@@ -9,13 +10,18 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import {
+  normalizePhone,
+  PHONE_PATTERN,
+  PHONE_VALIDATION_MESSAGE,
+} from '../../auth/phone';
 
 export const UPDATE_EMPLOYEE_EXAMPLE = {
   name: '',
   role: 'inventory',
   email: '',
   password: '',
-  phone: '0994000009',
+  phone: '+963994000009',
   verified: true,
   suspended: false,
   bio: '',
@@ -60,9 +66,12 @@ export class UpdateEmployeeDto {
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? normalizePhone(value) : value,
+  )
   @IsString()
-  @Matches(/^09\d{8}$/, {
-    message: 'must be a Syrian phone number (09xxxxxxxx)',
+  @Matches(PHONE_PATTERN, {
+    message: PHONE_VALIDATION_MESSAGE,
   })
   phone?: string | null;
 

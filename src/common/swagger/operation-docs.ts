@@ -125,7 +125,8 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       validation_failed: {
         summary: 'Invalid phone',
         value: validationFailed({
-          phone: 'must be a Syrian phone number (09xxxxxxxx)',
+          phone:
+            'must be an international phone number in E.164 form (+countrycode…)',
         }),
       },
     }),
@@ -147,7 +148,8 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       validation_failed: {
         summary: 'Invalid phone or code',
         value: validationFailed({
-          phone: 'must be a Syrian phone number (09xxxxxxxx)',
+          phone:
+            'must be an international phone number in E.164 form (+countrycode…)',
           code: 'must be a 6-digit code',
         }),
       },

@@ -216,7 +216,11 @@ describe('AdminService', () => {
       prisma.role.findUnique.mockResolvedValue(staffRole(UserRole.delivery));
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue(
-        makeUser({ role: UserRole.delivery, phone: '0994000009', email: null }),
+        makeUser({
+          role: UserRole.delivery,
+          phone: '+963994000009',
+          email: null,
+        }),
       );
 
       const result = await service.createEmployee({
@@ -225,8 +229,13 @@ describe('AdminService', () => {
         phone: '0994000009',
       });
 
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ phone: '+963994000009' }),
+        }),
+      );
       expect(result.user.role).toBe(UserRole.delivery);
-      expect(result.user.phone).toBe('0994000009');
+      expect(result.user.phone).toBe('+963994000009');
     });
 
     it('rejects a duplicate email', async () => {
