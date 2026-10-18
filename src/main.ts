@@ -20,6 +20,7 @@ async function bootstrap(): Promise<void> {
   mkdirSync('./uploads/products', { recursive: true });
   mkdirSync('./uploads/posts', { recursive: true });
   mkdirSync('./uploads/businesses', { recursive: true });
+  mkdirSync('./uploads/avatars', { recursive: true });
 
   app.enableCors({
     origin: config.get('corsOrigins', { infer: true }),

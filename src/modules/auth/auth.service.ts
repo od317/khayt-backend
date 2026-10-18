@@ -328,7 +328,8 @@ export class AuthService {
   async updateMe(
     actor: AuthenticatedUser,
     dto: UpdateMeDto,
-  ): Promise<{ user: UserResponse }> {
+    image?: Express.Multer.File,
+  ): Promise<{ user: UserResponse; business: BusinessResponse | null }> {
     const isBusinessOwner =
       actor.role === UserRole.workshop || actor.role === UserRole.store;
 
@@ -355,6 +356,11 @@ export class AuthService {
       );
     }
 
+    const uploadedAvatarUrl = image
+      ? `/uploads/avatars/${image.filename}`
+      : undefined;
+    const effectiveAvatarUrl = uploadedAvatarUrl ?? dto.avatarUrl;
+
     const data: Prisma.UserUpdateInput = {};
     if (dto.name !== undefined) {
       data.name = dto.name;
@@ -362,8 +368,8 @@ export class AuthService {
     if (dto.bio !== undefined) {
       data.bio = dto.bio;
     }
-    if (dto.avatarUrl !== undefined) {
-      data.avatarUrl = dto.avatarUrl;
+    if (effectiveAvatarUrl !== undefined) {
+      data.avatarUrl = effectiveAvatarUrl;
     }
     // Combined profile forms may send availableForWork; only employee-like roles apply it.
     if (
@@ -458,7 +464,7 @@ export class AuthService {
       (dto.description !== undefined ||
         dto.services !== undefined ||
         dto.name !== undefined ||
-        dto.avatarUrl !== undefined ||
+        effectiveAvatarUrl !== undefined ||
         dto.bio !== undefined)
     ) {
       const updated = await this.prisma.business.updateMany({
@@ -477,9 +483,9 @@ export class AuthService {
                   .filter((s) => s.length > 0),
               }
             : {}),
-          // Workshop/store UI shows business.imageUrl, not user.avatarUrl.
-          ...(dto.avatarUrl !== undefined
-            ? { imageUrl: dto.avatarUrl }
+          // Workshop/store UI shows business.imageUrl.
+          ...(effectiveAvatarUrl !== undefined
+            ? { imageUrl: effectiveAvatarUrl }
             : {}),
         },
       });
@@ -495,7 +501,14 @@ export class AuthService {
       }
     }
 
-    return { user: toUserResponse(user) };
+    const business = await this.prisma.business.findUnique({
+      where: { ownerId: actor.id },
+    });
+
+    return {
+      user: toUserResponse(user),
+      business: business ? toBusinessResponse(business) : null,
+    };
   }
 
   /**

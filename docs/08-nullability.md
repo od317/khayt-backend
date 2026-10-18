@@ -213,10 +213,10 @@
 
 ### PATCH `/api/auth/me`
 
-- **Response can be null:** `user` → UserResponse nullables  
-  (returns `{ user }` only — not full `GET /me` shape)
-- **Request optional:** `name`, `bio`, `availableForWork`, `avatarUrl`, `locationId`, `deliveryAddress`, `deliveryLat`, `deliveryLng`, `description`, `services`  
+- **Response can be null:** `user` → UserResponse nullables; `business` (null if user has no business)
+- **Request optional:** `name`, `bio`, `availableForWork`, `avatarUrl`, `image` (multipart file), `locationId`, `deliveryAddress`, `deliveryLat`, `deliveryLng`, `description`, `services`
   Empty `deliveryAddress` / null coords are treated as omitted.
+  Uploaded `image` sets `user.avatarUrl` and syncs `business.imageUrl` for workshop/store.
 
 ### PATCH `/api/auth/me/available-for-work`
 

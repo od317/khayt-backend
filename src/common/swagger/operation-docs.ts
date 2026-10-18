@@ -262,7 +262,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
 
   'patch /auth/me': {
-    '200': ok({ user: sampleUser }),
+    '200': ok({ user: sampleUser, business: sampleBusiness }),
     '400': errors('Validation failed', {
       availableForWork: {
         summary: 'availableForWork is employee-like only',

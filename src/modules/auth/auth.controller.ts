@@ -42,6 +42,26 @@ const businessImageStorage = diskStorage({
   },
 });
 
+const avatarImageStorage = diskStorage({
+  destination: './uploads/avatars',
+  filename: (_req, file, cb) => {
+    const ext = extname(file.originalname) || '.jpg';
+    cb(null, `${randomUUID()}${ext}`);
+  },
+});
+
+function imageFileFilter(
+  _req: Request,
+  file: Express.Multer.File,
+  cb: (error: Error | null, acceptFile: boolean) => void,
+): void {
+  if (!file.mimetype.startsWith('image/')) {
+    cb(new Error('Only image uploads are allowed'), false);
+    return;
+  }
+  cb(null, true);
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -99,8 +119,21 @@ export class AuthController {
   }
 
   @Patch('me')
-  updateMe(@RequireUser() user: AuthenticatedUser, @Body() dto: UpdateMeDto) {
-    return this.auth.updateMe(user, dto);
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @ApiBody({ type: UpdateMeDto })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: avatarImageStorage,
+      limits: { fileSize: 8 * 1024 * 1024 },
+      fileFilter: imageFileFilter,
+    }),
+  )
+  updateMe(
+    @RequireUser() user: AuthenticatedUser,
+    @Body() dto: UpdateMeDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ): Promise<{ user: UserResponse; business: BusinessResponse | null }> {
+    return this.auth.updateMe(user, dto, image);
   }
 
   @Patch('me/available-for-work')

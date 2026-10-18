@@ -50,15 +50,33 @@ export class UpdateMeDto {
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
   @IsBoolean()
   availableForWork?: boolean;
 
-  @ApiPropertyOptional({ example: '' })
+  @ApiPropertyOptional({
+    example: '',
+    description:
+      'Optional remote URL. Prefer uploading a file as multipart field `image`.',
+  })
   @IsOptional()
   @Transform(emptyToUndefined)
   @IsString()
   @MaxLength(500)
   avatarUrl?: string;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description:
+      'Profile photo (multipart field name: `image`). JPG/PNG/WebP, max 8MB. Stored under /uploads/avatars/.',
+  })
+  @IsOptional()
+  image?: never;
 
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
