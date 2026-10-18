@@ -501,6 +501,10 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
           fields: {
             specialty: [{ id: '', label: '', parentId: null, sortOrder: 0 }],
             skills: [{ id: '', label: '', parentId: '', sortOrder: 0 }],
+            currency: [
+              { id: 'opt-currency-syp', label: 'ليرة سورية', parentId: null, sortOrder: 0 },
+              { id: 'opt-currency-usd', label: 'دولار', parentId: null, sortOrder: 1 },
+            ],
           },
         },
         service_offering: {
@@ -508,6 +512,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
             specialty: [],
             servicePlace: [],
             pricing: [],
+            currency: [],
           },
         },
         product_offering: {
@@ -515,12 +520,14 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
             specialty: [],
             sellMethod: [],
             priceMethod: [],
+            currency: [],
           },
         },
         material_offering: {
           fields: {
             specialty: [],
             condition: [],
+            currency: [],
           },
         },
       },

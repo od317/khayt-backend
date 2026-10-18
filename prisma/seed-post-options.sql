@@ -521,6 +521,45 @@ VALUES
     true,
     NOW(),
     NOW()
+  ),
+  -- currency (SYP / USD)
+  (
+    'opt-currency-syp',
+    'currency',
+    ARRAY[
+      'job_offering',
+      'job_seeking',
+      'service_offering',
+      'service_requesting',
+      'product_offering',
+      'material_offering',
+      'material_requesting'
+    ]::"PostType"[],
+    'ليرة سورية',
+    NULL,
+    0,
+    true,
+    NOW(),
+    NOW()
+  ),
+  (
+    'opt-currency-usd',
+    'currency',
+    ARRAY[
+      'job_offering',
+      'job_seeking',
+      'service_offering',
+      'service_requesting',
+      'product_offering',
+      'material_offering',
+      'material_requesting'
+    ]::"PostType"[],
+    'دولار',
+    NULL,
+    1,
+    true,
+    NOW(),
+    NOW()
   )
 ON CONFLICT (id) DO UPDATE SET
   kind = EXCLUDED.kind,

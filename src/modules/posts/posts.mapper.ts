@@ -65,6 +65,7 @@ export type PostResponse = {
   priceMethod: string | null;
   condition: string | null;
   price: string | null;
+  currency: string | null;
   categories: PostCategoryResponse[];
   author: PostAuthorResponse;
   business: PostBusinessResponse | null;
@@ -174,6 +175,7 @@ export function toPostResponse(
     priceMethod: post.priceMethod,
     condition: post.condition,
     price: post.price,
+    currency: post.currency,
     categories: (post.categories ?? []).map((row) => ({
       id: row.category.id,
       name: row.category.name,

@@ -250,6 +250,7 @@ export class PostOptionsService {
       sellMethod?: string;
       priceMethod?: string;
       condition?: string;
+      currency?: string;
     },
   ): Promise<Record<string, string>> {
     const kinds = POST_OPTION_KINDS_BY_TYPE[type];
@@ -324,6 +325,11 @@ export class PostOptionsService {
         kind: PostOptionKind.condition,
         value: values.condition,
         field: 'condition',
+      },
+      {
+        kind: PostOptionKind.currency,
+        value: values.currency,
+        field: 'currency',
       },
     ];
 

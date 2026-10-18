@@ -78,6 +78,7 @@
 | `priceMethod` | yes |
 | `condition` | yes |
 | `price` | yes |
+| `currency` | yes |
 | `business` | yes (whole object) |
 | `product` | yes (whole object) |
 | `author.name` | yes |

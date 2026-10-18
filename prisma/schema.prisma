@@ -112,6 +112,7 @@ enum PostOptionKind {
   sell_method
   price_method
   condition
+  currency
 }
 
 
@@ -354,6 +355,7 @@ model Post {
   priceMethod  String?
   condition    String?
   price        String?
+  currency     String?
 
   author     User           @relation(fields: [authorId], references: [id])
   business   Business?      @relation(fields: [businessId], references: [id])

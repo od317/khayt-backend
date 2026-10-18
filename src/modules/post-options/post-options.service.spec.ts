@@ -68,6 +68,7 @@ describe('PostOptionsService', () => {
     expect(result.fields).not.toHaveProperty('salaryType');
     expect(result.fields).not.toHaveProperty('workType');
     expect(result.fields).not.toHaveProperty('experience');
+    expect(result.fields.currency).toEqual([]);
   });
 
   it('returns every post type under byType when type is omitted', async () => {

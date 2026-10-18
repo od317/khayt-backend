@@ -211,6 +211,16 @@ export class CreatePostDto {
   @MaxLength(100)
   priceMethod?: string;
 
+  @ApiPropertyOptional({
+    example: 'ليرة سورية',
+    description:
+      'Currency chip for priced posts (from post-options kind `currency`).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  currency?: string;
+
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()

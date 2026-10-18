@@ -339,6 +339,7 @@ export class PostsService {
         priceMethod: dto.priceMethod ?? null,
         condition: dto.condition ?? null,
         price: dto.price ?? null,
+        currency: dto.currency ?? null,
         productId,
         ...(categoryIds.length > 0
           ? {
@@ -398,6 +399,7 @@ export class PostsService {
       sellMethod: dto.sellMethod,
       priceMethod: dto.priceMethod,
       condition: dto.condition,
+      currency: dto.currency,
     };
     const touchesOptions = Object.values(optionPatch).some(
       (v) => v !== undefined,
@@ -417,6 +419,7 @@ export class PostsService {
           sellMethod: true,
           priceMethod: true,
           condition: true,
+          currency: true,
         },
       });
       await this.assertOptionSelections(existing.type, {
@@ -429,6 +432,7 @@ export class PostsService {
         sellMethod: dto.sellMethod ?? current?.sellMethod ?? undefined,
         priceMethod: dto.priceMethod ?? current?.priceMethod ?? undefined,
         condition: dto.condition ?? current?.condition ?? undefined,
+        currency: dto.currency ?? current?.currency ?? undefined,
       });
     }
 
@@ -509,6 +513,7 @@ export class PostsService {
         if (dto.priceMethod !== undefined) data.priceMethod = dto.priceMethod;
         if (dto.condition !== undefined) data.condition = dto.condition;
         if (dto.price !== undefined) data.price = dto.price;
+        if (dto.currency !== undefined) data.currency = dto.currency;
         if (dto.active !== undefined) data.active = dto.active;
 
         if (productPatch !== undefined) data.product = productPatch;
@@ -982,6 +987,7 @@ export class PostsService {
       sellMethod?: string;
       priceMethod?: string;
       condition?: string;
+      currency?: string;
     },
   ): Promise<void> {
     const fields = await this.postOptions.validateSelections(type, values);

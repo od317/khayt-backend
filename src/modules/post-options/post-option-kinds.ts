@@ -7,21 +7,39 @@ export const POST_OPTION_KINDS_BY_TYPE: Record<
 > = {
   // workType / salaryType / experience stay on the post body as free text —
   // they are not catalog chips anymore.
-  job_offering: [PostOptionKind.specialty, PostOptionKind.skill],
-  job_seeking: [PostOptionKind.specialty, PostOptionKind.skill],
+  job_offering: [
+    PostOptionKind.specialty,
+    PostOptionKind.skill,
+    PostOptionKind.currency,
+  ],
+  job_seeking: [
+    PostOptionKind.specialty,
+    PostOptionKind.skill,
+    PostOptionKind.currency,
+  ],
   service_offering: [
     PostOptionKind.specialty,
     PostOptionKind.service_place,
     PostOptionKind.pricing,
+    PostOptionKind.currency,
   ],
-  service_requesting: [PostOptionKind.specialty],
+  service_requesting: [PostOptionKind.specialty, PostOptionKind.currency],
   product_offering: [
     PostOptionKind.specialty,
     PostOptionKind.sell_method,
     PostOptionKind.price_method,
+    PostOptionKind.currency,
   ],
-  material_offering: [PostOptionKind.specialty, PostOptionKind.condition],
-  material_requesting: [PostOptionKind.specialty, PostOptionKind.condition],
+  material_offering: [
+    PostOptionKind.specialty,
+    PostOptionKind.condition,
+    PostOptionKind.currency,
+  ],
+  material_requesting: [
+    PostOptionKind.specialty,
+    PostOptionKind.condition,
+    PostOptionKind.currency,
+  ],
   reel: [],
 };
 
@@ -36,4 +54,5 @@ export const POST_OPTION_FIELD_NAME: Record<PostOptionKind, string> = {
   sell_method: 'sellMethod',
   price_method: 'priceMethod',
   condition: 'condition',
+  currency: 'currency',
 };

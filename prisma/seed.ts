@@ -1831,6 +1831,36 @@ async function main(): Promise<void> {
           sortOrder: i,
         }),
       ),
+      {
+        id: 'opt-currency-syp',
+        kind: PostOptionKind.currency,
+        postTypes: [
+          PostType.job_offering,
+          PostType.job_seeking,
+          PostType.service_offering,
+          PostType.service_requesting,
+          PostType.product_offering,
+          PostType.material_offering,
+          PostType.material_requesting,
+        ],
+        label: 'ليرة سورية',
+        sortOrder: 0,
+      },
+      {
+        id: 'opt-currency-usd',
+        kind: PostOptionKind.currency,
+        postTypes: [
+          PostType.job_offering,
+          PostType.job_seeking,
+          PostType.service_offering,
+          PostType.service_requesting,
+          PostType.product_offering,
+          PostType.material_offering,
+          PostType.material_requesting,
+        ],
+        label: 'دولار',
+        sortOrder: 1,
+      },
     ];
 
   for (const option of postOptions) {

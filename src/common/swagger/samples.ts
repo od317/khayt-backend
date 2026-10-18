@@ -126,6 +126,7 @@ export const samplePost = {
   priceMethod: null as string | null,
   condition: null as string | null,
   price: null as string | null,
+  currency: null as string | null,
   categories: [] as { id: string; name: string; slug: string }[],
   author: {
     id: '',
@@ -375,6 +376,7 @@ export const createPostSwaggerExamples = {
       sellMethod: 'جملة',
       priceMethod: 'سعر ثابت',
       price: '45000',
+      currency: 'ليرة سورية',
       productId: 'prod-qamis-abyad',
     },
   },
