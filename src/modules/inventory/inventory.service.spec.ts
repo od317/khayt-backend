@@ -264,19 +264,23 @@ describe('InventoryService', () => {
       });
     });
 
-    it('returns every item without pagination', async () => {
+    it('paginates with page and limit', async () => {
       prisma.supply.findMany.mockResolvedValue(
         Array.from({ length: 25 }, (_, i) =>
           makeSupply({ id: `supply-${i}`, sent: 10, remaining: 5 }),
         ),
       );
 
-      const result = await service.listSupply({}, internal);
+      const result = await service.listSupply(
+        { page: 2, limit: 10 },
+        internal,
+      );
 
-      expect(result.items).toHaveLength(25);
+      expect(result.items).toHaveLength(10);
       expect(result.total).toBe(25);
-      expect(result).not.toHaveProperty('page');
-      expect(result).not.toHaveProperty('limit');
+      expect(result.page).toBe(2);
+      expect(result.limit).toBe(10);
+      expect(result.items[0]?.id).toBe('supply-10');
     });
   });
 });

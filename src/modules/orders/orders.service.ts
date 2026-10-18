@@ -16,7 +16,6 @@ import {
 } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { assertHasDeliveryCoordinates } from '../../common/profile/profile-complete';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
 import { ORDER_STATUS_LABELS, orderStatusColor } from '../../common/order-status-labels';
@@ -214,8 +213,8 @@ export class OrdersService {
         });
       }
 
-      assertHasDeliveryCoordinates(storeUser);
-
+      // First order: accept address/lat/lng from the body and persist them.
+      // Later orders: reuse saved pin when the body omits location.
       const { dropoff, persist } = resolveOrderDropoff(dto, storeUser);
 
       const products = await tx.product.findMany({

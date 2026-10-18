@@ -12,7 +12,10 @@ import { RequireUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/types/auth';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
 import { NotificationResponse } from './notifications.mapper';
-import { NotificationsService } from './notifications.service';
+import {
+  NotificationsListResponse,
+  NotificationsService,
+} from './notifications.service';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -22,13 +25,7 @@ export class NotificationsController {
   list(
     @Query() query: QueryNotificationsDto,
     @RequireUser() user: AuthenticatedUser,
-  ): Promise<{
-    items: NotificationResponse[];
-    totalCount: number;
-    skipCount: number;
-    maxResultCount: number;
-    unreadCount: number;
-  }> {
+  ): Promise<NotificationsListResponse> {
     return this.notifications.list(query, user);
   }
 

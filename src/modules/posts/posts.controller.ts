@@ -111,7 +111,7 @@ export class PostsController {
   @ApiOperation({
     summary: 'List my posts',
     description:
-      'Authenticated. Returns the current user’s posts (active and inactive), newest first. Paginated via page & limit.',
+      'Authenticated. Current user’s posts only (reels excluded), active and inactive, newest first. Paginated via page & limit.',
   })
   @ApiOkResponse({
     description: 'Paginated list of the current user’s posts',
@@ -121,7 +121,25 @@ export class PostsController {
     @RequireUser() user: AuthenticatedUser,
     @Query() query: PaginationDto,
   ): Promise<Paginated<PostResponse>> {
-    return this.posts.listMine(user, query);
+    return this.posts.listMine(user, query, 'posts');
+  }
+
+  @Get('mine/reels')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'List my reels',
+    description:
+      'Authenticated. Current user’s reels only, active and inactive, newest first. Paginated via page & limit.',
+  })
+  @ApiOkResponse({
+    description: 'Paginated list of the current user’s reels',
+    schema: { example: paginated(samplePost) },
+  })
+  listMyReels(
+    @RequireUser() user: AuthenticatedUser,
+    @Query() query: PaginationDto,
+  ): Promise<Paginated<PostResponse>> {
+    return this.posts.listMine(user, query, 'reels');
   }
 
   @Public()

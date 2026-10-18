@@ -188,15 +188,18 @@ export class PostsService {
   }
 
   /**
-   * Authenticated user's own posts (active + inactive), paginated.
+   * Authenticated user's own content (active + inactive), paginated.
+   * `posts` excludes reels; `reels` is reels only.
    */
   async listMine(
     actor: AuthenticatedUser,
     query: { page: number; limit: number },
+    kind: 'posts' | 'reels' = 'posts',
   ): Promise<Paginated<PostResponse>> {
     const where: Prisma.PostWhereInput = {
       deletedAt: null,
       authorId: actor.id,
+      type: kind === 'reels' ? PostType.reel : { not: PostType.reel },
     };
 
     const { skip, take } = skipTake(query.page, query.limit);

@@ -518,7 +518,7 @@ text
 ### GET /notifications
 
 query: { unreadOnly?, page?, limit? }
-→ 200 { items: Notification[], total, unreadCount }
+→ 200 { items: Notification[], total, page, limit, unreadCount }
 
 text
 

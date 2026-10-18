@@ -3,6 +3,7 @@ import { Notification, NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { AuthenticatedUser } from '../../common/types/auth';
+import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
 import {
   NotificationResponse,
@@ -10,6 +11,10 @@ import {
 } from './notifications.mapper';
 import { NOTIFY_USER_CHANNEL } from './notifications.pubsub';
 import { FcmService } from './fcm.service';
+
+export type NotificationsListResponse = Paginated<NotificationResponse> & {
+  unreadCount: number;
+};
 
 export type NotifyInput = {
   userId: string;
@@ -111,13 +116,7 @@ export class NotificationsService {
   async list(
     query: QueryNotificationsDto,
     actor: AuthenticatedUser,
-  ): Promise<{
-    items: NotificationResponse[];
-    totalCount: number;
-    skipCount: number;
-    maxResultCount: number;
-    unreadCount: number;
-  }> {
+  ): Promise<NotificationsListResponse> {
     const baseWhere: Prisma.NotificationWhereInput = { userId: actor.id };
 
     const where: Prisma.NotificationWhereInput = { ...baseWhere };
@@ -125,15 +124,14 @@ export class NotificationsService {
       where.read = false;
     }
 
-    const skipCount = query.SkipCount;
-    const maxResultCount = query.MaxResultCount;
+    const { skip, take } = skipTake(query.page, query.limit);
 
-    const [rows, totalCount, unreadCount] = await this.prisma.$transaction([
+    const [rows, total, unreadCount] = await this.prisma.$transaction([
       this.prisma.notification.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: skipCount,
-        take: maxResultCount,
+        skip,
+        take,
       }),
       this.prisma.notification.count({ where }),
       this.prisma.notification.count({
@@ -142,10 +140,12 @@ export class NotificationsService {
     ]);
 
     return {
-      items: rows.map(toNotificationResponse),
-      totalCount,
-      skipCount,
-      maxResultCount,
+      ...paginate(
+        rows.map(toNotificationResponse),
+        total,
+        query.page,
+        query.limit,
+      ),
       unreadCount,
     };
   }

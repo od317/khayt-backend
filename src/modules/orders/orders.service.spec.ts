@@ -440,7 +440,57 @@ describe('OrdersService', () => {
       );
     });
 
-    it('rejects an order when the store has no saved coordinates', async () => {
+    it('allows the first order when the body sends address/lat/lng', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        deliveryAddress: null,
+        deliveryLat: null,
+        deliveryLng: null,
+      });
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: 'prod-1',
+          name: 'قميص',
+          price: 5000,
+          inWarehouse: true,
+          deletedAt: null,
+        },
+      ]);
+      prisma.supply.findUnique.mockResolvedValue({ remaining: 10 });
+      prisma.orderLine.aggregate.mockResolvedValue({ _sum: { quantity: 0 } });
+      prisma.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ nextval: 1001n }]);
+      const created = makeOrder({
+        total: 10000,
+        pieces: 2,
+        address: 'شارع بغداد، بناء 12',
+        lat: 33.51,
+        lng: 36.27,
+      });
+      prisma.order.create.mockResolvedValue(created);
+      prisma.order.findUnique.mockResolvedValue(created);
+      prisma.orderLine.findMany.mockResolvedValue([makeLine()]);
+
+      await service.create(store, {
+        ...dto,
+        address: 'شارع بغداد، بناء 12',
+        lat: 33.51,
+        lng: 36.27,
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            deliveryAddress: 'شارع بغداد، بناء 12',
+            deliveryLat: 33.51,
+            deliveryLng: 36.27,
+          },
+        }),
+      );
+      expect(prisma.order.create).toHaveBeenCalled();
+    });
+
+    it('rejects an order with no saved pin and no body location', async () => {
       prisma.user.findUnique.mockResolvedValue({
         deliveryAddress: null,
         deliveryLat: null,
@@ -448,21 +498,16 @@ describe('OrdersService', () => {
       });
 
       const error = await service
-        .create(store, {
-          ...dto,
-          address: 'شارع بغداد، بناء 12',
-          lat: 33.51,
-          lng: 36.27,
-        })
+        .create(store, dto)
         .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(HttpException);
       expect((error as HttpException).getResponse()).toMatchObject({
-        error: 'profile_incomplete',
-        completedData: false,
+        error: 'validation_failed',
         fields: {
-          deliveryLat: 'required',
-          deliveryLng: 'required',
+          address: 'required',
+          lat: 'required',
+          lng: 'required',
         },
       });
       expect(prisma.order.create).not.toHaveBeenCalled();

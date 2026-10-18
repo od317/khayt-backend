@@ -273,12 +273,14 @@ export function inventoryListSample(item = sampleInventoryItem) {
   };
 }
 
-/** GET /supply — full list, no pagination. */
+/** GET /supply — paginated like inventory. */
 export function supplyListSample(item = sampleInventoryItem) {
   return {
     items: [item],
     totals: sampleInventoryTotals,
     total: 0,
+    page: 1,
+    limit: 20,
   };
 }
 

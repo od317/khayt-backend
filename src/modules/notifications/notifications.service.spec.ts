@@ -72,6 +72,33 @@ describe('NotificationsService', () => {
     );
   });
 
+  describe('list', () => {
+    it('returns page/limit pagination with unreadCount', async () => {
+      prisma.notification.findMany.mockResolvedValue([makeNotification()]);
+      prisma.notification.count
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1);
+
+      const result = await service.list({ page: 2, limit: 10 }, actor);
+
+      expect(prisma.notification.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 10,
+          take: 10,
+        }),
+      );
+      expect(result).toMatchObject({
+        total: 1,
+        page: 2,
+        limit: 10,
+        unreadCount: 1,
+      });
+      expect(result.items).toHaveLength(1);
+      expect(result).not.toHaveProperty('skipCount');
+      expect(result).not.toHaveProperty('totalCount');
+    });
+  });
+
   describe('notify', () => {
     it('writes a notification', async () => {
       await service.notify({

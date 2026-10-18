@@ -192,7 +192,7 @@ describe('PostsService', () => {
   });
 
   describe('listMine', () => {
-    it('lists the current user’s posts with pagination', async () => {
+    it('lists the current user’s posts without reels', async () => {
       const mine = makePost({ authorId: actor.id });
       prisma.post.findMany.mockResolvedValue([mine]);
       prisma.post.count.mockResolvedValue(1);
@@ -201,7 +201,11 @@ describe('PostsService', () => {
 
       expect(prisma.post.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { deletedAt: null, authorId: actor.id },
+          where: {
+            deletedAt: null,
+            authorId: actor.id,
+            type: { not: PostType.reel },
+          },
           skip: 0,
           take: 10,
         }),
@@ -210,6 +214,23 @@ describe('PostsService', () => {
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
       expect(result.limit).toBe(10);
+    });
+
+    it('lists only the current user’s reels', async () => {
+      prisma.post.findMany.mockResolvedValue([]);
+      prisma.post.count.mockResolvedValue(0);
+
+      await service.listMine(actor, { page: 1, limit: 10 }, 'reels');
+
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            deletedAt: null,
+            authorId: actor.id,
+            type: PostType.reel,
+          },
+        }),
+      );
     });
   });
 

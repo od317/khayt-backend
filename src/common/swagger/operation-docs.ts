@@ -791,6 +791,15 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       },
     }),
   },
+  'get /posts/mine/reels': {
+    '200': ok(paginated(samplePost)),
+    '401': errors('Unauthorized', {
+      unauthorized: {
+        summary: 'Missing or invalid token',
+        value: errorBody(401, 'unauthorized', 'Unauthorized'),
+      },
+    }),
+  },
   'get /posts/{id}': {
     '200': ok({ post: samplePost }),
   },
@@ -1067,10 +1076,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
 
   'get /notifications': {
     '200': ok({
-      items: [sampleNotification],
-      totalCount: 1,
-      skipCount: 0,
-      maxResultCount: 20,
+      ...paginated(sampleNotification),
       unreadCount: 1,
     }),
   },
