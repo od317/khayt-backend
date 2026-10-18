@@ -6,8 +6,6 @@ export type InventoryItemResponse = {
   productId: string;
   productName: string;
   productUnit: string;
-  /** Workshop that supplied this product into the platform warehouse. */
-  supplierBusinessId: string | null;
   sent: number;
   remaining: number;
   sold: number;
@@ -29,7 +27,6 @@ export function toInventoryItemResponse(
     product: {
       name: string;
       unit: string;
-      supplierBusinessId?: string | null;
     };
   },
 ): InventoryItemResponse {
@@ -38,7 +35,6 @@ export function toInventoryItemResponse(
     productId: supply.productId,
     productName: supply.product.name,
     productUnit: supply.product.unit,
-    supplierBusinessId: supply.product.supplierBusinessId ?? null,
     sent: supply.sent,
     remaining: supply.remaining,
     sold: supply.sent - supply.remaining,

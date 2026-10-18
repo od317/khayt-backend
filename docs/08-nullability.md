@@ -148,12 +148,6 @@
 | `lat` | yes |
 | `lng` | yes |
 
-### InventoryItemResponse
-
-| Field | Can be null |
-|-------|-------------|
-| `supplierBusinessId` | yes |
-
 ### InventoryMovementResponse
 
 | Field | Can be null |
@@ -539,17 +533,17 @@
 
 ### GET `/api/supply`
 
-- **Response can be null:** `items[].supplierBusinessId`
-- **Request optional:** `page`, `limit`, `q`, `category`, `lowStock`
+- **Response can be null:** (none)
+- **Request optional:** `q`, `category`, `lowStock`
 
 ### GET `/api/inventory`
 
-- **Response can be null:** `items[].supplierBusinessId`
+- **Response can be null:** (none)
 - **Request optional:** `page`, `limit`, `category`, `q`, `lowStock`
 
 ### GET `/api/inventory/:id`
 
-- **Response can be null:** `item.supplierBusinessId`; `movements[].reference`
+- **Response can be null:** `movements[].reference`
 - **Request optional:** (none)
 
 ---
@@ -652,5 +646,4 @@
 | Orders | `lat`/`lng`, **`delivery`**, **`delivery.driver`**, line images |
 | Deliveries | `driverId`/`driverName`/`deliveredAt`; detail **`driver`** |
 | Notifications | `linkTo` |
-| Supply (workshop) | `supplierBusinessId` |
 | Bills | `dueAt`, `recordedByName` |

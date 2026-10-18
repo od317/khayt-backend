@@ -241,7 +241,6 @@ export const sampleInventoryItem = {
   productId: '',
   productName: '',
   productUnit: 'قطعة',
-  supplierBusinessId: null as string | null,
   sent: 0,
   remaining: 0,
   sold: 0,
@@ -273,14 +272,12 @@ export function inventoryListSample(item = sampleInventoryItem) {
   };
 }
 
-/** GET /supply — paginated like inventory. */
+/** GET /supply — full list, no pagination. */
 export function supplyListSample(item = sampleInventoryItem) {
   return {
     items: [item],
     totals: sampleInventoryTotals,
     total: 0,
-    page: 1,
-    limit: 20,
   };
 }
 

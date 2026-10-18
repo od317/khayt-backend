@@ -27,7 +27,6 @@ const makeSupply = (overrides: Record<string, unknown> = {}) => ({
   product: {
     name: 'قميص',
     unit: 'قطعة',
-    supplierBusinessId: 'biz-workshop',
   },
   ...overrides,
 });
@@ -230,7 +229,7 @@ describe('InventoryService', () => {
           },
           include: {
             product: {
-              select: { name: true, unit: true, supplierBusinessId: true },
+              select: { name: true, unit: true },
             },
           },
         }),
@@ -240,7 +239,7 @@ describe('InventoryService', () => {
         _sum: { paid: true },
       });
       expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.supplierBusinessId).toBe('biz-workshop');
+      expect(result.items[0]).not.toHaveProperty('supplierBusinessId');
     });
 
     it('lets internal staff see all platform supply', async () => {
@@ -253,7 +252,7 @@ describe('InventoryService', () => {
           where: {},
           include: {
             product: {
-              select: { name: true, unit: true, supplierBusinessId: true },
+              select: { name: true, unit: true },
             },
           },
         }),
@@ -264,23 +263,19 @@ describe('InventoryService', () => {
       });
     });
 
-    it('paginates with page and limit', async () => {
+    it('returns every item without pagination', async () => {
       prisma.supply.findMany.mockResolvedValue(
         Array.from({ length: 25 }, (_, i) =>
           makeSupply({ id: `supply-${i}`, sent: 10, remaining: 5 }),
         ),
       );
 
-      const result = await service.listSupply(
-        { page: 2, limit: 10 },
-        internal,
-      );
+      const result = await service.listSupply({}, internal);
 
-      expect(result.items).toHaveLength(10);
+      expect(result.items).toHaveLength(25);
       expect(result.total).toBe(25);
-      expect(result.page).toBe(2);
-      expect(result.limit).toBe(10);
-      expect(result.items[0]?.id).toBe('supply-10');
+      expect(result).not.toHaveProperty('page');
+      expect(result).not.toHaveProperty('limit');
     });
   });
 });

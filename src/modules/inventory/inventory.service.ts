@@ -52,12 +52,11 @@ export type InventoryListResponse = {
   limit: number;
 };
 
+/** Full supply list — no pagination. */
 export type SupplyListResponse = {
   items: InventoryItemResponse[];
   totals: InventoryTotals;
   total: number;
-  page: number;
-  limit: number;
 };
 
 export type InventoryDetailResponse = {
@@ -109,7 +108,7 @@ export class InventoryService {
         orderBy: { updatedAt: 'desc' },
         include: {
           product: {
-            select: { name: true, unit: true, supplierBusinessId: true },
+            select: { name: true, unit: true },
           },
         },
       }),
@@ -179,7 +178,7 @@ export class InventoryService {
       where: { id },
       include: {
         product: {
-          select: { name: true, unit: true, supplierBusinessId: true },
+          select: { name: true, unit: true },
         },
       },
     });
@@ -229,19 +228,14 @@ export class InventoryService {
       });
     }
 
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
     const { items, totals } = await this.loadSupplyItems({
       ...query,
       supplierBusinessId,
     });
-    const { skip, take } = skipTake(page, limit);
     return {
-      items: items.slice(skip, skip + take),
+      items,
       totals,
       total: items.length,
-      page,
-      limit,
     };
   }
 
