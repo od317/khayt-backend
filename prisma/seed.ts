@@ -1439,16 +1439,21 @@ async function main(): Promise<void> {
   // Products
   // ------------------------------------------------------------
   const SEED_PRODUCT_IMAGES = [
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMDNAwqo9isR6f7Vdq-QzjLkUXmnhAzGIerW3CQXgw6qH4V2T-winspHk&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtjcJGk6AUoGLl4LWJOEe-JCK9SDAelSZp07ogS8s7QcFGeqwLdXXA9sVI&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-VSroW1ZnXM4cABXizYmEQUqsgFH0bjIqwQetqaxLN71cc-QsqSe6oK5D&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ9kxU-8FLqYwwPusrMDSMFuYwQOwX5rtFzlf2wzLJPCGzwLsy1Eh9prC1l&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQfFKA_9HYaFyFDMgeqYUj6RpFMeu7SCdMIkz0QCiamw&s',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTytqH6f1FH7f7rZQDbB0C95J04rpwBI1VHY_xnZBQSza9oHOcA2Mipsyk&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtMOvcctToh0EHjt6y8NQnKc_mTL6UeAypwBjqZ7Etiw&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ46F8a2m5AnDEChFvV-yEdAfPmpvHPavp7qULPPwSqyA&s',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLoegp4lc8OxaZo_LOitBOudo8Cs4_DNRhG9T3n_2RLw&s',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNO36XKY6a7gCZq0CK5bQrqrMjc-VhMWm9QQVwp4TNoQ&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa1QmlzxwBlPlhmh6w8BM8dXFL2S3ZP4bguvtm95gAPA&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQhR3LHcBAtCvq4XSONggJ4YkLOAKw__X9FhcNn2Ub_vw&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQAN_ZqGHFHlICnFwCJjRicONciTe4mqpEBMskNq8cxiA&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQrOR8d4UkHfokUTnYTV-otgB3EeTggqTLDygpiUoQsWA&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNCylkV5skeNMNpCQhX-961pGYzfUSBZtRmvoSIB415Q&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSY7qvAGoDTbUQsKMssRSOLZSVyYaG4m_udZGcvP6gPhg&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSO0Hh_Rjs7z4Soe4g6CpLP2Cc2kAIDLTsuEQe58n2SDg&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRJv_Mx0w3DSyEB9v_92JFXljfRYIyk5osskJ7sNmBog&s=10',
   ] as const;
+
+  const SEED_SIZES = ['small', 'medium', 'large', 'xl', 'xxl'] as const;
+
+  const sizeChildren = (image: string) =>
+    SEED_SIZES.map((name) => ({ name, image }));
 
   /** Same workshop + category as prod-qamis-abyad for similar-products demos */
   const similarQamisAbyadSeed = [
@@ -1492,65 +1497,42 @@ async function main(): Promise<void> {
             hex: '#2563EB',
             image: SEED_PRODUCT_IMAGES[0],
             images: [SEED_PRODUCT_IMAGES[0]],
-            children: [
-              { name: 'S', image: SEED_PRODUCT_IMAGES[0] },
-              { name: 'M', image: SEED_PRODUCT_IMAGES[0] },
-              { name: 'L', image: SEED_PRODUCT_IMAGES[0] },
-              { name: 'XL', image: SEED_PRODUCT_IMAGES[0] },
-            ],
+            children: sizeChildren(SEED_PRODUCT_IMAGES[0]),
           },
           {
             name: 'بني',
             hex: '#92400E',
             image: SEED_PRODUCT_IMAGES[1],
             images: [SEED_PRODUCT_IMAGES[1]],
-            children: [
-              { name: 'S', image: SEED_PRODUCT_IMAGES[1] },
-              { name: 'M', image: SEED_PRODUCT_IMAGES[1] },
-              { name: 'L', image: SEED_PRODUCT_IMAGES[1] },
-              { name: 'XL', image: SEED_PRODUCT_IMAGES[1] },
-            ],
+            children: sizeChildren(SEED_PRODUCT_IMAGES[1]),
           },
           {
             name: 'أزرق',
             hex: '#1E3A8A',
             image: SEED_PRODUCT_IMAGES[2],
             images: [SEED_PRODUCT_IMAGES[2]],
-            children: [
-              { name: 'M', image: SEED_PRODUCT_IMAGES[2] },
-              { name: 'L', image: SEED_PRODUCT_IMAGES[2] },
-              { name: 'XL', image: SEED_PRODUCT_IMAGES[2] },
-            ],
+            children: sizeChildren(SEED_PRODUCT_IMAGES[2]),
           },
           {
             name: 'أخضر',
             hex: '#166534',
             image: SEED_PRODUCT_IMAGES[3],
             images: [SEED_PRODUCT_IMAGES[3]],
-            children: [
-              { name: 'M', image: SEED_PRODUCT_IMAGES[3] },
-              { name: 'L', image: SEED_PRODUCT_IMAGES[3] },
-            ],
+            children: sizeChildren(SEED_PRODUCT_IMAGES[3]),
           },
           {
             name: 'وردي',
             hex: '#DB2777',
             image: SEED_PRODUCT_IMAGES[4],
             images: [SEED_PRODUCT_IMAGES[4]],
-            children: [
-              { name: 'M', image: SEED_PRODUCT_IMAGES[4] },
-              { name: 'L', image: SEED_PRODUCT_IMAGES[4] },
-            ],
+            children: sizeChildren(SEED_PRODUCT_IMAGES[4]),
           },
           {
             name: 'أسود',
             hex: '#111827',
             image: SEED_PRODUCT_IMAGES[6],
             images: [SEED_PRODUCT_IMAGES[6], SEED_PRODUCT_IMAGES[7]],
-            children: [
-              { name: 'M', image: SEED_PRODUCT_IMAGES[6] },
-              { name: 'L', image: SEED_PRODUCT_IMAGES[6] },
-            ],
+            children: sizeChildren(SEED_PRODUCT_IMAGES[6]),
           },
         ],
       },
@@ -1591,12 +1573,10 @@ async function main(): Promise<void> {
       supplierBusinessId: 'biz-workshop',
       variants: {
         axes: [{ key: 'size', label: 'قياس' }],
-        options: [
-          { name: '30', image: SEED_PRODUCT_IMAGES[0] },
-          { name: '32', image: SEED_PRODUCT_IMAGES[0] },
-          { name: '34', image: SEED_PRODUCT_IMAGES[7] },
-          { name: '36', image: SEED_PRODUCT_IMAGES[8] },
-        ],
+        options: SEED_SIZES.map((name, i) => ({
+          name,
+          image: SEED_PRODUCT_IMAGES[i % SEED_PRODUCT_IMAGES.length],
+        })),
       },
     },
     ...similarQamisAbyadSeed.map((s) => {
