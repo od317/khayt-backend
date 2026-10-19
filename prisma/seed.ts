@@ -1493,8 +1493,39 @@ async function main(): Promise<void> {
 
   const SEED_SIZES = ['small', 'medium', 'large', 'xl', 'xxl'] as const;
 
+  const SEED_COLORS = [
+    { name: 'كاروهات', hex: '#2563EB', img: 0 },
+    { name: 'بني', hex: '#92400E', img: 1 },
+    { name: 'أزرق', hex: '#1E3A8A', img: 2 },
+    { name: 'أخضر', hex: '#166534', img: 3 },
+    { name: 'وردي', hex: '#DB2777', img: 4 },
+    { name: 'أسود', hex: '#111827', img: 6 },
+  ] as const;
+
   const sizeChildren = (image: string) =>
     SEED_SIZES.map((name) => ({ name, image }));
+
+  /** Color → size tree; reuses SEED_PRODUCT_IMAGES (optionally rotated per product). */
+  const colorSizeVariants = (imageOffset = 0) => ({
+    axes: [
+      { key: 'color', label: 'لون' },
+      { key: 'size', label: 'قياس' },
+    ],
+    options: SEED_COLORS.map((color, i) => {
+      const imgIndex =
+        (color.img + imageOffset) % SEED_PRODUCT_IMAGES.length;
+      const image = SEED_PRODUCT_IMAGES[imgIndex]!;
+      const alt =
+        SEED_PRODUCT_IMAGES[(imgIndex + 1) % SEED_PRODUCT_IMAGES.length]!;
+      return {
+        name: color.name,
+        hex: color.hex,
+        image,
+        images: i === SEED_COLORS.length - 1 ? [image, alt] : [image],
+        children: sizeChildren(image),
+      };
+    }),
+  });
 
   /** Same workshop + category as prod-qamis-abyad for similar-products demos */
   const similarQamisAbyadSeed = [
@@ -1527,56 +1558,7 @@ async function main(): Promise<void> {
       price: 45000,
       inWarehouse: true,
       available: true,
-      variants: {
-        axes: [
-          { key: 'color', label: 'لون' },
-          { key: 'size', label: 'قياس' },
-        ],
-        options: [
-          {
-            name: 'كاروهات',
-            hex: '#2563EB',
-            image: SEED_PRODUCT_IMAGES[0],
-            images: [SEED_PRODUCT_IMAGES[0]],
-            children: sizeChildren(SEED_PRODUCT_IMAGES[0]),
-          },
-          {
-            name: 'بني',
-            hex: '#92400E',
-            image: SEED_PRODUCT_IMAGES[1],
-            images: [SEED_PRODUCT_IMAGES[1]],
-            children: sizeChildren(SEED_PRODUCT_IMAGES[1]),
-          },
-          {
-            name: 'أزرق',
-            hex: '#1E3A8A',
-            image: SEED_PRODUCT_IMAGES[2],
-            images: [SEED_PRODUCT_IMAGES[2]],
-            children: sizeChildren(SEED_PRODUCT_IMAGES[2]),
-          },
-          {
-            name: 'أخضر',
-            hex: '#166534',
-            image: SEED_PRODUCT_IMAGES[3],
-            images: [SEED_PRODUCT_IMAGES[3]],
-            children: sizeChildren(SEED_PRODUCT_IMAGES[3]),
-          },
-          {
-            name: 'وردي',
-            hex: '#DB2777',
-            image: SEED_PRODUCT_IMAGES[4],
-            images: [SEED_PRODUCT_IMAGES[4]],
-            children: sizeChildren(SEED_PRODUCT_IMAGES[4]),
-          },
-          {
-            name: 'أسود',
-            hex: '#111827',
-            image: SEED_PRODUCT_IMAGES[6],
-            images: [SEED_PRODUCT_IMAGES[6], SEED_PRODUCT_IMAGES[7]],
-            children: sizeChildren(SEED_PRODUCT_IMAGES[6]),
-          },
-        ],
-      },
+      variants: colorSizeVariants(0),
       packaging: { onlyPackage: false, unitsPerPackage: 10, label: 'علبة 10' },
       discount: { percent: 10, originalPrice: 50000 },
       offer: 'عرض خاص',
@@ -1593,6 +1575,7 @@ async function main(): Promise<void> {
       price: 40000,
       inWarehouse: true,
       available: true,
+      variants: colorSizeVariants(1),
       guarantee: false,
       supplierBusinessId: 'biz-workshop',
     },
@@ -1610,17 +1593,11 @@ async function main(): Promise<void> {
       price: 65000,
       inWarehouse: true,
       available: true,
+      variants: colorSizeVariants(2),
       guarantee: true,
       supplierBusinessId: 'biz-workshop',
-      variants: {
-        axes: [{ key: 'size', label: 'قياس' }],
-        options: SEED_SIZES.map((name, i) => ({
-          name,
-          image: SEED_PRODUCT_IMAGES[i % SEED_PRODUCT_IMAGES.length],
-        })),
-      },
     },
-    ...similarQamisAbyadSeed.map((s) => {
+    ...similarQamisAbyadSeed.map((s, index) => {
       const images =
         'extraImg' in s
           ? [
@@ -1638,6 +1615,7 @@ async function main(): Promise<void> {
         price: s.price,
         inWarehouse: true,
         available: true,
+        variants: colorSizeVariants(index),
         guarantee: true,
         supplierBusinessId: 'biz-workshop',
       };
