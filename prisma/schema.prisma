@@ -207,6 +207,11 @@ model Location {
   children  Location[] @relation("LocationTree")
   sortOrder Int        @default(0)
   active    Boolean    @default(true)
+  /// Delivery circle center (cities / governorates only).
+  centerLat Float?
+  centerLng Float?
+  /// Delivery circle radius in kilometers.
+  radiusKm  Float?
   createdAt DateTime   @default(now())
 
   users User[]

@@ -20,6 +20,9 @@ const makeCity = (overrides: Record<string, unknown> = {}) => ({
   parentId: null,
   sortOrder: 1,
   active: true,
+  centerLat: 33.5138,
+  centerLng: 36.2765,
+  radiusKm: 18,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   children: [],
   ...overrides,
@@ -57,9 +60,68 @@ describe('LocationsService', () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0]?.name).toBe('دمشق');
+    expect(result.items[0]?.deliveryBorder).toEqual({
+      centerLat: 33.5138,
+      centerLng: 36.2765,
+      radiusKm: 18,
+    });
     expect(result.items[0]?.areas).toEqual([
       { id: 'loc-damascus-mazzeh', name: 'المزة' },
       { id: 'loc-damascus-midan', name: 'الميدان' },
+    ]);
+  });
+
+  it('returns null deliveryBorder for cities without a circle', async () => {
+    prisma.location.findMany.mockResolvedValue([
+      makeCity({
+        id: 'loc-remote',
+        name: 'عمل عن بعد',
+        centerLat: null,
+        centerLng: null,
+        radiusKm: null,
+        children: [],
+      }),
+    ]);
+
+    const result = await service.list();
+
+    expect(result.items[0]?.deliveryBorder).toBeNull();
+  });
+
+  it('includes deliveryBorder on the flat cities list', async () => {
+    prisma.location.findMany.mockResolvedValue([
+      {
+        id: 'loc-damascus',
+        name: 'دمشق',
+        centerLat: 33.5138,
+        centerLng: 36.2765,
+        radiusKm: 18,
+      },
+    ]);
+
+    const result = await service.listCities();
+
+    expect(prisma.location.findMany).toHaveBeenCalledWith({
+      where: { parentId: null, active: true },
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        centerLat: true,
+        centerLng: true,
+        radiusKm: true,
+      },
+    });
+    expect(result.items).toEqual([
+      {
+        id: 'loc-damascus',
+        name: 'دمشق',
+        deliveryBorder: {
+          centerLat: 33.5138,
+          centerLng: 36.2765,
+          radiusKm: 18,
+        },
+      },
     ]);
   });
 

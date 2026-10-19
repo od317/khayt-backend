@@ -3,6 +3,11 @@ import {
   BusinessResponse,
   toBusinessResponse,
 } from '../businesses/businesses.mapper';
+import {
+  DeliveryBorder,
+  LocationWithParent,
+  resolveDeliveryBorder,
+} from '../locations/location-border';
 
 export type { BusinessResponse };
 export { toBusinessResponse };
@@ -12,6 +17,11 @@ export const ORDERING_ROLES: readonly UserRole[] = [
   UserRole.store,
   UserRole.workshop,
 ] as const;
+
+/** Prisma include so area locations resolve parent-city delivery borders. */
+export const userLocationInclude = {
+  location: { include: { parent: true } },
+} as const;
 
 export function canOrder(
   role: string,
@@ -30,6 +40,8 @@ export type UserResponse = {
   phone: string | null;
   email: string | null;
   location: string | null;
+  locationId: string | null;
+  deliveryBorder: DeliveryBorder | null;
   deliveryAddress: string | null;
   deliveryLat: number | null;
   deliveryLng: number | null;
@@ -43,16 +55,19 @@ export type UserResponse = {
 };
 
 export function toUserResponse(
-  user: User & { location: Location | null },
+  user: User & { location: LocationWithParent | Location | null },
 ): UserResponse {
   const role = user.role as UserRole;
+  const location = user.location as LocationWithParent | null;
   return {
     id: user.id,
     role,
     name: user.name,
     phone: user.phone,
     email: user.email,
-    location: user.location?.name ?? null,
+    location: location?.name ?? null,
+    locationId: user.locationId,
+    deliveryBorder: resolveDeliveryBorder(location),
     deliveryAddress: user.deliveryAddress,
     deliveryLat: user.deliveryLat,
     deliveryLng: user.deliveryLng,

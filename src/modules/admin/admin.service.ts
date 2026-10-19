@@ -10,7 +10,11 @@ import { Prisma, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
-import { toUserResponse, UserResponse } from '../auth/auth.mapper';
+import {
+  toUserResponse,
+  userLocationInclude,
+  UserResponse,
+} from '../auth/auth.mapper';
 import { normalizePhone } from '../auth/phone';
 import { CreateStaffUserDto } from './dto/create-staff-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
@@ -199,7 +203,7 @@ export class AdminService {
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data,
-      include: { location: true },
+      include: userLocationInclude,
     });
 
     return { user: toUserResponse(updated) };
@@ -255,7 +259,7 @@ export class AdminService {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
-        include: { location: true },
+        include: userLocationInclude,
       }),
       this.prisma.user.count({ where }),
     ]);
@@ -275,7 +279,7 @@ export class AdminService {
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data,
-      include: { location: true },
+      include: userLocationInclude,
     });
 
     return { user: toUserResponse(updated) };
@@ -414,7 +418,7 @@ export class AdminService {
         onboardingCompleted: true,
         verified: true,
       },
-      include: { location: true },
+      include: userLocationInclude,
     });
 
     return { user: toUserResponse(user) };
@@ -454,7 +458,7 @@ export class AdminService {
         onboardingCompleted: true,
         verified: true,
       },
-      include: { location: true },
+      include: userLocationInclude,
     });
 
     return { user: toUserResponse(user) };

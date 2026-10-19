@@ -23,6 +23,7 @@ import {
   otpKey,
   otpLimitKey,
 } from './auth.constants';
+import { userLocationInclude } from './auth.mapper';
 import { AuthService } from './auth.service';
 import { SmsService } from './sms.service';
 
@@ -318,7 +319,7 @@ describe('AuthService', () => {
         phone: PHONE,
         role: UserRole.employee,
       },
-      include: { location: true },
+      include: userLocationInclude,
     });
     expect(result.user.id).toBe(created.id);
     expect(result.user.name).toBeNull();
@@ -425,7 +426,7 @@ describe('AuthService', () => {
           location: { connect: { id: LOCATION_ID } },
           onboardingCompleted: true,
         },
-        include: { location: true },
+        include: userLocationInclude,
       });
       expect(result.user.onboardingCompleted).toBe(true);
       expect(result.user.role).toBe(UserRole.employee);
@@ -687,7 +688,7 @@ describe('AuthService', () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: actor.id },
         data: { availableForWork: false },
-        include: { location: true },
+        include: userLocationInclude,
       });
       expect(result.user.availableForWork).toBe(false);
     });

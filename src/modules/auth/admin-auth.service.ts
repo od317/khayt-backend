@@ -15,7 +15,11 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { AppConfig } from '../../config/configuration';
 import { durationToSeconds } from '../../common/utils/duration';
-import { toUserResponse, UserResponse } from './auth.mapper';
+import {
+  toUserResponse,
+  userLocationInclude,
+  UserResponse,
+} from './auth.mapper';
 import { refreshKey } from './auth.constants';
 import {
   ADMIN_2FA_MAX_ATTEMPTS,
@@ -68,7 +72,7 @@ export class AdminAuthService {
   async login(email: string, password: string): Promise<AdminLoginResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email },
-      include: { location: true },
+      include: userLocationInclude,
     });
 
     if (!user || !user.passwordHash) {
@@ -179,7 +183,7 @@ export class AdminAuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      include: { location: true },
+      include: userLocationInclude,
     });
     if (!user) {
       throw new UnauthorizedException({

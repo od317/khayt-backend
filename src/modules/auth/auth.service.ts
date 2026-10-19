@@ -41,6 +41,7 @@ import {
   BusinessResponse,
   toBusinessResponse,
   toUserResponse,
+  userLocationInclude,
   UserResponse,
 } from './auth.mapper';
 import { OnboardingDto } from './dto/onboarding.dto';
@@ -300,7 +301,7 @@ export class AuthService {
   async getMe(userId: string): Promise<MeResponse> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { location: true },
+      include: userLocationInclude,
     });
     if (!user) {
       throw new UnauthorizedException({
@@ -456,7 +457,7 @@ export class AuthService {
     const user = await this.prisma.user.update({
       where: { id: actor.id },
       data,
-      include: { location: true },
+      include: userLocationInclude,
     });
 
     if (
@@ -546,7 +547,7 @@ export class AuthService {
     const user = await this.prisma.user.update({
       where: { id: actor.id },
       data: { availableForWork },
-      include: { location: true },
+      include: userLocationInclude,
     });
 
     return { user: toUserResponse(user) };
@@ -629,7 +630,7 @@ export class AuthService {
           location: { connect: { id: dto.locationId } },
           onboardingCompleted: true,
         },
-        include: { location: true },
+        include: userLocationInclude,
       });
 
       if (!needsBusiness || !businessType) {
@@ -709,7 +710,7 @@ export class AuthService {
   ): Promise<User & { location: Location | null }> {
     const existing = await this.prisma.user.findUnique({
       where: { phone },
-      include: { location: true },
+      include: userLocationInclude,
     });
     if (existing) {
       return existing;
@@ -721,7 +722,7 @@ export class AuthService {
           phone,
           role: UserRole.employee,
         },
-        include: { location: true },
+        include: userLocationInclude,
       });
     } catch (error: unknown) {
       if (
@@ -730,7 +731,7 @@ export class AuthService {
       ) {
         const raced = await this.prisma.user.findUnique({
           where: { phone },
-          include: { location: true },
+          include: userLocationInclude,
         });
         if (raced) {
           return raced;

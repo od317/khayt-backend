@@ -164,6 +164,7 @@ describe('OrdersService', () => {
           deliveryAddress: 'شارع بغداد',
           deliveryLat: 33.5138,
           deliveryLng: 36.2765,
+          location: null,
         }),
         update: vi.fn().mockResolvedValue({}),
       },
@@ -390,6 +391,7 @@ describe('OrdersService', () => {
         deliveryAddress: 'عنوان قديم',
         deliveryLat: 33.5,
         deliveryLng: 36.2,
+        location: null,
       });
       prisma.product.findMany.mockResolvedValue([
         {
@@ -445,6 +447,7 @@ describe('OrdersService', () => {
         deliveryAddress: null,
         deliveryLat: null,
         deliveryLng: null,
+        location: null,
       });
       prisma.product.findMany.mockResolvedValue([
         {
@@ -495,6 +498,7 @@ describe('OrdersService', () => {
         deliveryAddress: null,
         deliveryLat: null,
         deliveryLng: null,
+        location: null,
       });
 
       const error = await service
@@ -511,6 +515,87 @@ describe('OrdersService', () => {
         },
       });
       expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    const damascusLocation = {
+      id: 'loc-damascus',
+      name: 'دمشق',
+      parentId: null,
+      centerLat: 33.5138,
+      centerLng: 36.2765,
+      radiusKm: 18,
+      parent: null,
+    };
+
+    it('rejects a drop-off pin outside the user governorate border', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        deliveryAddress: null,
+        deliveryLat: null,
+        deliveryLng: null,
+        location: damascusLocation,
+      });
+
+      const error = await service
+        .create(store, {
+          ...dto,
+          address: 'حلب',
+          lat: 36.2021,
+          lng: 37.1343,
+        })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(HttpStatus.BAD_REQUEST);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+        fields: {
+          lat: 'خارج نطاق التوصيل',
+          lng: 'خارج نطاق التوصيل',
+        },
+      });
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts a drop-off pin inside the user governorate border', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        deliveryAddress: null,
+        deliveryLat: null,
+        deliveryLng: null,
+        location: damascusLocation,
+      });
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: 'prod-1',
+          name: 'قميص',
+          price: 5000,
+          inWarehouse: true,
+          deletedAt: null,
+        },
+      ]);
+      prisma.supply.findUnique.mockResolvedValue({ remaining: 10 });
+      prisma.orderLine.aggregate.mockResolvedValue({ _sum: { quantity: 0 } });
+      prisma.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ nextval: 1001n }]);
+      const created = makeOrder({
+        total: 10000,
+        pieces: 2,
+        address: 'شارع بغداد',
+        lat: 33.52,
+        lng: 36.28,
+      });
+      prisma.order.create.mockResolvedValue(created);
+      prisma.order.findUnique.mockResolvedValue(created);
+      prisma.orderLine.findMany.mockResolvedValue([makeLine()]);
+
+      await service.create(store, {
+        ...dto,
+        address: 'شارع بغداد',
+        lat: 33.52,
+        lng: 36.28,
+      });
+
+      expect(prisma.order.create).toHaveBeenCalled();
     });
 
     it('rejects a product not in the warehouse', async () => {

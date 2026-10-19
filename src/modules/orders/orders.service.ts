@@ -24,6 +24,10 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto, parseActiveQueryFlag } from './dto/query-orders.dto';
 import { UpdateOrderLineDto } from './dto/update-order-line.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import {
+  isInsideDeliveryBorder,
+  resolveDeliveryBorder,
+} from '../locations/location-border';
 import { resolveOrderDropoff } from './order-location';
 import {
   canActorAdvance,
@@ -204,6 +208,7 @@ export class OrdersService {
           deliveryAddress: true,
           deliveryLat: true,
           deliveryLng: true,
+          location: { include: { parent: true } },
         },
       });
       if (!storeUser) {
@@ -216,6 +221,24 @@ export class OrdersService {
       // First order: accept address/lat/lng from the body and persist them.
       // Later orders: reuse saved pin when the body omits location.
       const { dropoff, persist } = resolveOrderDropoff(dto, storeUser);
+
+      const border = resolveDeliveryBorder(storeUser.location);
+      if (
+        border &&
+        !isInsideDeliveryBorder(dropoff.lat, dropoff.lng, border)
+      ) {
+        throw new HttpException(
+          {
+            error: 'validation_failed',
+            message: 'موقع التسليم خارج نطاق المحافظة المحددة',
+            fields: {
+              lat: 'خارج نطاق التوصيل',
+              lng: 'خارج نطاق التوصيل',
+            },
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
       const products = await tx.product.findMany({
         where: { id: { in: productIds }, deletedAt: null },

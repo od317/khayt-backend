@@ -365,30 +365,150 @@ async function main(): Promise<void> {
   // ------------------------------------------------------------
   // Locations
   // ------------------------------------------------------------
-  const cities: { id: string; name: string; sortOrder: number }[] = [
-    { id: 'loc-damascus', name: 'دمشق', sortOrder: 1 },
-    { id: 'loc-rural-damascus', name: 'ريف دمشق', sortOrder: 2 },
-    { id: 'loc-halep', name: 'حلب', sortOrder: 3 },
-    { id: 'loc-homs', name: 'حمص', sortOrder: 4 },
-    { id: 'loc-hama', name: 'حماة', sortOrder: 5 },
-    { id: 'loc-lattakia', name: 'اللاذقية', sortOrder: 6 },
-    { id: 'loc-tartous', name: 'طرطوس', sortOrder: 7 },
-    { id: 'loc-idlib', name: 'إدلب', sortOrder: 8 },
-    { id: 'loc-deir-ezzor', name: 'دير الزور', sortOrder: 9 },
-    { id: 'loc-hasakah', name: 'الحسكة', sortOrder: 10 },
-    { id: 'loc-raqqa', name: 'الرقة', sortOrder: 11 },
-    { id: 'loc-daraa', name: 'درعا', sortOrder: 12 },
-    { id: 'loc-sweida', name: 'السويداء', sortOrder: 13 },
-    { id: 'loc-quneitra', name: 'القنيطرة', sortOrder: 14 },
-    { id: 'loc-outside-syria', name: 'خارج سوريا', sortOrder: 15 },
-    { id: 'loc-remote', name: 'عمل عن بعد', sortOrder: 16 },
+  const cities: {
+    id: string;
+    name: string;
+    sortOrder: number;
+    centerLat?: number | null;
+    centerLng?: number | null;
+    radiusKm?: number | null;
+  }[] = [
+    {
+      id: 'loc-damascus',
+      name: 'دمشق',
+      sortOrder: 1,
+      centerLat: 33.5138,
+      centerLng: 36.2765,
+      radiusKm: 18,
+    },
+    {
+      id: 'loc-rural-damascus',
+      name: 'ريف دمشق',
+      sortOrder: 2,
+      centerLat: 33.5167,
+      centerLng: 36.3,
+      radiusKm: 55,
+    },
+    {
+      id: 'loc-halep',
+      name: 'حلب',
+      sortOrder: 3,
+      centerLat: 36.2021,
+      centerLng: 37.1343,
+      radiusKm: 35,
+    },
+    {
+      id: 'loc-homs',
+      name: 'حمص',
+      sortOrder: 4,
+      centerLat: 34.7268,
+      centerLng: 36.7234,
+      radiusKm: 30,
+    },
+    {
+      id: 'loc-hama',
+      name: 'حماة',
+      sortOrder: 5,
+      centerLat: 35.1318,
+      centerLng: 36.7578,
+      radiusKm: 28,
+    },
+    {
+      id: 'loc-lattakia',
+      name: 'اللاذقية',
+      sortOrder: 6,
+      centerLat: 35.5311,
+      centerLng: 35.7911,
+      radiusKm: 25,
+    },
+    {
+      id: 'loc-tartous',
+      name: 'طرطوس',
+      sortOrder: 7,
+      centerLat: 34.889,
+      centerLng: 35.8866,
+      radiusKm: 22,
+    },
+    {
+      id: 'loc-idlib',
+      name: 'إدلب',
+      sortOrder: 8,
+      centerLat: 35.9306,
+      centerLng: 36.6339,
+      radiusKm: 30,
+    },
+    {
+      id: 'loc-deir-ezzor',
+      name: 'دير الزور',
+      sortOrder: 9,
+      centerLat: 35.3333,
+      centerLng: 40.15,
+      radiusKm: 40,
+    },
+    {
+      id: 'loc-hasakah',
+      name: 'الحسكة',
+      sortOrder: 10,
+      centerLat: 36.5024,
+      centerLng: 40.7463,
+      radiusKm: 45,
+    },
+    {
+      id: 'loc-raqqa',
+      name: 'الرقة',
+      sortOrder: 11,
+      centerLat: 35.9506,
+      centerLng: 39.0112,
+      radiusKm: 35,
+    },
+    {
+      id: 'loc-daraa',
+      name: 'درعا',
+      sortOrder: 12,
+      centerLat: 32.6189,
+      centerLng: 36.1021,
+      radiusKm: 30,
+    },
+    {
+      id: 'loc-sweida',
+      name: 'السويداء',
+      sortOrder: 13,
+      centerLat: 32.7089,
+      centerLng: 36.5695,
+      radiusKm: 28,
+    },
+    {
+      id: 'loc-quneitra',
+      name: 'القنيطرة',
+      sortOrder: 14,
+      centerLat: 33.1253,
+      centerLng: 35.8247,
+      radiusKm: 20,
+    },
+    {
+      id: 'loc-outside-syria',
+      name: 'خارج سوريا',
+      sortOrder: 15,
+      centerLat: null,
+      centerLng: null,
+      radiusKm: null,
+    },
+    {
+      id: 'loc-remote',
+      name: 'عمل عن بعد',
+      sortOrder: 16,
+      centerLat: null,
+      centerLng: null,
+      radiusKm: null,
+    },
   ];
 
   for (const c of cities) {
+    const { id, ...rest } = c;
     await prisma.location.upsert({
-      where: { id: c.id },
-      create: c,
-      update: { name: c.name, sortOrder: c.sortOrder },
+      where: { id },
+      create: { id, ...rest },
+      update: rest,
     });
   }
 

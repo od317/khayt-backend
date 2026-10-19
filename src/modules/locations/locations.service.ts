@@ -9,6 +9,10 @@ import { Location, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
+import {
+  DeliveryBorder,
+  toDeliveryBorder,
+} from './location-border';
 
 export type AreaResponse = {
   id: string;
@@ -18,12 +22,14 @@ export type AreaResponse = {
 export type CityResponse = {
   id: string;
   name: string;
+  deliveryBorder: DeliveryBorder | null;
   areas: AreaResponse[];
 };
 
 export type CityFlatResponse = {
   id: string;
   name: string;
+  deliveryBorder: DeliveryBorder | null;
 };
 
 export type AdminLocationResponse = {
@@ -32,6 +38,9 @@ export type AdminLocationResponse = {
   parentId: string | null;
   sortOrder: number;
   active: boolean;
+  centerLat: number | null;
+  centerLng: number | null;
+  radiusKm: number | null;
   areas: AdminLocationResponse[];
 };
 
@@ -48,6 +57,9 @@ export function toAdminLocation(
     parentId: location.parentId,
     sortOrder: location.sortOrder,
     active: location.active,
+    centerLat: location.centerLat,
+    centerLng: location.centerLng,
+    radiusKm: location.radiusKm,
     areas: (location.children ?? []).map((child) => toAdminLocation(child)),
   };
 }
@@ -73,6 +85,7 @@ export class LocationsService {
       items: cities.map((city) => ({
         id: city.id,
         name: city.name,
+        deliveryBorder: toDeliveryBorder(city),
         areas: city.children.map((area) => ({
           id: area.id,
           name: area.name,
@@ -85,10 +98,22 @@ export class LocationsService {
     const cities = await this.prisma.location.findMany({
       where: { parentId: null, active: true },
       orderBy: { sortOrder: 'asc' },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        centerLat: true,
+        centerLng: true,
+        radiusKm: true,
+      },
     });
 
-    return { items: cities };
+    return {
+      items: cities.map((city) => ({
+        id: city.id,
+        name: city.name,
+        deliveryBorder: toDeliveryBorder(city),
+      })),
+    };
   }
 
   async listAreas(locationId: string): Promise<{ items: AreaResponse[] }> {
@@ -193,6 +218,9 @@ export class LocationsService {
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.sortOrder !== undefined) data.sortOrder = dto.sortOrder;
     if (dto.active !== undefined) data.active = dto.active;
+    if (dto.centerLat !== undefined) data.centerLat = dto.centerLat;
+    if (dto.centerLng !== undefined) data.centerLng = dto.centerLng;
+    if (dto.radiusKm !== undefined) data.radiusKm = dto.radiusKm;
     if (dto.parentId !== undefined) {
       data.parent =
         dto.parentId === null
