@@ -1019,6 +1019,9 @@ async function main(): Promise<void> {
   const SHARED_AVATAR_URL =
     'https://media.istockphoto.com/id/2060009001/vector/avatar-user-profile-person-icon-profile-picture-for-social-media-profiles-icons-screensavers.jpg?s=612x612&w=0&k=20&c=onk7rmEoISSvHVlqc-SiBvcUr8ilCm2u9kcw3_Bm_SA=';
 
+  /** Actual DB user ids created/updated for seed accounts (may differ from seed ids). */
+  const resolvedSeedUserIds: string[] = [];
+
   // Upsert by id, but never steal a phone already owned by another user
   // (common on VPS when real accounts reused a seed number).
   for (const u of users) {
@@ -1056,6 +1059,7 @@ async function main(): Promise<void> {
           `  skip phone for ${u.id}: ${u.phone} already on ${byPhone.id}`,
         );
       }
+      resolvedSeedUserIds.push(u.id);
       continue;
     }
 
@@ -1068,6 +1072,7 @@ async function main(): Promise<void> {
       console.warn(
         `  reuse ${byPhone.id} for seed phone ${u.phone} (wanted id ${u.id})`,
       );
+      resolvedSeedUserIds.push(byPhone.id);
       continue;
     }
 
@@ -1079,6 +1084,7 @@ async function main(): Promise<void> {
         verified,
       },
     });
+    resolvedSeedUserIds.push(u.id);
   }
   console.log(`  users: ${users.length}`);
 
@@ -3118,7 +3124,8 @@ async function main(): Promise<void> {
   // ------------------------------------------------------------
   // Notifications — 15 per seeded user
   // ------------------------------------------------------------
-  const notificationUserIds = users.map((u) => u.id);
+  // Use resolved DB ids (phone-reuse may map a seed id to another row).
+  const notificationUserIds = [...new Set(resolvedSeedUserIds)];
   if (superEmail) {
     const superAdmin = await prisma.user.findUnique({
       where: { email: superEmail },
@@ -3128,6 +3135,15 @@ async function main(): Promise<void> {
       notificationUserIds.push(superAdmin.id);
     }
   }
+
+  const actorCandidates = ['user-store', 'user-employee', ...notificationUserIds];
+  const existingActors = await prisma.user.findMany({
+    where: { id: { in: actorCandidates } },
+    select: { id: true },
+  });
+  const actorIds = existingActors.map((a) => a.id);
+  const actorA = actorIds[0] ?? null;
+  const actorB = actorIds[1] ?? actorA;
 
   const notificationTemplates = [
     {
@@ -3229,7 +3245,7 @@ async function main(): Promise<void> {
       const id = `notif-${userId}-${String(i + 1).padStart(2, '0')}`;
       const data = {
         userId,
-        actorId: i % 2 === 0 ? 'user-store' : 'user-employee',
+        actorId: i % 2 === 0 ? actorA : actorB,
         type: template.type,
         title: template.title,
         body: template.body,
