@@ -490,57 +490,27 @@ describe('OrdersService', () => {
       expect(prisma.order.create).toHaveBeenCalled();
     });
 
-    it('uses default drop-off when no saved pin and no body location', async () => {
+    it('rejects an order with no saved pin and no body location', async () => {
       prisma.user.findUnique.mockResolvedValue({
         deliveryAddress: null,
         deliveryLat: null,
         deliveryLng: null,
       });
-      prisma.product.findMany.mockResolvedValue([
-        {
-          id: 'prod-1',
-          name: 'قميص',
-          price: 5000,
-          inWarehouse: true,
-          deletedAt: null,
+
+      const error = await service
+        .create(store, dto)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getResponse()).toMatchObject({
+        error: 'validation_failed',
+        fields: {
+          address: 'مطلوب',
+          lat: 'مطلوب',
+          lng: 'مطلوب',
         },
-      ]);
-      prisma.supply.findUnique.mockResolvedValue({ remaining: 10 });
-      prisma.orderLine.aggregate.mockResolvedValue({ _sum: { quantity: 0 } });
-      prisma.$queryRaw
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ nextval: 1001n }]);
-      const created = makeOrder({
-        total: 10000,
-        pieces: 2,
-        address: 'دمشق — موقع افتراضي للاختبار',
-        lat: 33.5138,
-        lng: 36.2765,
       });
-      prisma.order.create.mockResolvedValue(created);
-      prisma.order.findUnique.mockResolvedValue(created);
-      prisma.orderLine.findMany.mockResolvedValue([makeLine()]);
-
-      await service.create(store, dto);
-
-      expect(prisma.order.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            address: 'دمشق — موقع افتراضي للاختبار',
-            lat: 33.5138,
-            lng: 36.2765,
-          }),
-        }),
-      );
-      expect(prisma.user.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: {
-            deliveryAddress: 'دمشق — موقع افتراضي للاختبار',
-            deliveryLat: 33.5138,
-            deliveryLng: 36.2765,
-          },
-        }),
-      );
+      expect(prisma.order.create).not.toHaveBeenCalled();
     });
 
     it('rejects a product not in the warehouse', async () => {

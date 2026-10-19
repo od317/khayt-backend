@@ -1,14 +1,9 @@
+import { HttpException, HttpStatus } from '@nestjs/common';
+
 export type DropoffLocation = {
   address: string;
   lat: number;
   lng: number;
-};
-
-/** Temporary defaults for VPS testing when the client omits drop-off. */
-const DEFAULT_DROPOFF: DropoffLocation = {
-  address: 'دمشق — موقع افتراضي للاختبار',
-  lat: 33.5138,
-  lng: 36.2765,
 };
 
 export function resolveOrderDropoff(
@@ -25,20 +20,23 @@ export function resolveOrderDropoff(
     dto.lng !== undefined;
 
   if (provided) {
-    const address =
-      dto.address?.trim() && dto.address.trim().length >= 3
-        ? dto.address.trim()
-        : DEFAULT_DROPOFF.address;
-    const lat =
-      dto.lat !== undefined && dto.lat !== null
-        ? dto.lat
-        : DEFAULT_DROPOFF.lat;
-    const lng =
-      dto.lng !== undefined && dto.lng !== null
-        ? dto.lng
-        : DEFAULT_DROPOFF.lng;
+    const address = dto.address?.trim() ?? '';
+    const fields: Record<string, string> = {};
+    if (address.length < 3) fields.address = 'مطلوب';
+    if (dto.lat === undefined || dto.lat === null) fields.lat = 'مطلوب';
+    if (dto.lng === undefined || dto.lng === null) fields.lng = 'مطلوب';
+    if (Object.keys(fields).length > 0) {
+      throw new HttpException(
+        {
+          error: 'validation_failed',
+          message: 'موقع الخريطة والعنوان مطلوبان معاً',
+          fields,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     return {
-      dropoff: { address, lat, lng },
+      dropoff: { address, lat: dto.lat as number, lng: dto.lng as number },
       persist: true,
     };
   }
@@ -59,9 +57,16 @@ export function resolveOrderDropoff(
     };
   }
 
-  // No body pin and no saved profile pin — use defaults (temporary for testing).
-  return {
-    dropoff: { ...DEFAULT_DROPOFF },
-    persist: true,
-  };
+  throw new HttpException(
+    {
+      error: 'validation_failed',
+      message: 'حدّد موقع التوصيل على الخريطة لأول طلب',
+      fields: {
+        address: 'مطلوب',
+        lat: 'مطلوب',
+        lng: 'مطلوب',
+      },
+    },
+    HttpStatus.BAD_REQUEST,
+  );
 }
