@@ -1019,29 +1019,64 @@ async function main(): Promise<void> {
   const SHARED_AVATAR_URL =
     'https://media.istockphoto.com/id/2060009001/vector/avatar-user-profile-person-icon-profile-picture-for-social-media-profiles-icons-screensavers.jpg?s=612x612&w=0&k=20&c=onk7rmEoISSvHVlqc-SiBvcUr8ilCm2u9kcw3_Bm_SA=';
 
+  // Upsert by id, but never steal a phone already owned by another user
+  // (common on VPS when real accounts reused a seed number).
   for (const u of users) {
-    await prisma.user.upsert({
-      where: { id: u.id },
-      create: {
+    const verified =
+      u.role !== UserRole.employee &&
+      u.role !== UserRole.marketer &&
+      u.role !== UserRole.shipping_company;
+
+    const byId = await prisma.user.findUnique({ where: { id: u.id } });
+    const byPhone = await prisma.user.findUnique({
+      where: { phone: u.phone },
+      select: { id: true },
+    });
+
+    const shared = {
+      name: u.name,
+      role: u.role,
+      locationId: u.locationId,
+      onboardingCompleted: u.onboardingCompleted,
+      avatarUrl: SHARED_AVATAR_URL,
+    };
+
+    if (byId) {
+      const phoneOwnedElsewhere = byPhone && byPhone.id !== u.id;
+      await prisma.user.update({
+        where: { id: u.id },
+        data: {
+          ...shared,
+          ...(phoneOwnedElsewhere ? {} : { phone: u.phone }),
+          verified,
+        },
+      });
+      if (phoneOwnedElsewhere) {
+        console.warn(
+          `  skip phone for ${u.id}: ${u.phone} already on ${byPhone.id}`,
+        );
+      }
+      continue;
+    }
+
+    if (byPhone) {
+      // Keep the live account; refresh profile fields only.
+      await prisma.user.update({
+        where: { id: byPhone.id },
+        data: { ...shared, verified },
+      });
+      console.warn(
+        `  reuse ${byPhone.id} for seed phone ${u.phone} (wanted id ${u.id})`,
+      );
+      continue;
+    }
+
+    await prisma.user.create({
+      data: {
         id: u.id,
         phone: u.phone,
-        name: u.name,
-        role: u.role,
-        locationId: u.locationId,
-        onboardingCompleted: u.onboardingCompleted,
-        verified:
-          u.role !== UserRole.employee &&
-          u.role !== UserRole.marketer &&
-          u.role !== UserRole.shipping_company,
-        avatarUrl: SHARED_AVATAR_URL,
-      },
-      update: {
-        phone: u.phone,
-        name: u.name,
-        role: u.role,
-        locationId: u.locationId,
-        onboardingCompleted: u.onboardingCompleted,
-        avatarUrl: SHARED_AVATAR_URL,
+        ...shared,
+        verified,
       },
     });
   }
