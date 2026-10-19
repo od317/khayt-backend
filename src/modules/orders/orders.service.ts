@@ -122,7 +122,7 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Order not found',
+        message: 'الطلب غير موجود',
       });
     }
 
@@ -189,7 +189,7 @@ export class OrdersService {
     ) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Only stores and workshops can place orders',
+        message: 'فقط المتجر والورشة يمكنهما تقديم الطلبات',
       });
     }
 
@@ -209,7 +209,7 @@ export class OrdersService {
       if (!storeUser) {
         throw new NotFoundException({
           error: 'not_found',
-          message: 'User not found',
+          message: 'المستخدم غير موجود',
         });
       }
 
@@ -228,14 +228,14 @@ export class OrdersService {
         if (!product) {
           throw new NotFoundException({
             error: 'not_found',
-            message: `Product ${line.productId} not found`,
+            message: `المنتج ${line.productId} غير موجود`,
           });
         }
         if (!product.inWarehouse) {
           throw new HttpException(
             {
               error: 'not_in_warehouse',
-              message: 'Product is not available for ordering',
+              message: 'المنتج غير متاح للطلب',
               productId: line.productId,
             },
             HttpStatus.BAD_REQUEST,
@@ -282,7 +282,7 @@ export class OrdersService {
           throw new HttpException(
             {
               error: 'insufficient_stock',
-              message: 'Not enough stock available',
+              message: 'المخزون غير كافٍ',
               productId,
               available,
             },
@@ -332,7 +332,7 @@ export class OrdersService {
               if (!product) {
                 throw new NotFoundException({
                   error: 'not_found',
-                  message: `Product ${line.productId} not found`,
+                  message: `المنتج ${line.productId} غير موجود`,
                 });
               }
               return {
@@ -390,7 +390,7 @@ export class OrdersService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Order not found',
+        message: 'الطلب غير موجود',
       });
     }
 
@@ -413,7 +413,7 @@ export class OrdersService {
       throw new HttpException(
         {
           error: 'invalid_transition',
-          message: 'Transition not allowed',
+          message: 'الانتقال غير مسموح',
           from: existing.status,
           to: dto.status,
         },
@@ -431,7 +431,7 @@ export class OrdersService {
     if (!isInternal(actor.role)) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Only staff can force-advance an order',
+        message: 'فقط الموظفون يمكنهم تقديم الطلب قسرياً',
       });
     }
 
@@ -443,7 +443,7 @@ export class OrdersService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Order not found',
+        message: 'الطلب غير موجود',
       });
     }
 
@@ -452,7 +452,7 @@ export class OrdersService {
       throw new HttpException(
         {
           error: 'invalid_transition',
-          message: 'Order is already in a terminal status',
+          message: 'الطلب في حالة نهائية',
           from: existing.status,
         },
         HttpStatus.BAD_REQUEST,
@@ -490,7 +490,7 @@ export class OrdersService {
     if (!updated) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Order not found',
+        message: 'الطلب غير موجود',
       });
     }
 
@@ -528,7 +528,7 @@ export class OrdersService {
     ) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Only inventory staff can update lines',
+        message: 'فقط موظفو المخزون يحدّثون البنود',
       });
     }
 
@@ -543,7 +543,7 @@ export class OrdersService {
     if (!line) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Order line not found',
+        message: 'بند الطلب غير موجود',
       });
     }
 
@@ -551,7 +551,7 @@ export class OrdersService {
       throw new HttpException(
         {
           error: 'invalid_state',
-          message: 'Lines can only be picked while the order is preparing',
+          message: 'البنود تُجهَّز فقط أثناء التحضير',
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -581,7 +581,7 @@ export class OrdersService {
       if (!order) {
         throw new NotFoundException({
           error: 'not_found',
-          message: 'Order not found',
+          message: 'الطلب غير موجود',
         });
       }
       await this.decrementStockForOrder(tx, orderId, order.number);
@@ -646,7 +646,7 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Order not found',
+        message: 'الطلب غير موجود',
       });
     }
 
@@ -666,7 +666,7 @@ export class OrdersService {
     }
     throw new NotFoundException({
       error: 'order_not_accessible',
-      message: 'Order not found',
+      message: 'الطلب غير موجود',
     });
   }
 

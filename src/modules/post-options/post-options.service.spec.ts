@@ -143,7 +143,7 @@ describe('PostOptionsService', () => {
     expect(error).toBeInstanceOf(HttpException);
     expect((error as HttpException).getResponse()).toMatchObject({
       error: 'validation_failed',
-      fields: { parentId: 'required for skill options' },
+      fields: { parentId: 'مطلوب لخيارات المهارة' },
     });
   });
 });

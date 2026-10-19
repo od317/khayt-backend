@@ -66,8 +66,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
           {
             status: HttpStatus.CONFLICT,
             body: {
-              error: 'duplicate',
-              message: 'A record with this value already exists',
+              error: 'مكرر',
+              message: 'سجل بهذه القيمة موجود مسبقاً',
               statusCode: HttpStatus.CONFLICT,
             },
           },
@@ -82,7 +82,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             status: HttpStatus.NOT_FOUND,
             body: {
               error: 'not_found',
-              message: 'Record not found',
+              message: 'السجل غير موجود',
               statusCode: HttpStatus.NOT_FOUND,
             },
           },
@@ -98,7 +98,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
           status: HttpStatus.BAD_REQUEST,
           body: {
             error: 'invalid_multipart',
-            message: exception.message,
+            message: this.multerMessage(exception),
             statusCode: HttpStatus.BAD_REQUEST,
           },
         },
@@ -161,7 +161,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const message =
       isDevelopment && exception instanceof Error
         ? exception.message
-        : 'An unexpected error occurred';
+        : 'حدث خطأ غير متوقع';
 
     return this.withStack(
       {
@@ -226,6 +226,25 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return 'too_many_requests';
       default:
         return 'error';
+    }
+  }
+
+  private multerMessage(error: multer.MulterError): string {
+    switch (error.code) {
+      case 'LIMIT_FILE_SIZE':
+        return 'حجم الملف أكبر من المسموح';
+      case 'LIMIT_FILE_COUNT':
+        return 'عدد الملفات أكبر من المسموح';
+      case 'LIMIT_UNEXPECTED_FILE':
+        return 'حقل ملف غير متوقع';
+      case 'LIMIT_PART_COUNT':
+        return 'عدد أجزاء الطلب أكبر من المسموح';
+      case 'LIMIT_FIELD_KEY':
+      case 'LIMIT_FIELD_VALUE':
+      case 'LIMIT_FIELD_COUNT':
+        return 'حقول النموذج غير صالحة';
+      default:
+        return 'رفع الملف فشل';
     }
   }
 }

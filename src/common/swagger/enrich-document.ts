@@ -87,7 +87,7 @@ function defaultErrors(opts: {
   }
 
   if (opts.hasPathParam) {
-    errors['404'] = asExamples('Not found', {
+    errors['404'] = asExamples('غير موجود', {
       not_found: {
         summary: 'The requested record does not exist',
         value: ERRORS.notFound,

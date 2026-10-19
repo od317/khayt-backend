@@ -30,7 +30,7 @@ export class VerifyDto {
 
   @ApiProperty({ example: '', description: '6-digit verification code' })
   @IsString()
-  @Matches(/^\d{6}$/, { message: 'must be a 6-digit code' })
+  @Matches(/^\d{6}$/, { message: 'يجب أن يكون رمزاً من 6 أرقام' })
   code!: string;
 
   @ApiPropertyOptional({

@@ -52,8 +52,8 @@ export class AdminService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Role must appear in the app',
-          fields: { role: 'must be a visibleInApp role' },
+          message: 'يجب أن يظهر الدور في التطبيق',
+          fields: { role: 'يجب أن يكون دوراً ظاهراً في التطبيق' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -81,14 +81,14 @@ export class AdminService {
     if (!target) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'User not found',
+        message: 'المستخدم غير موجود',
       });
     }
 
     if (appRoles.includes(target.role)) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Employee not found',
+        message: 'الموظف غير موجود',
       });
     }
 
@@ -96,13 +96,13 @@ export class AdminService {
       if (dto.role !== undefined) {
         throw new ForbiddenException({
           error: 'forbidden',
-          message: 'Cannot change the role of a super admin',
+          message: 'لا يمكن تغيير دور المشرف الأعلى',
         });
       }
       if (dto.suspended === true) {
         throw new ForbiddenException({
           error: 'forbidden',
-          message: 'Cannot suspend a super admin',
+          message: 'لا يمكن إيقاف المشرف الأعلى',
         });
       }
     }
@@ -125,8 +125,8 @@ export class AdminService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'phone is required for this role',
-            fields: { phone: 'required for this role' },
+            message: 'رقم الهاتف مطلوب لهذا الدور',
+            fields: { phone: 'مطلوب لهذا الدور' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -136,8 +136,8 @@ export class AdminService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'email is required for this role',
-            fields: { email: 'required for this role' },
+            message: 'البريد مطلوب لهذا الدور',
+            fields: { email: 'مطلوب لهذا الدور' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -146,8 +146,8 @@ export class AdminService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'password is required for this role',
-            fields: { password: 'required for this role' },
+            message: 'كلمة المرور مطلوبة لهذا الدور',
+            fields: { password: 'مطلوب لهذا الدور' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -160,8 +160,8 @@ export class AdminService {
       });
       if (existing && existing.id !== userId) {
         throw new ConflictException({
-          error: 'duplicate',
-          message: 'A user with this email already exists',
+          error: 'مكرر',
+          message: 'مستخدم بهذا البريد موجود',
         });
       }
     }
@@ -172,8 +172,8 @@ export class AdminService {
       });
       if (existing && existing.id !== userId) {
         throw new ConflictException({
-          error: 'duplicate',
-          message: 'A user with this phone already exists',
+          error: 'مكرر',
+          message: 'مستخدم بهذا الهاتف موجود',
         });
       }
     }
@@ -225,7 +225,7 @@ export class AdminService {
             message: appUsers
               ? 'Role is not an app-visible user role'
               : 'Role is not an employee role',
-            fields: { role: 'does not belong to this list' },
+            fields: { role: 'لا ينتمي لهذه القائمة' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -294,7 +294,7 @@ export class AdminService {
     if (!target) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'User not found',
+        message: 'المستخدم غير موجود',
       });
     }
 
@@ -302,7 +302,7 @@ export class AdminService {
     if (isAppUser !== appUsers) {
       throw new NotFoundException({
         error: 'not_found',
-        message: appUsers ? 'User not found' : 'Employee not found',
+        message: appUsers ? 'المستخدم غير موجود' : 'الموظف غير موجود',
       });
     }
 
@@ -315,8 +315,8 @@ export class AdminService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Role does not exist',
-          fields: { role: 'must reference an existing role' },
+          message: 'الدور غير موجود',
+          fields: { role: 'يجب أن يشير إلى دور موجود' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -326,8 +326,8 @@ export class AdminService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'App roles cannot be created as employees',
-          fields: { role: 'must be hidden from the app (visibleInApp false)' },
+          message: 'أدوار التطبيق لا تُنشأ كموظفين',
+          fields: { role: 'يجب أن يكون مخفياً عن التطبيق' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -336,7 +336,7 @@ export class AdminService {
     if (role.value === UserRole.super_admin) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Super admin accounts cannot be created this way',
+        message: 'لا يُنشأ مشرف أعلى بهذه الطريقة',
       });
     }
 
@@ -366,8 +366,8 @@ export class AdminService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Location does not exist or is inactive',
-          fields: { locationId: 'must reference an active location' },
+          message: 'الموقع غير موجود أو غير نشط',
+          fields: { locationId: 'يجب أن يشير إلى موقع نشط' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -384,10 +384,10 @@ export class AdminService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'email and password are required for this role',
+          message: 'البريد وكلمة المرور مطلوبان لهذا الدور',
           fields: {
-            email: !dto.email ? 'required for this role' : '',
-            password: !dto.password ? 'required for this role' : '',
+            email: !dto.email ? 'مطلوب لهذا الدور' : '',
+            password: !dto.password ? 'مطلوب لهذا الدور' : '',
           },
         },
         HttpStatus.BAD_REQUEST,
@@ -399,8 +399,8 @@ export class AdminService {
     });
     if (existing) {
       throw new ConflictException({
-        error: 'duplicate',
-        message: 'A user with this email already exists',
+        error: 'مكرر',
+        message: 'مستخدم بهذا البريد موجود',
       });
     }
 
@@ -428,8 +428,8 @@ export class AdminService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'phone is required for this role',
-          fields: { phone: 'required for this role' },
+          message: 'رقم الهاتف مطلوب لهذا الدور',
+          fields: { phone: 'مطلوب لهذا الدور' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -441,8 +441,8 @@ export class AdminService {
     });
     if (existing) {
       throw new ConflictException({
-        error: 'duplicate',
-        message: 'A user with this phone already exists',
+        error: 'مكرر',
+        message: 'مستخدم بهذا الهاتف موجود',
       });
     }
 

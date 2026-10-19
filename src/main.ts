@@ -47,6 +47,7 @@ async function bootstrap(): Promise<void> {
       exceptionFactory: (errors: ValidationError[]) => {
         return new BadRequestException({
           error: 'validation_failed',
+          message: 'فشل التحقق من البيانات',
           fields: flattenValidationErrors(errors),
         });
       },

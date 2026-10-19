@@ -41,14 +41,14 @@ export class ProductsService {
       throw new NotFoundException({
         error: 'not_found',
         resource: 'business',
-        message: 'Supplier business not found',
+        message: 'نشاط المورد غير موجود',
       });
     }
     if (business.type !== BusinessType.workshop) {
       throw new BadRequestException({
         error: 'validation_failed',
-        message: 'Supplier must be a workshop business',
-        fields: { supplierBusinessId: 'must be a workshop' },
+        message: 'المورد يجب أن يكون ورشة',
+        fields: { supplierBusinessId: 'يجب أن تكون ورشة' },
       });
     }
   }
@@ -107,7 +107,7 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Product not found',
+        message: 'المنتج غير موجود',
       });
     }
 
@@ -141,7 +141,7 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Product not found',
+        message: 'المنتج غير موجود',
       });
     }
 
@@ -264,7 +264,7 @@ export class ProductsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Product not found',
+        message: 'المنتج غير موجود',
       });
     }
 
@@ -317,7 +317,7 @@ export class ProductsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Product not found',
+        message: 'المنتج غير موجود',
       });
     }
 
@@ -328,7 +328,7 @@ export class ProductsService {
     if (orderLineCount > 0) {
       throw new ConflictException({
         error: 'product_has_orders',
-        message: 'Product has been ordered and cannot be deleted',
+        message: 'المنتج مُطلَب ولا يمكن حذفه',
       });
     }
 

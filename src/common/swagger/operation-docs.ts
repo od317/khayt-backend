@@ -94,7 +94,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           400,
           'invalid_transition',
-          'Order is already in a terminal status',
+          'الطلب في حالة نهائية',
         ),
       },
     }),
@@ -107,14 +107,14 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: ERRORS.authRequired,
       },
       invalid: {
-        summary: 'Invalid or expired access token',
-        value: errorBody(401, 'unauthorized', 'Invalid or expired access token'),
+        summary: 'رمز الوصول غير صالح أو منتهٍ',
+        value: errorBody(401, 'unauthorized', 'رمز الوصول غير صالح أو منتهٍ'),
       },
     }),
     '404': errors('Disabled', {
       not_found: {
         summary: 'Debug routes are not enabled',
-        value: errorBody(404, 'not_found', 'Not found'),
+        value: errorBody(404, 'not_found', 'غير موجود'),
       },
     }),
   },
@@ -126,7 +126,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         summary: 'Invalid phone',
         value: validationFailed({
           phone:
-            'must be an international phone number in E.164 form (+countrycode…)',
+            'يجب أن يكون رقم هاتف دولي بصيغة E.164 (+رمز الدولة…)',
         }),
       },
     }),
@@ -136,7 +136,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           429,
           'too_many_requests',
-          'Too many code requests. Try again later.',
+          'طلبات كثيرة للرمز. حاول لاحقاً.',
         ),
       },
     }),
@@ -149,22 +149,22 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         summary: 'Invalid phone or code',
         value: validationFailed({
           phone:
-            'must be an international phone number in E.164 form (+countrycode…)',
-          code: 'must be a 6-digit code',
+            'يجب أن يكون رقم هاتف دولي بصيغة E.164 (+رمز الدولة…)',
+          code: 'يجب أن يكون رمزاً من 6 أرقام',
         }),
       },
     }),
     '401': errors('Unauthorized', {
       invalid_code: {
         summary: 'Wrong code',
-        value: errorBody(401, 'invalid_code', 'Invalid verification code'),
+        value: errorBody(401, 'invalid_code', 'رمز التحقق غير صحيح'),
       },
       code_expired: {
         summary: 'Code missing or expired',
         value: errorBody(
           401,
           'code_expired',
-          'Verification code is missing or expired',
+          'رمز التحقق مفقود أو منتهٍ',
         ),
       },
     }),
@@ -174,7 +174,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           403,
           'account_suspended',
-          'This account has been suspended',
+          'تم إيقاف هذا الحساب',
         ),
       },
     }),
@@ -184,7 +184,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           429,
           'too_many_attempts',
-          'Too many incorrect codes. Request a new one.',
+          'محاولات خاطئة كثيرة. اطلب رمزاً جديداً.',
         ),
       },
     }),
@@ -198,17 +198,17 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '400': errors('Validation failed', {
       validation_failed: {
         summary: 'Missing refresh token',
-        value: validationFailed({ refreshToken: 'must be a string' }),
+        value: validationFailed({ refreshToken: 'يجب أن يكون نصاً' }),
       },
     }),
     '401': errors('Unauthorized', {
       invalid_token: {
         summary: 'Refresh token revoked or invalid',
-        value: errorBody(401, 'invalid_token', 'Refresh token has been revoked'),
+        value: errorBody(401, 'invalid_token', 'تم إلغاء رمز التحديث'),
       },
       unauthorized: {
         summary: 'User no longer exists',
-        value: errorBody(401, 'unauthorized', 'User not found'),
+        value: errorBody(401, 'unauthorized', 'المستخدم غير موجود'),
       },
     }),
     '403': errors('Forbidden', {
@@ -217,7 +217,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           403,
           'account_suspended',
-          'This account has been suspended',
+          'تم إيقاف هذا الحساب',
         ),
       },
     }),
@@ -255,7 +255,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           403,
           'cannot_delete_account',
-          'Staff accounts cannot be deleted from the app',
+          'لا يمكن حذف حسابات الموظفين من التطبيق',
         ),
       },
     }),
@@ -277,19 +277,19 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       locationId: {
         summary: 'Unknown location',
         value: validationFailed(
-          { locationId: 'must reference an active location' },
-          'Location does not exist or is inactive',
+          { locationId: 'يجب أن يشير إلى موقع نشط' },
+          'الموقع غير موجود أو غير نشط',
         ),
       },
       delivery_location: {
         summary: 'Store drop-off pin is incomplete',
         value: validationFailed(
           {
-            deliveryAddress: 'required',
-            deliveryLat: 'required',
-            deliveryLng: 'required',
+            deliveryAddress: 'مطلوب',
+            deliveryLat: 'مطلوب',
+            deliveryLng: 'مطلوب',
           },
-          'Map pin and address are required together',
+          'موقع الخريطة والعنوان مطلوبان معاً',
         ),
       },
     }),
@@ -303,7 +303,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           403,
           'forbidden',
-          'Only employee, marketer, or shipping_company can set availability',
+          'فقط الموظف أو المسوق أو شركة الشحن يمكنه تغيير التوفر',
         ),
       },
     }),
@@ -311,7 +311,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       availableForWork: {
         summary: 'Boolean required',
         value: validationFailed(
-          { availableForWork: 'must be a boolean' },
+          { availableForWork: 'يجب أن يكون منطقيًا (صحيح/خطأ)' },
           'Validation failed',
         ),
       },
@@ -322,7 +322,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           429,
           'too_many_requests',
-          'Too many availability changes. Try again in a few minutes.',
+          'تغييرات كثيرة للتوفر. حاول بعد دقائق.',
         ),
       },
     }),
@@ -333,7 +333,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '400': errors('Validation failed', {
       validation_failed: {
         summary: 'Invalid role or fields',
-        value: validationFailed({ role: 'is not a selectable role' }),
+        value: validationFailed({ role: 'يجب أن يكون دوراً قابلاً للاختيار' }),
       },
     }),
     '409': errors('Conflict', {
@@ -342,7 +342,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           409,
           'already_onboarded',
-          'Onboarding has already been completed',
+          'اكتمل التسجيل الأول مسبقاً',
         ),
       },
     }),
@@ -353,13 +353,13 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '400': errors('Validation failed', {
       validation_failed: {
         summary: 'Missing email or password',
-        value: validationFailed({ email: 'must be an email' }),
+        value: validationFailed({ email: 'بريد إلكتروني غير صالح' }),
       },
     }),
     '401': errors('Unauthorized', {
       invalid_credentials: {
         summary: 'Wrong email or password',
-        value: errorBody(401, 'invalid_credentials', 'Invalid email or password'),
+        value: errorBody(401, 'invalid_credentials', 'البريد أو كلمة المرور غير صحيحة'),
       },
     }),
     '403': errors('Forbidden', {
@@ -375,21 +375,21 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '400': errors('Validation failed', {
       validation_failed: {
         summary: 'Missing challenge or code',
-        value: validationFailed({ code: 'must be a 6-digit code' }),
+        value: validationFailed({ code: 'يجب أن يكون رمزاً من 6 أرقام' }),
       },
     }),
     '401': errors('Unauthorized', {
       invalid_challenge: {
         summary: 'Challenge token is invalid',
-        value: errorBody(401, 'invalid_challenge', 'Invalid challenge token'),
+        value: errorBody(401, 'invalid_challenge', 'رمز التحدي غير صالح أو منتهٍ'),
       },
       code_expired: {
         summary: '2FA code expired',
-        value: errorBody(401, 'code_expired', 'Verification code is missing or expired'),
+        value: errorBody(401, 'code_expired', 'رمز التحقق مفقود أو منتهٍ'),
       },
       invalid_code: {
         summary: 'Wrong 2FA code',
-        value: errorBody(401, 'invalid_code', 'Invalid verification code'),
+        value: errorBody(401, 'invalid_code', 'رمز التحقق غير صحيح'),
       },
     }),
   },
@@ -420,7 +420,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '409': errors('Conflict', {
       conflict: {
         summary: 'System role or role still in use',
-        value: errorBody(409, 'conflict', 'Cannot delete this role'),
+        value: errorBody(409, 'conflict', 'لا يمكن حذف هذا الدور'),
       },
     }),
   },
@@ -435,10 +435,10 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'get /locations/{id}/areas': {
     '200': ok({ items: [{ id: '', name: 'المزة' }] }),
-    '404': errors('Not found', {
+    '404': errors('غير موجود', {
       not_found: {
         summary: 'City location missing',
-        value: errorBody(404, 'not_found', 'Location not found'),
+        value: errorBody(404, 'not_found', 'الموقع غير موجود'),
       },
     }),
   },
@@ -451,8 +451,8 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       parentId: {
         summary: 'Parent must be an existing city',
         value: validationFailed(
-          { parentId: 'must reference an existing city' },
-          'Parent location does not exist',
+          { parentId: 'يجب أن يشير إلى مدينة موجودة' },
+          'الموقع الأب غير موجود',
         ),
       },
     }),
@@ -463,8 +463,8 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
       parentId: {
         summary: 'Cannot nest an area under an area',
         value: validationFailed(
-          { parentId: 'must be a city, not an area' },
-          'Areas can only be nested under a city',
+          { parentId: 'يجب أن تكون مدينة وليس منطقة' },
+          'المناطق تُنشأ فقط تحت مدينة',
         ),
       },
     }),
@@ -474,14 +474,14 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '409': errors('Conflict', {
       children: {
         summary: 'City still has areas',
-        value: errorBody(409, 'conflict', 'Delete or move child areas first'),
+        value: errorBody(409, 'conflict', 'احذف أو انقل المناطق الفرعية أولاً'),
       },
       users: {
         summary: 'Location assigned to users',
         value: errorBody(
           409,
           'conflict',
-          'Location is assigned to one or more users',
+          'الموقع مرتبط بمستخدمين',
         ),
       },
     }),
@@ -600,7 +600,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           409,
           'conflict',
-          'A category with this slug already exists',
+          'فئة بهذا المعرف موجودة',
         ),
       },
     }),
@@ -621,7 +621,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           409,
           'conflict',
-          'A category with this slug already exists',
+          'فئة بهذا المعرف موجودة',
         ),
       },
     }),
@@ -634,7 +634,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           409,
           'conflict',
-          'Category is assigned to one or more posts',
+          'الفئة مرتبطة بمنشورات',
         ),
       },
     }),
@@ -651,10 +651,10 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'get /profiles/{id}/similar': {
     '200': ok(paginated(sampleBusiness)),
-    '404': errors('Not found', {
+    '404': errors('غير موجود', {
       not_found: {
         summary: 'Factory profile missing',
-        value: errorBody(404, 'not_found', 'Factory profile not found'),
+        value: errorBody(404, 'not_found', 'ملف المصنع غير موجود'),
       },
     }),
   },
@@ -712,10 +712,10 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         },
       },
     },
-    '404': errors('Not found', {
+    '404': errors('غير موجود', {
       not_found: {
         summary: 'No public profile for this business/user id',
-        value: errorBody(404, 'not_found', 'Profile not found'),
+        value: errorBody(404, 'not_found', 'الملف غير موجود'),
       },
     }),
   },
@@ -737,7 +737,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '403': errors('Forbidden', {
       forbidden: {
         summary: 'Not the business owner',
-        value: errorBody(403, 'forbidden', 'Not the owner of this business'),
+        value: errorBody(403, 'forbidden', 'لست مالك هذا النشاط'),
       },
     }),
   },
@@ -747,10 +747,10 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'get /products/{id}/similar': {
     '200': ok(paginated(sampleProduct)),
-    '404': errors('Not found', {
+    '404': errors('غير موجود', {
       not_found: {
         summary: 'Product missing',
-        value: errorBody(404, 'not_found', 'Product not found'),
+        value: errorBody(404, 'not_found', 'المنتج غير موجود'),
       },
     }),
   },
@@ -781,7 +781,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '409': errors('Conflict', {
       product_has_orders: {
         summary: 'Product appears on orders',
-        value: errorBody(409, 'product_has_orders', 'Product has been ordered'),
+        value: errorBody(409, 'product_has_orders', 'المنتج مُطلَب ولا يمكن حذفه'),
       },
     }),
   },
@@ -794,7 +794,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '401': errors('Unauthorized', {
       unauthorized: {
         summary: 'Missing or invalid token',
-        value: errorBody(401, 'unauthorized', 'Unauthorized'),
+        value: errorBody(401, 'unauthorized', 'غير مصرح'),
       },
     }),
   },
@@ -803,7 +803,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '401': errors('Unauthorized', {
       unauthorized: {
         summary: 'Missing or invalid token',
-        value: errorBody(401, 'unauthorized', 'Unauthorized'),
+        value: errorBody(401, 'unauthorized', 'غير مصرح'),
       },
     }),
   },
@@ -818,8 +818,8 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           403,
           'profile_incomplete',
-          'Enter your name to continue',
-          { completedData: false, fields: { name: 'required' } },
+          'أدخل اسمك للمتابعة',
+          { completedData: false, fields: { name: 'مطلوب' } },
         ),
       },
     }),
@@ -838,8 +838,8 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           403,
           'profile_incomplete',
-          'Enter your name to continue',
-          { completedData: false, fields: { name: 'required' } },
+          'أدخل اسمك للمتابعة',
+          { completedData: false, fields: { name: 'مطلوب' } },
         ),
       },
     }),
@@ -864,8 +864,8 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           403,
           'profile_incomplete',
-          'Enter your name to continue',
-          { completedData: false, fields: { name: 'required' } },
+          'أدخل اسمك للمتابعة',
+          { completedData: false, fields: { name: 'مطلوب' } },
         ),
       },
     }),
@@ -874,10 +874,10 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '200': ok({
       items: [{ ...sampleComment, replies: [sampleComment] }],
     }),
-    '404': errors('Not found', {
+    '404': errors('غير موجود', {
       not_found: {
         summary: 'Parent comment missing',
-        value: errorBody(404, 'not_found', 'Comment not found'),
+        value: errorBody(404, 'not_found', 'التعليق غير موجود'),
       },
     }),
   },
@@ -889,15 +889,15 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           403,
           'profile_incomplete',
-          'Enter your name to continue',
-          { completedData: false, fields: { name: 'required' } },
+          'أدخل اسمك للمتابعة',
+          { completedData: false, fields: { name: 'مطلوب' } },
         ),
       },
     }),
-    '404': errors('Not found', {
+    '404': errors('غير موجود', {
       not_found: {
         summary: 'Parent comment missing',
-        value: errorBody(404, 'not_found', 'Comment not found'),
+        value: errorBody(404, 'not_found', 'التعليق غير موجود'),
       },
     }),
   },
@@ -906,13 +906,13 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '403': errors('Forbidden', {
       forbidden: {
         summary: 'Not the comment author',
-        value: errorBody(403, 'forbidden', 'Not the author of this comment'),
+        value: errorBody(403, 'forbidden', 'لست كاتب هذا التعليق'),
       },
     }),
-    '404': errors('Not found', {
+    '404': errors('غير موجود', {
       not_found: {
         summary: 'Comment missing',
-        value: errorBody(404, 'not_found', 'Comment not found'),
+        value: errorBody(404, 'not_found', 'التعليق غير موجود'),
       },
     }),
   },
@@ -931,11 +931,11 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'get /orders/{id}': {
     '200': ok(sampleOrderDetail),
-    '404': errors('Not found', {
+    '404': errors('غير موجود', {
       not_found: { summary: 'Unknown order', value: ERRORS.notFound },
       order_not_accessible: {
         summary: 'Caller cannot see this order',
-        value: errorBody(404, 'order_not_accessible', 'Order not found'),
+        value: errorBody(404, 'order_not_accessible', 'الطلب غير موجود'),
       },
     }),
   },
@@ -946,22 +946,22 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         summary: 'First order needs a map pin and address',
         value: validationFailed(
           {
-            address: 'required',
-            lat: 'required',
-            lng: 'required',
+            address: 'مطلوب',
+            lat: 'مطلوب',
+            lng: 'مطلوب',
           },
-          'Pick your delivery location on the map for the first order',
+          'حدّد موقع التوصيل على الخريطة لأول طلب',
         ),
       },
       map_pin_incomplete: {
         summary: 'Address, lat, and lng must be sent together',
         value: validationFailed(
           {
-            address: 'required',
-            lat: 'required',
-            lng: 'required',
+            address: 'مطلوب',
+            lat: 'مطلوب',
+            lng: 'مطلوب',
           },
-          'Map pin and address are required together',
+          'موقع الخريطة والعنوان مطلوبان معاً',
         ),
       },
       not_in_warehouse: {
@@ -969,7 +969,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           400,
           'not_in_warehouse',
-          'Product is not available for ordering',
+          'المنتج غير متاح for ordering',
           { productId: '' },
         ),
       },
@@ -980,29 +980,29 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           403,
           'profile_incomplete',
-          'Enter your delivery location to continue',
+          'أدخل موقع التوصيل للمتابعة',
           {
             completedData: false,
             fields: {
-              deliveryLat: 'required',
-              deliveryLng: 'required',
+              deliveryLat: 'مطلوب',
+              deliveryLng: 'مطلوب',
             },
           },
         ),
       },
       forbidden: {
-        summary: 'Only stores and workshops can place orders',
+        summary: 'فقط المتجر والورشة يمكنهما تقديم الطلبات',
         value: errorBody(
           403,
           'forbidden',
-          'Only stores and workshops can place orders',
+          'فقط المتجر والورشة يمكنهما تقديم الطلبات',
         ),
       },
     }),
-    '404': errors('Not found', {
+    '404': errors('غير موجود', {
       not_found: {
-        summary: 'Unknown product',
-        value: errorBody(404, 'not_found', 'Product not found'),
+        summary: 'منتج غير معروف',
+        value: errorBody(404, 'not_found', 'المنتج غير موجود'),
       },
     }),
     '409': errors('Conflict', {
@@ -1011,7 +1011,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(
           409,
           'insufficient_stock',
-          'Not enough stock available',
+          'المخزون غير كافٍ',
           { productId: '', available: 0 },
         ),
       },
@@ -1022,7 +1022,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '400': errors('Invalid transition', {
       invalid_transition: {
         summary: 'Status cannot move that way',
-        value: errorBody(400, 'invalid_transition', 'Invalid status transition'),
+        value: errorBody(400, 'invalid_transition', 'انتقال الحالة غير مسموح'),
       },
     }),
     '403': errors('Forbidden', {
@@ -1037,7 +1037,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '400': errors('Invalid state', {
       invalid_state: {
         summary: 'Line cannot be updated in this order status',
-        value: errorBody(400, 'invalid_state', 'Order is not in a pickable state'),
+        value: errorBody(400, 'invalid_state', 'الطلب ليس في حالة قابلة للتجهيز'),
       },
     }),
   },
@@ -1170,7 +1170,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '400': errors('Validation failed', {
       amount_not_positive: {
         summary: 'Amount must be greater than zero',
-        value: errorBody(400, 'amount_not_positive', 'Amount must be greater than zero'),
+        value: errorBody(400, 'amount_not_positive', 'المبلغ يجب أن يكون أكبر من صفر'),
       },
       amount_exceeds_balance: {
         summary: 'Amount exceeds remaining balance',
@@ -1244,11 +1244,11 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '400': errors('Invalid status change', {
       no_driver_assigned: {
         summary: 'Cannot complete without a driver',
-        value: errorBody(400, 'no_driver_assigned', 'No driver assigned'),
+        value: errorBody(400, 'no_driver_assigned', 'لم يُعيَّن موصل'),
       },
       invalid_transition: {
         summary: 'Status cannot move that way',
-        value: errorBody(400, 'invalid_transition', 'Invalid status transition'),
+        value: errorBody(400, 'invalid_transition', 'انتقال الحالة غير مسموح'),
       },
     }),
   },

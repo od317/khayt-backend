@@ -28,7 +28,7 @@ export class BusinessOwnerGuard implements CanActivate {
     if (!businessId || !user) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Not the owner of this business',
+        message: 'لست مالك هذا النشاط',
       });
     }
 
@@ -40,14 +40,14 @@ export class BusinessOwnerGuard implements CanActivate {
     if (!business) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Business not found',
+        message: 'النشاط التجاري غير موجود',
       });
     }
 
     if (business.ownerId !== user.id) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Not the owner of this business',
+        message: 'لست مالك هذا النشاط',
       });
     }
 

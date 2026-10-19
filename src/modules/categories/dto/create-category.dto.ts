@@ -22,7 +22,7 @@ export class CreateCategoryDto {
   @ApiProperty({ example: 'qumsan' })
   @IsString()
   @Matches(/^[a-z][a-z0-9-]*$/, {
-    message: 'must be a lowercase slug (letters, numbers, hyphen)',
+    message: 'يجب أن يكون معرفاً بأحرف صغيرة (حروف، أرقام، شرطة)',
   })
   @MaxLength(80)
   slug!: string;

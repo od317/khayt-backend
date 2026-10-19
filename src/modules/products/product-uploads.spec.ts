@@ -65,7 +65,7 @@ describe('applyVariantImageFiles', () => {
         },
         [],
       ),
-    ).toThrow(/Each variant option needs at least one uploaded image/);
+    ).toThrow(/كل خيار متغير يحتاج صورة واحدة على الأقل/);
   });
 
   it('keeps stored variant images when no new file is uploaded', () => {

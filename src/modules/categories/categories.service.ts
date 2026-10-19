@@ -104,7 +104,7 @@ export class CategoriesService {
       ) {
         throw new ConflictException({
           error: 'conflict',
-          message: 'A category with this slug already exists',
+          message: 'فئة بهذا المعرف موجودة',
         });
       }
       throw error;
@@ -119,7 +119,7 @@ export class CategoriesService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Category not found',
+        message: 'الفئة غير موجودة',
       });
     }
 
@@ -139,7 +139,7 @@ export class CategoriesService {
       ) {
         throw new ConflictException({
           error: 'conflict',
-          message: 'A category with this slug already exists',
+          message: 'فئة بهذا المعرف موجودة',
         });
       }
       throw error;
@@ -154,14 +154,14 @@ export class CategoriesService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Category not found',
+        message: 'الفئة غير موجودة',
       });
     }
 
     if (existing._count.posts > 0) {
       throw new ConflictException({
         error: 'conflict',
-        message: 'Category is assigned to one or more posts',
+        message: 'الفئة مرتبطة بمنشورات',
       });
     }
 

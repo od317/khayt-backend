@@ -34,14 +34,14 @@ export class RolesGuard implements CanActivate {
     if (!user) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'Authentication required',
+        message: 'يلزم تسجيل الدخول',
       });
     }
 
     if (!requiredRoles.includes(user.role)) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Insufficient role',
+        message: 'صلاحيات غير كافية',
       });
     }
 

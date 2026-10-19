@@ -115,15 +115,15 @@ export function applyVariantImageFiles(
     if (!option.image || !option.images?.length) {
       throw new BadRequestException({
         error: 'validation_failed',
-        message: 'Each variant option needs at least one uploaded image',
-        fields: { [`variants.options.${index}.image`]: 'required' },
+        message: 'كل خيار متغير يحتاج صورة واحدة على الأقل',
+        fields: { [`variants.options.${index}.image`]: 'مطلوب' },
       });
     }
     for (const [childIndex, child] of (option.children ?? []).entries()) {
       if (!child.image) {
         throw new BadRequestException({
           error: 'validation_failed',
-          message: 'Each variant size needs an uploaded image',
+          message: 'كل مقاس يحتاج صورة مرفوعة',
           fields: {
             [`variants.options.${index}.children.${childIndex}.image`]:
               'required',

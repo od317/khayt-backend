@@ -161,7 +161,7 @@ export class NotificationsService {
     if (!notification) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Notification not found',
+        message: 'الإشعار غير موجود',
       });
     }
 
@@ -193,7 +193,7 @@ export class NotificationsService {
     if (!notification) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Notification not found',
+        message: 'الإشعار غير موجود',
       });
     }
 

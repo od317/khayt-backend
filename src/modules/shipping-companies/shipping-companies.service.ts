@@ -64,7 +64,7 @@ export class ShippingCompaniesService {
         if (!company) {
             throw new NotFoundException({
                 error: 'not_found',
-                message: 'Shipping company not found',
+                message: 'شركة الشحن غير موجودة',
             });
         }
 
@@ -102,7 +102,7 @@ export class ShippingCompaniesService {
         if (!existing) {
             throw new NotFoundException({
                 error: 'not_found',
-                message: 'Shipping company not found',
+                message: 'شركة الشحن غير موجودة',
             });
         }
 
@@ -135,7 +135,7 @@ export class ShippingCompaniesService {
         if (!existing) {
             throw new NotFoundException({
                 error: 'not_found',
-                message: 'Shipping company not found',
+                message: 'شركة الشحن غير موجودة',
             });
         }
 

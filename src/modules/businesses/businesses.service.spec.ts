@@ -267,7 +267,7 @@ describe('BusinessesService', () => {
     expect(error).toBeInstanceOf(NotFoundException);
     expect((error as NotFoundException).getResponse()).toMatchObject({
       error: 'not_found',
-      message: 'Profile not found',
+      message: 'الملف غير موجود',
     });
   });
 });

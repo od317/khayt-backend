@@ -92,7 +92,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
           ? err.message
           : info instanceof Error
             ? info.message
-            : 'Invalid or expired token';
+            : 'الرمز غير صالح أو منتهٍ';
 
       throw new UnauthorizedException({
         error: 'unauthorized',

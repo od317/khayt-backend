@@ -71,7 +71,7 @@ export class DebugController {
     if (!this.isEnabled()) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Not found',
+        message: 'غير موجود',
       });
     }
 
@@ -79,7 +79,7 @@ export class DebugController {
     if (!header || !header.startsWith('Bearer ')) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'Authentication required',
+        message: 'يلزم تسجيل الدخول',
       });
     }
 
@@ -90,7 +90,7 @@ export class DebugController {
     } catch {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'Invalid or expired access token',
+        message: 'رمز الوصول غير صالح أو منتهٍ',
       });
     }
 

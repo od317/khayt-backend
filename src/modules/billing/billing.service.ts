@@ -95,14 +95,14 @@ export class BillingService {
     if (!receiving) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Receiving not found',
+        message: 'الاستلام غير موجود',
       });
     }
 
     if (!receiving.bill) {
       throw new InternalServerErrorException({
         error: 'internal_error',
-        message: 'Receiving is missing its bill',
+        message: 'الاستلام بلا فاتورة',
       });
     }
 
@@ -113,7 +113,7 @@ export class BillingService {
     if (!billWithBusiness) {
       throw new InternalServerErrorException({
         error: 'internal_error',
-        message: 'Receiving is missing its bill',
+        message: 'الاستلام بلا فاتورة',
       });
     }
 
@@ -145,8 +145,8 @@ export class BillingService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'Duplicate product in receiving',
-            fields: { [`lines[${i}].productId`]: 'duplicate' },
+            message: 'منتج مكرر في الاستلام',
+            fields: { [`lines[${i}].productId`]: 'مكرر' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -162,15 +162,15 @@ export class BillingService {
       throw new NotFoundException({
         error: 'not_found',
         resource: 'business',
-        message: 'Business not found',
+        message: 'النشاط التجاري غير موجود',
       });
     }
     if (business.type !== BusinessType.workshop) {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Receiving supplier must be a workshop',
-          fields: { businessId: 'must be a workshop' },
+          message: 'مورد الاستلام يجب أن يكون ورشة',
+          fields: { businessId: 'يجب أن تكون ورشة' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -191,8 +191,8 @@ export class BillingService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'Unknown product',
-            fields: { [`lines[${i}].productId`]: 'unknown product' },
+            message: 'منتج غير معروف',
+            fields: { [`lines[${i}].productId`]: 'منتج غير معروف' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -204,9 +204,9 @@ export class BillingService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'Product is linked to a different workshop',
+            message: 'المنتج مرتبط بورشة أخرى',
             fields: {
-              [`lines[${i}].productId`]: 'supplier mismatch',
+              [`lines[${i}].productId`]: 'عدم تطابق المورد',
             },
           },
           HttpStatus.BAD_REQUEST,
@@ -405,7 +405,7 @@ export class BillingService {
     if (!bill) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Bill not found',
+        message: 'الفاتورة غير موجودة',
       });
     }
 
@@ -427,7 +427,7 @@ export class BillingService {
       throw new HttpException(
         {
           error: 'amount_not_positive',
-          message: 'Payment amount must be positive',
+          message: 'مبلغ الدفع يجب أن يكون موجباً',
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -440,7 +440,7 @@ export class BillingService {
       if (locked.length === 0) {
         throw new NotFoundException({
           error: 'not_found',
-          message: 'Bill not found',
+          message: 'الفاتورة غير موجودة',
         });
       }
 
@@ -451,7 +451,7 @@ export class BillingService {
       if (!bill) {
         throw new NotFoundException({
           error: 'not_found',
-          message: 'Bill not found',
+          message: 'الفاتورة غير موجودة',
         });
       }
 
@@ -460,7 +460,7 @@ export class BillingService {
         throw new HttpException(
           {
             error: 'amount_exceeds_balance',
-            message: 'Payment exceeds the remaining balance',
+            message: 'الدفع يتجاوز الرصيد المتبقي',
             remaining,
           },
           HttpStatus.BAD_REQUEST,

@@ -66,8 +66,8 @@ export class CartService {
             throw new HttpException(
                 {
                     error: 'validation_failed',
-                    message: `quantity must be between 1 and ${MAX_QUANTITY_PER_ITEM}`,
-                    fields: { quantity: `must be 1..${MAX_QUANTITY_PER_ITEM}` },
+                    message: `الكمية يجب أن تكون بين 1 و${MAX_QUANTITY_PER_ITEM}`,
+                    fields: { quantity: `يجب أن تكون بين 1 و${MAX_QUANTITY_PER_ITEM}` },
                 },
                 HttpStatus.BAD_REQUEST,
             );
@@ -80,14 +80,14 @@ export class CartService {
         if (!product) {
             throw new NotFoundException({
                 error: 'not_found',
-                message: 'Product not found',
+                message: 'المنتج غير موجود',
             });
         }
 
         if (!product.available) {
             throw new BadRequestException({
                 error: 'product_unavailable',
-                message: 'Product is not available',
+                message: 'المنتج غير متاح',
             });
         }
 
@@ -114,7 +114,7 @@ export class CartService {
             throw new HttpException(
                 {
                     error: 'cart_full',
-                    message: `Cart cannot hold more than ${MAX_CART_ITEMS} distinct items`,
+                    message: `السلة لا تقبل أكثر من ${MAX_CART_ITEMS} أصناف`,
                 },
                 HttpStatus.BAD_REQUEST,
             );
@@ -156,8 +156,8 @@ export class CartService {
             throw new HttpException(
                 {
                     error: 'validation_failed',
-                    message: `quantity must be between 1 and ${MAX_QUANTITY_PER_ITEM}`,
-                    fields: { quantity: `must be 1..${MAX_QUANTITY_PER_ITEM}` },
+                    message: `الكمية يجب أن تكون بين 1 و${MAX_QUANTITY_PER_ITEM}`,
+                    fields: { quantity: `يجب أن تكون بين 1 و${MAX_QUANTITY_PER_ITEM}` },
                 },
                 HttpStatus.BAD_REQUEST,
             );
@@ -171,7 +171,7 @@ export class CartService {
         if (!item) {
             throw new NotFoundException({
                 error: 'not_found',
-                message: 'Cart item not found',
+                message: 'عنصر السلة غير موجود',
             });
         }
 
@@ -202,7 +202,7 @@ export class CartService {
         if (!item) {
             throw new NotFoundException({
                 error: 'not_found',
-                message: 'Cart item not found',
+                message: 'عنصر السلة غير موجود',
             });
         }
 
@@ -241,7 +241,7 @@ export class CartService {
         if (cartItems.length === 0) {
             throw new BadRequestException({
                 error: 'empty_cart',
-                message: 'Cart is empty',
+                message: 'السلة فارغة',
             });
         }
 
@@ -250,14 +250,14 @@ export class CartService {
             if (item.product.deletedAt !== null) {
                 throw new BadRequestException({
                     error: 'product_unavailable',
-                    message: `Product no longer exists: ${item.productId}`,
+                    message: `المنتج لم يعد موجوداً: ${item.productId}`,
                     fields: { productId: item.productId },
                 });
             }
             if (!item.product.available) {
                 throw new BadRequestException({
                     error: 'product_unavailable',
-                    message: `Product is currently unavailable: ${item.productId}`,
+                    message: `المنتج غير متاح حالياً: ${item.productId}`,
                     fields: { productId: item.productId },
                 });
             }

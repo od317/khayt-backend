@@ -186,7 +186,7 @@ export class BusinessesService {
     if (!business) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Business not found',
+        message: 'النشاط التجاري غير موجود',
       });
     }
 
@@ -216,7 +216,7 @@ export class BusinessesService {
 
     throw new NotFoundException({
       error: 'not_found',
-      message: 'Profile not found',
+      message: 'الملف غير موجود',
     });
   }
 
@@ -232,7 +232,7 @@ export class BusinessesService {
     if (!factory) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Factory profile not found',
+        message: 'ملف المصنع غير موجود',
       });
     }
 
@@ -384,7 +384,7 @@ export class BusinessesService {
     if (existing) {
       throw new ConflictException({
         error: 'already_has_business',
-        message: 'You already own a business',
+        message: 'لديك نشاط مسبقاً',
       });
     }
 
@@ -482,8 +482,8 @@ export class BusinessesService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'One or more categories do not exist',
-          fields: { categoryIds: 'contains an unknown id' },
+          message: 'فئة أو أكثر غير موجودة',
+          fields: { categoryIds: 'يحتوي معرفاً غير معروف' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -496,10 +496,10 @@ export class BusinessesService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'One or more categories are not business categories',
+          message: 'فئة أو أكثر ليست فئات نشاط',
           fields: {
             categoryIds:
-              'must have appliesTo in [business, workshop, institute, store]',
+              'يجب أن تنطبق على نشاط أو ورشة أو معهد أو متجر',
           },
         },
         HttpStatus.BAD_REQUEST,

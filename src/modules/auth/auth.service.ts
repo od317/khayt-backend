@@ -114,7 +114,7 @@ export class AuthService {
         throw new HttpException(
           {
             error: 'too_many_requests',
-            message: 'Too many code requests. Try again later.',
+            message: 'طلبات كثيرة للرمز. حاول لاحقاً.',
           },
           HttpStatus.TOO_MANY_REQUESTS,
         );
@@ -144,7 +144,7 @@ export class AuthService {
     if (!stored) {
       throw new UnauthorizedException({
         error: 'code_expired',
-        message: 'Verification code is missing or expired',
+        message: 'رمز التحقق مفقود أو منتهٍ',
       });
     }
 
@@ -159,7 +159,7 @@ export class AuthService {
         throw new HttpException(
           {
             error: 'too_many_attempts',
-            message: 'Too many incorrect codes. Request a new one.',
+            message: 'محاولات خاطئة كثيرة. اطلب رمزاً جديداً.',
           },
           HttpStatus.TOO_MANY_REQUESTS,
         );
@@ -167,7 +167,7 @@ export class AuthService {
 
       throw new UnauthorizedException({
         error: 'invalid_code',
-        message: 'Invalid verification code',
+        message: 'رمز التحقق غير صحيح',
       });
     }
 
@@ -178,7 +178,7 @@ export class AuthService {
     if (user.suspended) {
       throw new ForbiddenException({
         error: 'account_suspended',
-        message: 'This account has been suspended',
+        message: 'تم إيقاف هذا الحساب',
       });
     }
 
@@ -202,7 +202,7 @@ export class AuthService {
     if (!exists) {
       throw new UnauthorizedException({
         error: 'invalid_token',
-        message: 'Refresh token has been revoked',
+        message: 'تم إلغاء رمز التحديث',
       });
     }
 
@@ -212,13 +212,13 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'User not found',
+        message: 'المستخدم غير موجود',
       });
     }
     if (user.suspended) {
       throw new ForbiddenException({
         error: 'account_suspended',
-        message: 'This account has been suspended',
+        message: 'تم إيقاف هذا الحساب',
       });
     }
 
@@ -253,7 +253,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'User not found',
+        message: 'المستخدم غير موجود',
       });
     }
 
@@ -263,7 +263,7 @@ export class AuthService {
     if (!appRole) {
       throw new ForbiddenException({
         error: 'cannot_delete_account',
-        message: 'Staff accounts cannot be deleted from the app',
+        message: 'لا يمكن حذف حسابات الموظفين من التطبيق',
       });
     }
 
@@ -305,7 +305,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'User not found',
+        message: 'المستخدم غير موجود',
       });
     }
 
@@ -340,15 +340,15 @@ export class AuthService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'description/services are only for workshop or store',
+          message: 'الوصف/الخدمات للورشة أو المتجر فقط',
           fields: {
             description:
               dto.description !== undefined
-                ? 'only allowed for workshop or store'
+                ? 'مسموح للورشة أو المتجر فقط'
                 : undefined,
             services:
               dto.services !== undefined
-                ? 'only allowed for workshop or store'
+                ? 'مسموح للورشة أو المتجر فقط'
                 : undefined,
           },
         },
@@ -389,8 +389,8 @@ export class AuthService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'Location does not exist or is inactive',
-            fields: { locationId: 'must reference an active location' },
+            message: 'الموقع غير موجود أو غير نشط',
+            fields: { locationId: 'يجب أن يشير إلى موقع نشط' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -409,7 +409,7 @@ export class AuthService {
           throw new HttpException(
             {
               error: 'validation_failed',
-              message: 'Delivery staff must send deliveryLat and deliveryLng',
+              message: 'موظف التوصيل يجب أن يرسل خط العرض وخط الطول',
               fields: {
                 deliveryLat:
                   dto.deliveryLat === undefined ? 'required' : undefined,
@@ -435,7 +435,7 @@ export class AuthService {
           throw new HttpException(
             {
               error: 'validation_failed',
-              message: 'Map pin and address are required together',
+              message: 'موقع الخريطة والعنوان مطلوبان معاً',
               fields: {
                 deliveryAddress: address.length < 3 ? 'required' : undefined,
                 deliveryLat:
@@ -494,7 +494,7 @@ export class AuthService {
         throw new HttpException(
           {
             error: 'not_found',
-            message: 'Business profile not found',
+            message: 'ملف النشاط غير موجود',
           },
           HttpStatus.NOT_FOUND,
         );
@@ -523,7 +523,7 @@ export class AuthService {
       throw new ForbiddenException({
         error: 'forbidden',
         message:
-          'Only employee, marketer, or shipping_company can set availability',
+          'فقط الموظف أو المسوق أو شركة الشحن يمكنه تغيير التوفر',
       });
     }
 
@@ -537,7 +537,7 @@ export class AuthService {
         {
           error: 'too_many_requests',
           message:
-            'Too many availability changes. Try again in a few minutes.',
+            'تغييرات كثيرة للتوفر. حاول بعد دقائق.',
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );
@@ -565,14 +565,14 @@ export class AuthService {
     if (!existing) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'User not found',
+        message: 'المستخدم غير موجود',
       });
     }
 
     if (existing.onboardingCompleted) {
       throw new ConflictException({
         error: 'already_onboarded',
-        message: 'Onboarding has already been completed',
+        message: 'اكتمل التسجيل الأول مسبقاً',
       });
     }
 
@@ -585,8 +585,8 @@ export class AuthService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Location does not exist or is inactive',
-          fields: { locationId: 'must reference an active location' },
+          message: 'الموقع غير موجود أو غير نشط',
+          fields: { locationId: 'يجب أن يشير إلى موقع نشط' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -601,8 +601,8 @@ export class AuthService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Role is not available for onboarding',
-          fields: { role: 'must be a selectable role' },
+          message: 'الدور غير متاح للتسجيل الأول',
+          fields: { role: 'يجب أن يكون دوراً قابلاً للاختيار' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -668,25 +668,25 @@ export class AuthService {
   ): void {
     const fields: Record<string, string> = {};
     if (!dto.businessName?.trim()) {
-      fields.businessName = 'required for workshop/store';
+      fields.businessName = 'مطلوب للورشة/المتجر';
     }
     if (!dto.description?.trim()) {
-      fields.description = 'required for workshop/store';
+      fields.description = 'مطلوب للورشة/المتجر';
     }
     if (!dto.services?.length) {
-      fields.services = 'required for workshop/store';
+      fields.services = 'مطلوب للورشة/المتجر';
     }
     if (dto.experienceYears === undefined || dto.experienceYears === null) {
-      fields.experienceYears = 'required for workshop/store';
+      fields.experienceYears = 'مطلوب للورشة/المتجر';
     }
     if (!image) {
-      fields.image = 'required for workshop/store';
+      fields.image = 'مطلوب للورشة/المتجر';
     }
     if (Object.keys(fields).length > 0) {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Business profile is required for this role',
+          message: 'ملف النشاط مطلوب لهذا الدور',
           fields,
         },
         HttpStatus.BAD_REQUEST,
@@ -791,7 +791,7 @@ export class AuthService {
       if (!payload.sub || !payload.tokenId) {
         throw new UnauthorizedException({
           error: 'invalid_token',
-          message: 'Invalid refresh token',
+          message: 'رمز التحديث غير صالح',
         });
       }
       return payload;
@@ -801,7 +801,7 @@ export class AuthService {
       }
       throw new UnauthorizedException({
         error: 'invalid_token',
-        message: 'Invalid or expired refresh token',
+        message: 'رمز التحديث غير صالح أو منتهٍ',
       });
     }
   }

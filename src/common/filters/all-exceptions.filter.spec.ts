@@ -35,7 +35,7 @@ describe('AllExceptionsFilter', () => {
         error: 'validation_failed',
         fields: {
           phone:
-            'must be an international phone number in E.164 form (+countrycode…)',
+            'يجب أن يكون رقم هاتف دولي بصيغة E.164 (+رمز الدولة…)',
         },
       }),
       host as never,

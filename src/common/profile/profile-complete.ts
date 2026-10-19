@@ -29,8 +29,8 @@ export function throwProfileIncomplete(
 export function assertHasDisplayName(name: string | null | undefined): void {
   if (!hasDisplayName(name)) {
     throwProfileIncomplete(
-      { name: 'required' },
-      'Enter your name to continue',
+      { name: 'مطلوب' },
+      'أدخل اسمك للمتابعة',
     );
   }
 }
@@ -41,8 +41,8 @@ export function assertHasDeliveryCoordinates(saved: {
 }): void {
   if (!hasDeliveryCoordinates(saved)) {
     throwProfileIncomplete(
-      { deliveryLat: 'required', deliveryLng: 'required' },
-      'Enter your delivery location to continue',
+      { deliveryLat: 'مطلوب', deliveryLng: 'مطلوب' },
+      'أدخل موقع التوصيل للمتابعة',
     );
   }
 }

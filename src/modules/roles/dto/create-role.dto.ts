@@ -15,7 +15,7 @@ export class CreateRoleDto {
   @ApiProperty({ example: 'partner' })
   @IsString()
   @Matches(/^[a-z][a-z0-9_]*$/, {
-    message: 'must be a lowercase slug (letters, numbers, underscore)',
+    message: 'يجب أن يكون معرفاً بأحرف صغيرة (حروف، أرقام، شرطة سفلية)',
   })
   @MaxLength(50)
   value!: string;

@@ -41,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (await this.redis.exists(accessDenyKey(tokenHash))) {
         throw new UnauthorizedException({
           error: 'unauthorized',
-          message: 'Invalid or expired token',
+          message: 'الرمز غير صالح أو منتهٍ',
         });
       }
     }
@@ -49,7 +49,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!payload.sub || !payload.role) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'Invalid access token',
+        message: 'رمز الوصول غير صالح',
       });
     }
 
@@ -60,14 +60,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'User not found',
+        message: 'المستخدم غير موجود',
       });
     }
 
     if (user.suspended) {
       throw new UnauthorizedException({
         error: 'account_suspended',
-        message: 'This account has been suspended',
+        message: 'تم إيقاف هذا الحساب',
       });
     }
 

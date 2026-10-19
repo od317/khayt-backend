@@ -106,7 +106,7 @@ export class PostsService {
       if (!actor) {
         throw new UnauthorizedException({
           error: 'unauthorized',
-          message: 'Authentication required to list inactive posts',
+          message: 'يلزم تسجيل الدخول لعرض المنشورات غير النشطة',
         });
       }
       where.active = false;
@@ -120,7 +120,7 @@ export class PostsService {
       if (!actor) {
         throw new UnauthorizedException({
           error: 'unauthorized',
-          message: 'Authentication required to list saved posts',
+          message: 'يلزم تسجيل الدخول لعرض المحفوظات',
         });
       }
       where.savedBy = { some: { userId: actor.id } };
@@ -133,7 +133,7 @@ export class PostsService {
       if (!actor) {
         throw new UnauthorizedException({
           error: 'unauthorized',
-          message: 'Authentication required to use forMe',
+          message: 'يلزم تسجيل الدخول لاستخدام forMe',
         });
       }
 
@@ -231,7 +231,7 @@ export class PostsService {
     if (!post) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
 
@@ -239,7 +239,7 @@ export class PostsService {
     if (!post.active && !isAuthor) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
 
@@ -247,7 +247,7 @@ export class PostsService {
     if (!response) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
     return { post: response };
@@ -298,7 +298,7 @@ export class PostsService {
       if (!business || business.ownerId !== actor.id) {
         throw new ForbiddenException({
           error: 'forbidden',
-          message: 'Not the owner of this business',
+          message: 'لست مالك هذا النشاط',
         });
       }
     }
@@ -356,7 +356,7 @@ export class PostsService {
     if (!response) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
     return { post: response };
@@ -375,13 +375,13 @@ export class PostsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
     if (existing.authorId !== actor.id) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Not the author of this post',
+        message: 'لست كاتب هذا المنشور',
       });
     }
 
@@ -542,7 +542,7 @@ export class PostsService {
     if (!response) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
     return { post: response };
@@ -559,13 +559,13 @@ export class PostsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
     if (existing.authorId !== actor.id) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Not the author of this post',
+        message: 'لست كاتب هذا المنشور',
       });
     }
 
@@ -579,7 +579,7 @@ export class PostsService {
     if (!response) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
     return { post: response, deleted: true };
@@ -724,7 +724,7 @@ export class PostsService {
     if (!parent) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Comment not found',
+        message: 'التعليق غير موجود',
       });
     }
 
@@ -754,7 +754,7 @@ export class PostsService {
     if (!parent) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Comment not found',
+        message: 'التعليق غير موجود',
       });
     }
 
@@ -798,14 +798,14 @@ export class PostsService {
     if (!comment) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Comment not found',
+        message: 'التعليق غير موجود',
       });
     }
 
     if (comment.authorId !== actor.id) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Not the author of this comment',
+        message: 'لست كاتب هذا التعليق',
       });
     }
 
@@ -830,7 +830,7 @@ export class PostsService {
     if (!comment) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Comment not found',
+        message: 'التعليق غير موجود',
       });
     }
 
@@ -839,7 +839,7 @@ export class PostsService {
     if (!isCommentAuthor && !isPostAuthor) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Not the author of this comment or post',
+        message: 'لست كاتب التعليق أو المنشور',
       });
     }
 
@@ -875,14 +875,14 @@ export class PostsService {
     if (!post) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
 
     if (opts.requireActive && !post.active) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
   }
@@ -902,8 +902,8 @@ export class PostsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'One or more categories do not exist',
-          fields: { categoryIds: 'contains an unknown id' },
+          message: 'فئة أو أكثر غير موجودة',
+          fields: { categoryIds: 'يحتوي معرفاً غير معروف' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -916,8 +916,8 @@ export class PostsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'One or more categories cannot be used on posts',
-          fields: { categoryIds: 'must apply to posts' },
+          message: 'فئة أو أكثر لا تصلح للمنشورات',
+          fields: { categoryIds: 'يجب أن تنطبق على المنشورات' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -938,8 +938,8 @@ export class PostsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Product not found',
-          fields: { productId: 'unknown product' },
+          message: 'المنتج غير موجود',
+          fields: { productId: 'منتج غير معروف' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -959,7 +959,7 @@ export class PostsService {
         (typeof value === 'string' && value.trim() === '') ||
         (Array.isArray(value) && value.length === 0);
       if (empty) {
-        fields[field] = `${field} is required for ${dto.type}`;
+        fields[field] = `${field} مطلوب لـ ${dto.type}`;
       }
     }
 
@@ -967,7 +967,7 @@ export class PostsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Missing type-specific fields',
+          message: 'حقول مطلوبة حسب النوع مفقودة',
           fields,
         },
         HttpStatus.BAD_REQUEST,
@@ -995,7 +995,7 @@ export class PostsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'One or more values are not valid post options',
+          message: 'قيم غير صالحة لخيارات المنشور',
           fields,
         },
         HttpStatus.BAD_REQUEST,
@@ -1013,13 +1013,13 @@ export class PostsService {
 
     if (dto.type === PostType.reel || media === MediaType.video) {
       if (!dto.videoUrl || dto.videoUrl.trim() === '') {
-        fields.videoUrl = 'videoUrl is required when media is video';
+        fields.videoUrl = 'رابط الفيديو مطلوب عندما يكون النوع فيديو';
       }
     }
 
     if (media === MediaType.image) {
       if (!dto.imageUrls || dto.imageUrls.length === 0) {
-        fields.imageUrls = 'imageUrls is required when media is image';
+        fields.imageUrls = 'صور المنشور مطلوبة عندما يكون النوع صورة';
       }
     }
 
@@ -1027,7 +1027,7 @@ export class PostsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Invalid media configuration',
+          message: 'إعداد الوسائط غير صالح',
           fields,
         },
         HttpStatus.BAD_REQUEST,
@@ -1092,7 +1092,7 @@ export class PostsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
 
@@ -1118,7 +1118,7 @@ export class PostsService {
     if (!response) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
     return { post: response, deleted: true };
@@ -1136,7 +1136,7 @@ export class PostsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
 
@@ -1149,7 +1149,7 @@ export class PostsService {
       if (!current) {
         throw new NotFoundException({
           error: 'not_found',
-          message: 'Post not found',
+          message: 'المنشور غير موجود',
         });
       }
       const [response] = await this.attachCounts([current], actor);
@@ -1180,7 +1180,7 @@ export class PostsService {
     if (!response) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post not found',
+        message: 'المنشور غير موجود',
       });
     }
     return { post: response };

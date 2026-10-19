@@ -108,14 +108,14 @@ export class DeliveryService {
     if (!delivery) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Delivery not found',
+        message: 'التوصيل غير موجود',
       });
     }
 
     if (actor.role === UserRole.delivery && delivery.driverId !== actor.id) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Delivery not found',
+        message: 'التوصيل غير موجود',
       });
     }
 
@@ -149,7 +149,7 @@ export class DeliveryService {
       if (!foundIds.has(id)) {
         throw new NotFoundException({
           error: 'not_found',
-          message: 'Order not found',
+          message: 'الطلب غير موجود',
         });
       }
     }
@@ -159,9 +159,9 @@ export class DeliveryService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: `Order ${order.number} is not ready`,
+            message: `الطلب ${order.number} غير جاهز`,
             fields: {
-              orderIds: `order ${order.number} is not ready`,
+              orderIds: `الطلب ${order.number} غير جاهز`,
             },
           },
           HttpStatus.BAD_REQUEST,
@@ -175,7 +175,7 @@ export class DeliveryService {
     if (assigned) {
       throw new ConflictException({
         error: 'order_already_assigned',
-        message: 'One or more orders are already assigned to a delivery',
+        message: 'طلب أو أكثر مُسند لتوصيل',
       });
     }
 
@@ -225,7 +225,7 @@ export class DeliveryService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Delivery not found',
+        message: 'التوصيل غير موجود',
       });
     }
 
@@ -238,8 +238,8 @@ export class DeliveryService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'driverId must reference an active delivery user',
-            fields: { driverId: 'must reference an active delivery user' },
+            message: 'يجب أن يشير المعرف إلى موصل نشط',
+            fields: { driverId: 'يجب أن يشير إلى موصل نشط' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -280,7 +280,7 @@ export class DeliveryService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Delivery not found',
+        message: 'التوصيل غير موجود',
       });
     }
 
@@ -288,7 +288,7 @@ export class DeliveryService {
       throw new HttpException(
         {
           error: 'no_driver_assigned',
-          message: 'A delivery cannot move to in_transit without a driver',
+          message: 'لا يمكن نقل التوصيل إلى قيد التوصيل دون موصل',
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -298,7 +298,7 @@ export class DeliveryService {
       throw new HttpException(
         {
           error: 'invalid_transition',
-          message: 'Transition not allowed',
+          message: 'الانتقال غير مسموح',
           from: existing.status,
           to: dto.status,
         },

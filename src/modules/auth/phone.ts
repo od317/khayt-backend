@@ -28,4 +28,4 @@ export const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/;
 export const SYRIAN_PHONE_PATTERN = PHONE_PATTERN;
 
 export const PHONE_VALIDATION_MESSAGE =
-  'must be an international phone number in E.164 form (+countrycode…)';
+  'يجب أن يكون رقم هاتف دولي بصيغة E.164 (+رمز الدولة…)';

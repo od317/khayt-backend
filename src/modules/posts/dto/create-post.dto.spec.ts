@@ -43,9 +43,9 @@ describe('CreatePostDto', () => {
     expect(messages.length).toBeGreaterThan(0);
   });
 
-  it('rejects a missing location', async () => {
-    const messages = await run({ location: '' });
-    expect(messages.length).toBeGreaterThan(0);
+  it('allows an empty or omitted location', async () => {
+    expect(await run({ location: '' })).toEqual([]);
+    expect(await run({ location: undefined })).toEqual([]);
   });
 
   it('rejects specialty as an array', async () => {

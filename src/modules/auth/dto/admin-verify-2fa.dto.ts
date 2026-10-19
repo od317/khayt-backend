@@ -9,6 +9,6 @@ export class AdminVerify2faDto {
 
   @ApiProperty({ example: '' })
   @IsString()
-  @Matches(/^\d{6}$/, { message: 'must be a 6-digit code' })
+  @Matches(/^\d{6}$/, { message: 'يجب أن يكون رمزاً من 6 أرقام' })
   code!: string;
 }

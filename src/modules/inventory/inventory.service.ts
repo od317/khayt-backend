@@ -186,7 +186,7 @@ export class InventoryService {
     if (!supply) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Inventory item not found',
+        message: 'عنصر المخزون غير موجود',
       });
     }
 
@@ -217,14 +217,14 @@ export class InventoryService {
       if (!business || business.type !== BusinessType.workshop) {
         throw new ForbiddenException({
           error: 'forbidden',
-          message: 'Workshop business profile required',
+          message: 'ملف ورشة مطلوب',
         });
       }
       supplierBusinessId = business.id;
     } else {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Insufficient role',
+        message: 'صلاحيات غير كافية',
       });
     }
 
@@ -247,7 +247,7 @@ export class InventoryService {
     if (!this.isInternal(actor)) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'Insufficient role',
+        message: 'صلاحيات غير كافية',
       });
     }
   }

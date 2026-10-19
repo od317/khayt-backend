@@ -196,7 +196,7 @@ describe('BillingService', () => {
       expect(error).toBeInstanceOf(HttpException);
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'validation_failed',
-        fields: { 'lines[1].productId': 'duplicate' },
+        fields: { 'lines[1].productId': 'مكرر' },
       });
     });
 
@@ -210,7 +210,7 @@ describe('BillingService', () => {
       expect(error).toBeInstanceOf(NotFoundException);
     });
 
-    it('rejects an unknown product', async () => {
+    it('rejects an منتج غير معروف', async () => {
       prisma.business.findUnique.mockResolvedValue(makeBusiness());
       prisma.product.findMany.mockResolvedValue([]);
 
@@ -221,7 +221,7 @@ describe('BillingService', () => {
       expect(error).toBeInstanceOf(HttpException);
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'validation_failed',
-        fields: { 'lines[0].productId': 'unknown product' },
+        fields: { 'lines[0].productId': 'منتج غير معروف' },
       });
     });
 
@@ -237,7 +237,7 @@ describe('BillingService', () => {
       expect(error).toBeInstanceOf(HttpException);
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'validation_failed',
-        fields: { businessId: 'must be a workshop' },
+        fields: { businessId: 'يجب أن تكون ورشة' },
       });
     });
 
@@ -254,7 +254,7 @@ describe('BillingService', () => {
       expect(error).toBeInstanceOf(HttpException);
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'validation_failed',
-        fields: { 'lines[0].productId': 'supplier mismatch' },
+        fields: { 'lines[0].productId': 'عدم تطابق المورد' },
       });
     });
 

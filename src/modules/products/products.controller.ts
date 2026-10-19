@@ -84,7 +84,7 @@ export class ProductsController {
     schema: {
       example: {
         error: 'unauthorized',
-        message: 'Unauthorized',
+        message: 'غير مصرح',
         statusCode: 401,
       },
     },

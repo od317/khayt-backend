@@ -99,7 +99,7 @@ export class LocationsService {
     if (!city) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Location not found',
+        message: 'الموقع غير موجود',
       });
     }
 
@@ -158,7 +158,7 @@ export class LocationsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Location not found',
+        message: 'الموقع غير موجود',
       });
     }
 
@@ -168,8 +168,8 @@ export class LocationsService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'A location cannot be its own parent',
-            fields: { parentId: 'cannot reference itself' },
+            message: 'الموقع لا يمكن أن يكون أباً لنفسه',
+            fields: { parentId: 'لا يمكن الإشارة إلى نفسه' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -181,8 +181,8 @@ export class LocationsService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'A city with areas cannot become an area',
-            fields: { parentId: 'remove child areas first' },
+            message: 'مدينة بمناطق لا يمكن أن تصبح منطقة',
+            fields: { parentId: 'احذف المناطق الفرعية أولاً' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -220,21 +220,21 @@ export class LocationsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Location not found',
+        message: 'الموقع غير موجود',
       });
     }
 
     if (existing.children.length > 0) {
       throw new ConflictException({
         error: 'conflict',
-        message: 'Delete or move child areas first',
+        message: 'احذف أو انقل المناطق الفرعية أولاً',
       });
     }
 
     if (existing._count.users > 0) {
       throw new ConflictException({
         error: 'conflict',
-        message: 'Location is assigned to one or more users',
+        message: 'الموقع مرتبط بمستخدمين',
       });
     }
 
@@ -251,8 +251,8 @@ export class LocationsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Parent location does not exist',
-          fields: { parentId: 'must reference an existing city' },
+          message: 'الموقع الأب غير موجود',
+          fields: { parentId: 'يجب أن يشير إلى مدينة موجودة' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -261,8 +261,8 @@ export class LocationsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Areas can only be nested under a city',
-          fields: { parentId: 'must be a city, not an area' },
+          message: 'المناطق تُنشأ فقط تحت مدينة',
+          fields: { parentId: 'يجب أن تكون مدينة وليس منطقة' },
         },
         HttpStatus.BAD_REQUEST,
       );

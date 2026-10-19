@@ -66,12 +66,12 @@ describe('enrichOpenApiDocument', () => {
         ?.value,
     ).toMatchObject({
       error: 'validation_failed',
-      message: 'Pick your delivery location on the map for the first order',
+      message: 'حدّد موقع التوصيل على الخريطة لأول طلب',
       statusCode: 400,
       fields: {
-        address: 'required',
-        lat: 'required',
-        lng: 'required',
+        address: 'مطلوب',
+        lat: 'مطلوب',
+        lng: 'مطلوب',
       },
     });
   });

@@ -74,21 +74,21 @@ export class AdminAuthService {
     if (!user || !user.passwordHash) {
       throw new UnauthorizedException({
         error: 'invalid_credentials',
-        message: 'Invalid email or password',
+        message: 'البريد أو كلمة المرور غير صحيحة',
       });
     }
 
     if (!this.isEmailAuthRole(user.role)) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'This account cannot use email login',
+        message: 'هذا الحساب لا يدعم الدخول بالبريد',
       });
     }
 
     if (user.suspended) {
       throw new ForbiddenException({
         error: 'account_suspended',
-        message: 'This account has been suspended',
+        message: 'تم إيقاف هذا الحساب',
       });
     }
 
@@ -96,7 +96,7 @@ export class AdminAuthService {
     if (!ok) {
       throw new UnauthorizedException({
         error: 'invalid_credentials',
-        message: 'Invalid email or password',
+        message: 'البريد أو كلمة المرور غير صحيحة',
       });
     }
 
@@ -128,14 +128,14 @@ export class AdminAuthService {
     } catch {
       throw new UnauthorizedException({
         error: 'invalid_challenge',
-        message: 'Challenge token is invalid or expired',
+        message: 'رمز التحدي غير صالح أو منتهٍ',
       });
     }
 
     if (payload.purpose !== ADMIN_CHALLENGE_PURPOSE || !payload.sub) {
       throw new UnauthorizedException({
         error: 'invalid_challenge',
-        message: 'Challenge token is invalid or expired',
+        message: 'رمز التحدي غير صالح أو منتهٍ',
       });
     }
 
@@ -143,7 +143,7 @@ export class AdminAuthService {
     if (!stored) {
       throw new UnauthorizedException({
         error: 'code_expired',
-        message: 'Verification code is missing or expired',
+        message: 'رمز التحقق مفقود أو منتهٍ',
       });
     }
 
@@ -163,14 +163,14 @@ export class AdminAuthService {
         throw new HttpException(
           {
             error: 'too_many_attempts',
-            message: 'Too many incorrect codes. Log in again.',
+            message: 'محاولات خاطئة كثيرة. سجّل الدخول مجدداً.',
           },
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
       throw new UnauthorizedException({
         error: 'invalid_code',
-        message: 'Invalid verification code',
+        message: 'رمز التحقق غير صحيح',
       });
     }
 
@@ -184,13 +184,13 @@ export class AdminAuthService {
     if (!user) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'User not found',
+        message: 'المستخدم غير موجود',
       });
     }
     if (user.suspended) {
       throw new ForbiddenException({
         error: 'account_suspended',
-        message: 'This account has been suspended',
+        message: 'تم إيقاف هذا الحساب',
       });
     }
 

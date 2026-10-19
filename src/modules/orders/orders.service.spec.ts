@@ -505,9 +505,9 @@ describe('OrdersService', () => {
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'validation_failed',
         fields: {
-          address: 'required',
-          lat: 'required',
-          lng: 'required',
+          address: 'مطلوب',
+          lat: 'مطلوب',
+          lng: 'مطلوب',
         },
       });
       expect(prisma.order.create).not.toHaveBeenCalled();

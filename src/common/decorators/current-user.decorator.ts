@@ -48,7 +48,7 @@ export const RequireUser = createParamDecorator(
     if (!user) {
       throw new UnauthorizedException({
         error: 'unauthorized',
-        message: 'Authentication required',
+        message: 'يلزم تسجيل الدخول',
       });
     }
 

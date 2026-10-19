@@ -79,7 +79,7 @@ export class RolesService {
       ) {
         throw new ConflictException({
           error: 'conflict',
-          message: 'A role with this value already exists',
+          message: 'دور بهذه القيمة موجود',
         });
       }
       throw error;
@@ -94,7 +94,7 @@ export class RolesService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Role not found',
+        message: 'الدور غير موجود',
       });
     }
 
@@ -113,14 +113,14 @@ export class RolesService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Role not found',
+        message: 'الدور غير موجود',
       });
     }
 
     if (existing.system) {
       throw new ForbiddenException({
         error: 'forbidden',
-        message: 'System roles cannot be deleted',
+        message: 'لا يمكن حذف أدوار النظام',
       });
     }
 
@@ -130,7 +130,7 @@ export class RolesService {
     if (inUse > 0) {
       throw new ConflictException({
         error: 'conflict',
-        message: 'Role is assigned to one or more users',
+        message: 'الدور مرتبط بمستخدمين',
       });
     }
 

@@ -55,7 +55,7 @@ describe('BusinessOwnerGuard', () => {
     expect(error).toBeInstanceOf(ForbiddenException);
     expect((error as ForbiddenException).getResponse()).toMatchObject({
       error: 'forbidden',
-      message: 'Not the owner of this business',
+      message: 'لست مالك هذا النشاط',
     });
   });
 

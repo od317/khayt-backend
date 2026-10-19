@@ -9,7 +9,7 @@ export function assertCanOrder(actor: AuthenticatedUser): void {
   if (!(ORDERING_ROLES as readonly string[]).includes(actor.role)) {
     throw new ForbiddenException({
       error: 'forbidden',
-      message: 'Cart is available for store and workshop accounts only',
+      message: 'السلة للمتجر والورشة فقط',
     });
   }
 }

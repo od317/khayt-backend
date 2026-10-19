@@ -39,7 +39,7 @@ export class OnboardingDto {
   @ApiProperty({ example: 'employee' })
   @IsString()
   @IsNotIn(INTERNAL_ROLES, {
-    message: 'must be a self-selectable role',
+    message: 'يجب أن يكون دوراً متاحاً للاختيار',
   })
   role!: string;
 

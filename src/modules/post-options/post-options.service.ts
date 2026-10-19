@@ -177,7 +177,7 @@ export class PostOptionsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post option not found',
+        message: 'خيار المنشور غير موجود',
       });
     }
 
@@ -217,14 +217,14 @@ export class PostOptionsService {
     if (!existing) {
       throw new NotFoundException({
         error: 'not_found',
-        message: 'Post option not found',
+        message: 'خيار المنشور غير موجود',
       });
     }
     if (existing._count.children > 0) {
       throw new HttpException(
         {
           error: 'conflict',
-          message: 'Detach or delete child skills first',
+          message: 'افصل أو احذف المهارات الفرعية أولاً',
         },
         HttpStatus.CONFLICT,
       );
@@ -294,7 +294,7 @@ export class PostOptionsService {
         const match = skillRows.find((r) => r.label === skill);
         if (!match) continue;
         if (specialty && match.parentId && match.parentId !== specialty.id) {
-          fields.skills = 'catalog skills must belong to the selected specialty';
+          fields.skills = 'مهارات الكتالوج يجب أن تتبع التخصص المختار';
           break;
         }
       }
@@ -336,7 +336,7 @@ export class PostOptionsService {
     for (const item of singles) {
       if (!kinds.includes(item.kind) || !item.value) continue;
       if (!labelsOf(item.kind).has(item.value)) {
-        fields[item.field] = `must be an active ${item.field} option`;
+        fields[item.field] = `يجب أن يكون خيار ${item.field} نشطاً`;
       }
     }
 
@@ -352,8 +352,8 @@ export class PostOptionsService {
         throw new HttpException(
           {
             error: 'validation_failed',
-            message: 'Skills require a parent specialty',
-            fields: { parentId: 'required for skill options' },
+            message: 'المهارات تتطلب تخصصاً أباً',
+            fields: { parentId: 'مطلوب لخيارات المهارة' },
           },
           HttpStatus.BAD_REQUEST,
         );
@@ -362,8 +362,8 @@ export class PostOptionsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Only skill options may have a parent',
-          fields: { parentId: 'only allowed for skill' },
+          message: 'فقط خيارات المهارة لها أب',
+          fields: { parentId: 'مسموح للمهارة فقط' },
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -379,8 +379,8 @@ export class PostOptionsService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'parentId must reference a specialty option',
-          fields: { parentId: 'must reference a specialty' },
+          message: 'يجب أن يشير المعرف الأب إلى تخصص',
+          fields: { parentId: 'يجب أن يشير إلى تخصص' },
         },
         HttpStatus.BAD_REQUEST,
       );

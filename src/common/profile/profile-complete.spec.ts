@@ -28,7 +28,7 @@ describe('profile-complete', () => {
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'profile_incomplete',
         completedData: false,
-        fields: { name: 'required' },
+        fields: { name: 'مطلوب' },
       });
     }
   });
@@ -54,7 +54,7 @@ describe('profile-complete', () => {
       expect((error as HttpException).getResponse()).toMatchObject({
         error: 'profile_incomplete',
         completedData: false,
-        fields: { deliveryLat: 'required', deliveryLng: 'required' },
+        fields: { deliveryLat: 'مطلوب', deliveryLng: 'مطلوب' },
       });
     }
   });

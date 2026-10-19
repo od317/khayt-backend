@@ -22,14 +22,14 @@ export function resolveOrderDropoff(
   if (provided) {
     const address = dto.address?.trim() ?? '';
     const fields: Record<string, string> = {};
-    if (address.length < 3) fields.address = 'required';
-    if (dto.lat === undefined || dto.lat === null) fields.lat = 'required';
-    if (dto.lng === undefined || dto.lng === null) fields.lng = 'required';
+    if (address.length < 3) fields.address = 'مطلوب';
+    if (dto.lat === undefined || dto.lat === null) fields.lat = 'مطلوب';
+    if (dto.lng === undefined || dto.lng === null) fields.lng = 'مطلوب';
     if (Object.keys(fields).length > 0) {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'Map pin and address are required together',
+          message: 'موقع الخريطة والعنوان مطلوبان معاً',
           fields,
         },
         HttpStatus.BAD_REQUEST,
@@ -61,11 +61,11 @@ export function resolveOrderDropoff(
     {
       error: 'validation_failed',
       message:
-        'Pick your delivery location on the map for the first order',
+        'حدّد موقع التوصيل على الخريطة لأول طلب',
       fields: {
-        address: 'required',
-        lat: 'required',
-        lng: 'required',
+        address: 'مطلوب',
+        lat: 'مطلوب',
+        lng: 'مطلوب',
       },
     },
     HttpStatus.BAD_REQUEST,
