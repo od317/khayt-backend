@@ -1491,7 +1491,7 @@ async function main(): Promise<void> {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRJv_Mx0w3DSyEB9v_92JFXljfRYIyk5osskJ7sNmBog&s=10',
   ] as const;
 
-  const SEED_SIZES = ['small', 'medium', 'large', 'xl', 'xxl'] as const;
+  const SEED_SIZES = ['sm', 'md', 'lg', 'xl', 'xx'] as const;
 
   const SEED_COLORS = [
     { name: 'كاروهات', hex: '#2563EB', img: 0 },
