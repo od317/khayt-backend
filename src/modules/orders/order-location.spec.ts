@@ -1,4 +1,3 @@
-import { HttpException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import { resolveOrderDropoff } from './order-location';
 
@@ -29,12 +28,27 @@ describe('resolveOrderDropoff', () => {
     expect(result.dropoff.address).toBe('شارع بغداد');
   });
 
-  it('rejects the first order with no pin', () => {
-    expect(() =>
-      resolveOrderDropoff(
-        {},
-        { deliveryAddress: null, deliveryLat: null, deliveryLng: null },
-      ),
-    ).toThrow(HttpException);
+  it('fills Damascus defaults when no pin is sent or saved', () => {
+    const result = resolveOrderDropoff(
+      {},
+      { deliveryAddress: null, deliveryLat: null, deliveryLng: null },
+    );
+    expect(result.persist).toBe(true);
+    expect(result.dropoff).toEqual({
+      address: 'دمشق — موقع افتراضي للاختبار',
+      lat: 33.5138,
+      lng: 36.2765,
+    });
+  });
+
+  it('fills missing fields from a partial request with defaults', () => {
+    const result = resolveOrderDropoff(
+      { lat: 33.1 },
+      { deliveryAddress: null, deliveryLat: null, deliveryLng: null },
+    );
+    expect(result.persist).toBe(true);
+    expect(result.dropoff.lat).toBe(33.1);
+    expect(result.dropoff.lng).toBe(36.2765);
+    expect(result.dropoff.address).toBe('دمشق — موقع افتراضي للاختبار');
   });
 });
