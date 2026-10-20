@@ -1229,6 +1229,9 @@ async function main(): Promise<void> {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRJv_Mx0w3DSyEB9v_92JFXljfRYIyk5osskJ7sNmBog&s=10',
   ] as const;
 
+  const directoryImage = (index: number) =>
+    SEED_DIRECTORY_IMAGES[index % SEED_DIRECTORY_IMAGES.length]!;
+
   /** Actual DB user ids created/updated for seed accounts (may differ from seed ids). */
   const resolvedSeedUserIds: string[] = [];
 
@@ -1256,7 +1259,16 @@ async function main(): Promise<void> {
       role: u.role,
       locationId: u.locationId,
       onboardingCompleted: u.onboardingCompleted,
-      avatarUrl: SHARED_AVATAR_URL,
+      avatarUrl:
+        u.role === UserRole.marketer ||
+        u.role === UserRole.employee ||
+        u.role === UserRole.shipping_company
+          ? directoryImage(
+              Math.abs(
+                [...u.id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0),
+              ),
+            )
+          : SHARED_AVATAR_URL,
       ...(extras.bio !== undefined ? { bio: extras.bio } : {}),
       ...(extras.availableForWork !== undefined
         ? { availableForWork: extras.availableForWork }
@@ -1340,9 +1352,6 @@ async function main(): Promise<void> {
   }
 
   const SHARED_IMAGE_URL = SHARED_AVATAR_URL;
-
-  const directoryImage = (index: number) =>
-    SEED_DIRECTORY_IMAGES[index % SEED_DIRECTORY_IMAGES.length]!;
 
   const businesses = [
     // ═════════════════════════════════════════
@@ -1705,12 +1714,13 @@ async function main(): Promise<void> {
     }),
   ];
 
-  for (const b of businesses) {
+  for (const [index, b] of businesses.entries()) {
     const { id, ...rest } = b;
+    const withImage = { ...rest, imageUrl: directoryImage(index + 1) };
     await prisma.business.upsert({
       where: { id },
-      create: { id, ...rest },
-      update: rest,
+      create: { id, ...withImage },
+      update: withImage,
     });
   }
   console.log(`  businesses: ${businesses.length}`);
@@ -3206,11 +3216,12 @@ async function main(): Promise<void> {
     },
   ];
 
-  for (const sc of shippingCompanies) {
+  for (const [index, sc] of shippingCompanies.entries()) {
+    const withImage = { ...sc, imageUrl: directoryImage(index + 3) };
     await prisma.shippingCompany.upsert({
       where: { id: sc.id },
-      create: sc,
-      update: sc,
+      create: withImage,
+      update: withImage,
     });
   }
   console.log(`  shipping companies: ${shippingCompanies.length}`);

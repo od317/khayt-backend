@@ -10,6 +10,7 @@ export type ShippingCompanyResponse = {
   pricing: string | null;
   fleet: string | null;
   phone: string;
+  imageUrl: string | null;
   createdAt: string;
 };
 
@@ -26,6 +27,7 @@ export function toShippingCompanyResponse(
     pricing: company.pricing,
     fleet: company.fleet,
     phone: company.phone,
+    imageUrl: company.imageUrl,
     createdAt: company.createdAt.toISOString(),
   };
 }

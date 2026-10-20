@@ -87,4 +87,13 @@ export class CreateShippingCompanyDto {
   @IsNotEmpty()
   @MaxLength(30)
   phone!: string;
+
+  @ApiPropertyOptional({
+    example: 'https://example.com/company.jpg',
+    description: 'Public image URL for the company card.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imageUrl?: string;
 }

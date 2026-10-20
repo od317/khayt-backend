@@ -678,6 +678,7 @@ model ShippingCompany {
   pricing      String?
   fleet        String?
   phone        String
+  imageUrl     String?
   createdAt    DateTime @default(now())
 }
 

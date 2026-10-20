@@ -84,6 +84,7 @@ export class ShippingCompaniesService {
                 pricing: dto.pricing?.trim() ?? null,
                 fleet: dto.fleet?.trim() ?? null,
                 phone: dto.phone.trim(),
+                imageUrl: dto.imageUrl?.trim() || null,
             },
         });
 
@@ -117,6 +118,9 @@ export class ShippingCompaniesService {
         if (dto.pricing !== undefined) data.pricing = dto.pricing?.trim() ?? null;
         if (dto.fleet !== undefined) data.fleet = dto.fleet?.trim() ?? null;
         if (dto.phone !== undefined) data.phone = dto.phone.trim();
+        if (dto.imageUrl !== undefined) {
+            data.imageUrl = dto.imageUrl?.trim() || null;
+        }
 
         const company = await this.prisma.shippingCompany.update({
             where: { id },
