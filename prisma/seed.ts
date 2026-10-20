@@ -953,6 +953,8 @@ async function main(): Promise<void> {
       role: UserRole.marketer,
       locationId: 'loc-damascus',
       onboardingCompleted: true,
+      bio: 'مسوق أقمشة وألبسة في دمشق',
+      availableForWork: true,
     },
     {
       id: 'user-shipping',
@@ -1134,10 +1136,98 @@ async function main(): Promise<void> {
       locationId: 'loc-sweida',
       onboardingCompleted: true,
     },
+
+    // ─────────────────────────────────────────
+    // Directory fill — stores / institutes / marketers
+    // Targets: 15 stores, 10 institutes, 10 marketers
+    // ─────────────────────────────────────────
+    ...Array.from({ length: 10 }, (_, i) => {
+      const n = i + 1;
+      return {
+        id: `user-store-extra-${n}`,
+        phone: `+9639940021${String(n).padStart(2, '0')}`,
+        name: `متجر النسيج ${n}`,
+        role: UserRole.store,
+        locationId: (
+          [
+            'loc-damascus',
+            'loc-halep',
+            'loc-homs',
+            'loc-hama',
+            'loc-lattakia',
+            'loc-tartous',
+            'loc-idlib',
+            'loc-daraa',
+            'loc-sweida',
+            'loc-rural-damascus',
+          ] as const
+        )[i]!,
+        onboardingCompleted: true,
+      };
+    }),
+    ...Array.from({ length: 6 }, (_, i) => {
+      const n = i + 1;
+      return {
+        id: `user-institute-extra-${n}`,
+        phone: `+9639940022${String(n).padStart(2, '0')}`,
+        name: `معهد الخياطة ${n}`,
+        role: UserRole.institute,
+        locationId: (
+          [
+            'loc-damascus',
+            'loc-halep',
+            'loc-homs',
+            'loc-hama',
+            'loc-tartous',
+            'loc-daraa',
+          ] as const
+        )[i]!,
+        onboardingCompleted: true,
+      };
+    }),
+    ...Array.from({ length: 9 }, (_, i) => {
+      const n = i + 1;
+      return {
+        id: `user-marketer-extra-${n}`,
+        phone: `+9639940023${String(n).padStart(2, '0')}`,
+        name: `مسوق ${n}`,
+        role: UserRole.marketer,
+        locationId: (
+          [
+            'loc-damascus',
+            'loc-halep',
+            'loc-homs',
+            'loc-hama',
+            'loc-lattakia',
+            'loc-tartous',
+            'loc-idlib',
+            'loc-daraa',
+            'loc-sweida',
+          ] as const
+        )[i]!,
+        onboardingCompleted: true,
+        bio: `مسوق أقمشة وألبسة — منطقة ${n}`,
+        availableForWork: n % 2 === 1,
+      };
+    }),
   ];
 
   const SHARED_AVATAR_URL =
     'https://media.istockphoto.com/id/2060009001/vector/avatar-user-profile-person-icon-profile-picture-for-social-media-profiles-icons-screensavers.jpg?s=612x612&w=0&k=20&c=onk7rmEoISSvHVlqc-SiBvcUr8ilCm2u9kcw3_Bm_SA=';
+
+  /** Same fabric/product images used elsewhere in this seed. */
+  const SEED_DIRECTORY_IMAGES = [
+    SHARED_AVATAR_URL,
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNO36XKY6a7gCZq0CK5bQrqrMjc-VhMWm9QQVwp4TNoQ&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa1QmlzxwBlPlhmh6w8BM8dXFL2S3ZP4bguvtm95gAPA&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQhR3LHcBAtCvq4XSONggJ4YkLOAKw__X9FhcNn2Ub_vw&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQAN_ZqGHFHlICnFwCJjRicONciTe4mqpEBMskNq8cxiA&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQrOR8d4UkHfokUTnYTV-otgB3EeTggqTLDygpiUoQsWA&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNCylkV5skeNMNpCQhX-961pGYzfUSBZtRmvoSIB415Q&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSY7qvAGoDTbUQsKMssRSOLZSVyYaG4m_udZGcvP6gPhg&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSO0Hh_Rjs7z4Soe4g6CpLP2Cc2kAIDLTsuEQe58n2SDg&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRJv_Mx0w3DSyEB9v_92JFXljfRYIyk5osskJ7sNmBog&s=10',
+  ] as const;
 
   /** Actual DB user ids created/updated for seed accounts (may differ from seed ids). */
   const resolvedSeedUserIds: string[] = [];
@@ -1156,12 +1246,21 @@ async function main(): Promise<void> {
       select: { id: true },
     });
 
+    const extras = u as {
+      bio?: string;
+      availableForWork?: boolean;
+    };
+
     const shared = {
       name: u.name,
       role: u.role,
       locationId: u.locationId,
       onboardingCompleted: u.onboardingCompleted,
       avatarUrl: SHARED_AVATAR_URL,
+      ...(extras.bio !== undefined ? { bio: extras.bio } : {}),
+      ...(extras.availableForWork !== undefined
+        ? { availableForWork: extras.availableForWork }
+        : {}),
     };
 
     if (byId) {
@@ -1240,9 +1339,10 @@ async function main(): Promise<void> {
     );
   }
 
-  const SHARED_IMAGE_URL =
-    'https://media.istockphoto.com/id/2060009001/vector/avatar-user-profile-person-icon-profile-picture-for-social-media-profiles-icons-screensavers.jpg?s=612x612&w=0&k=20&c=onk7rmEoISSvHVlqc-SiBvcUr8ilCm2u9kcw3_Bm_SA=';
+  const SHARED_IMAGE_URL = SHARED_AVATAR_URL;
 
+  const directoryImage = (index: number) =>
+    SEED_DIRECTORY_IMAGES[index % SEED_DIRECTORY_IMAGES.length]!;
 
   const businesses = [
     // ═════════════════════════════════════════
@@ -1545,6 +1645,64 @@ async function main(): Promise<void> {
       services: ['بيع أقمشة', 'بيع جملة', 'قص بالمتر'],
       experience: '12 سنة',
     },
+
+    // Extra stores → 15 total
+    ...Array.from({ length: 10 }, (_, i) => {
+      const n = i + 1;
+      const cities = [
+        'دمشق',
+        'حلب',
+        'حمص',
+        'حماة',
+        'اللاذقية',
+        'طرطوس',
+        'إدلب',
+        'درعا',
+        'السويداء',
+        'ريف دمشق',
+      ] as const;
+      return {
+        id: `biz-store-extra-${n}`,
+        ownerId: `user-store-extra-${n}`,
+        type: BusinessType.store,
+        name: `متجر النسيج ${n}`,
+        location: cities[i]!,
+        description: `متجر أقمشة وألبسة رقم ${n}`,
+        phone: `+9639940021${String(n).padStart(2, '0')}`,
+        imageUrl: directoryImage(n),
+        verified: n % 3 !== 0,
+        services: ['بيع جملة', 'بيع مفرق', 'توصيل'],
+        experience: `${3 + (n % 10)} سنوات`,
+      };
+    }),
+
+    // Extra institutes → 10 total
+    ...Array.from({ length: 6 }, (_, i) => {
+      const n = i + 1;
+      const cities = [
+        'دمشق',
+        'حلب',
+        'حمص',
+        'حماة',
+        'طرطوس',
+        'درعا',
+      ] as const;
+      return {
+        id: `biz-institute-extra-${n}`,
+        ownerId: `user-institute-extra-${n}`,
+        type: BusinessType.institute,
+        name: `معهد الخياطة ${n}`,
+        location: cities[i]!,
+        description: `دورات خياطة وتطريز — معهد ${n}`,
+        phone: `+9639940022${String(n).padStart(2, '0')}`,
+        imageUrl: directoryImage(n + 2),
+        verified: n % 2 === 0,
+        duration: `${2 + (n % 4)} أشهر`,
+        topics: ['خياطة أساسية', 'تطريز', 'تصميم'],
+        experience: `${4 + n} سنوات`,
+        services: ['دورات خياطة', 'دورات تطريز', 'دورات تصميم'],
+      };
+    }),
   ];
 
   for (const b of businesses) {
@@ -1567,6 +1725,10 @@ async function main(): Promise<void> {
     { businessId: 'biz-store-babtouma', categoryId: 'cat-biz-store' },
     { businessId: 'biz-store-homs', categoryId: 'cat-biz-store' },
     { businessId: 'biz-store-midan', categoryId: 'cat-biz-store' },
+    ...Array.from({ length: 10 }, (_, i) => ({
+      businessId: `biz-store-extra-${i + 1}`,
+      categoryId: 'cat-biz-store',
+    })),
 
     // Workshops (مشاغل) → cat-biz-factory
     { businessId: 'biz-workshop', categoryId: 'cat-biz-factory' },
@@ -1585,6 +1747,10 @@ async function main(): Promise<void> {
     { businessId: 'biz-institute-halep', categoryId: 'cat-biz-institute' },
     { businessId: 'biz-institute-homs', categoryId: 'cat-biz-institute' },
     { businessId: 'biz-institute-lattakia', categoryId: 'cat-biz-institute' },
+    ...Array.from({ length: 6 }, (_, i) => ({
+      businessId: `biz-institute-extra-${i + 1}`,
+      categoryId: 'cat-biz-institute',
+    })),
   ];
 
   for (const { businessId, categoryId } of businessCategories) {
@@ -2970,6 +3136,73 @@ async function main(): Promise<void> {
       pricing: 'يبدأ من 6000 ل.س',
       fleet: '6 شاحنات',
       phone: '+963994111004',
+    },
+    // Extra shipping companies → 10 total
+    {
+      id: 'ship-north-line',
+      name: 'الخط الشمالي للشحن',
+      location: 'حلب - الشيخ نجار',
+      verified: true,
+      coverage: ['حلب', 'إدلب', 'الرقة'],
+      deliveryTime: '24-48 ساعة',
+      pricing: 'يبدأ من 6500 ل.س',
+      fleet: '7 شاحنات',
+      phone: '+963994111005',
+    },
+    {
+      id: 'ship-south-route',
+      name: 'الطريق الجنوبي',
+      location: 'درعا - المدينة',
+      verified: false,
+      coverage: ['درعا', 'السويداء', 'دمشق'],
+      deliveryTime: '48 ساعة',
+      pricing: 'يبدأ من 5500 ل.س',
+      fleet: '3 شاحنات + 1 فان',
+      phone: '+963994111006',
+    },
+    {
+      id: 'ship-euphrates',
+      name: 'الفرات للشحن',
+      location: 'دير الزور',
+      verified: true,
+      coverage: ['دير الزور', 'الرقة', 'الحسكة'],
+      deliveryTime: '72 ساعة',
+      pricing: 'حسب المسافة',
+      fleet: '5 شاحنات',
+      phone: '+963994111007',
+    },
+    {
+      id: 'ship-qasioun',
+      name: 'قاسيون لوجستيك',
+      location: 'دمشق - مشروع دمر',
+      verified: true,
+      coverage: ['دمشق', 'ريف دمشق', 'حمص', 'حماة'],
+      deliveryTime: '24 ساعة',
+      pricing: 'يبدأ من 4000 ل.س',
+      fleet: '10 فانات',
+      phone: '+963994111008',
+    },
+    {
+      id: 'ship-mediterranean',
+      name: 'المتوسط للشحن',
+      location: 'طرطوس - الميناء',
+      verified: false,
+      coverage: ['طرطوس', 'اللاذقية', 'حمص'],
+      deliveryTime: '24-48 ساعة',
+      pricing: 'يبدأ من 6000 ل.س',
+      fleet: '4 شاحنات صغيرة',
+      phone: '+963994111009',
+    },
+    {
+      id: 'ship-jazira',
+      name: 'الجزيرة إكسبريس',
+      location: 'الحسكة',
+      verified: true,
+      coverage: ['الحسكة', 'القامشلي', 'الرقة', 'حلب'],
+      deliveryTime: '48-72 ساعة',
+      pricing: 'يبدأ من 8000 ل.س',
+      fleet: '6 شاحنات',
+      phone: '+963994111010',
     },
   ];
 
