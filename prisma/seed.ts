@@ -1212,15 +1212,23 @@ async function main(): Promise<void> {
     }),
   ];
 
-  /** Default placeholder when no custom image is set. */
+  /** Person placeholder for user / marketer avatars. */
   const SHARED_AVATAR_URL =
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10';
 
-  /** Directory samples: placeholder + fabric images used elsewhere in this seed. */
-  const SEED_DIRECTORY_IMAGES = [
-    SHARED_AVATAR_URL,
-    SHARED_AVATAR_URL,
-    SHARED_AVATAR_URL,
+  /** Building placeholder for stores, workshops, institutes, shipping companies. */
+  const SHARED_BUSINESS_IMAGE_URL =
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRKFSey5bgsBA3-2Z7f27pym50-ySDrxPZWoIJ1bOCQ9pQVdvEun88f-iPX&s=10';
+
+  /**
+   * Business/shipping samples: building placeholder (several slots) + fabric images.
+   * Some rows intentionally get the building icon so it appears in the directory.
+   */
+  const SEED_BUSINESS_IMAGES = [
+    SHARED_BUSINESS_IMAGE_URL,
+    SHARED_BUSINESS_IMAGE_URL,
+    SHARED_BUSINESS_IMAGE_URL,
+    SHARED_BUSINESS_IMAGE_URL,
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNO36XKY6a7gCZq0CK5bQrqrMjc-VhMWm9QQVwp4TNoQ&s=10',
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa1QmlzxwBlPlhmh6w8BM8dXFL2S3ZP4bguvtm95gAPA&s=10',
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQhR3LHcBAtCvq4XSONggJ4YkLOAKw__X9FhcNn2Ub_vw&s=10',
@@ -1233,7 +1241,7 @@ async function main(): Promise<void> {
   ] as const;
 
   const directoryImage = (index: number) =>
-    SEED_DIRECTORY_IMAGES[index % SEED_DIRECTORY_IMAGES.length]!;
+    SEED_BUSINESS_IMAGES[index % SEED_BUSINESS_IMAGES.length]!;
 
   /** Actual DB user ids created/updated for seed accounts (may differ from seed ids). */
   const resolvedSeedUserIds: string[] = [];
