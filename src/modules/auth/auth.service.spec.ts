@@ -543,7 +543,7 @@ describe('AuthService', () => {
       expect(result.business?.services).toEqual(['خياطة']);
     });
 
-    it('rejects store onboarding without business fields', async () => {
+    it('rejects store onboarding without required business fields', async () => {
       prisma.user.findUnique.mockResolvedValueOnce({
         onboardingCompleted: false,
       });
@@ -565,9 +565,71 @@ describe('AuthService', () => {
         error: 'validation_failed',
         fields: expect.objectContaining({
           businessName: expect.any(String),
-          image: expect.any(String),
+          description: expect.any(String),
+          experienceYears: expect.any(String),
         }),
       });
+      expect(
+        ((error as HttpException).getResponse() as { fields: object }).fields,
+      ).not.toHaveProperty('services');
+      expect(
+        ((error as HttpException).getResponse() as { fields: object }).fields,
+      ).not.toHaveProperty('image');
+    });
+
+    it('allows store onboarding without services or image', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: false,
+      });
+      prisma.location.findFirst.mockResolvedValue({
+        id: LOCATION_ID,
+        name: 'دمشق',
+      });
+      prisma.role.findFirst.mockResolvedValue({ value: UserRole.store });
+      const updated = makeUser({
+        role: UserRole.store,
+        onboardingCompleted: true,
+        locationId: LOCATION_ID,
+      });
+      prisma.user.update.mockResolvedValue(updated);
+      prisma.business.create.mockResolvedValue({
+        id: 'biz-1',
+        ownerId: actor.id,
+        type: 'store',
+        name: 'متجر',
+        location: 'دمشق',
+        description: 'وصف',
+        phone: null,
+        imageUrl: null,
+        verified: false,
+        capacity: null,
+        equipment: null,
+        minOrder: null,
+        experience: '3',
+        services: [],
+        duration: null,
+        topics: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const result = await service.onboarding(actor, {
+        role: UserRole.store,
+        locationId: LOCATION_ID,
+        businessName: 'متجر',
+        description: 'وصف',
+        experienceYears: 3,
+      });
+
+      expect(prisma.business.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            services: [],
+            imageUrl: null,
+          }),
+        }),
+      );
+      expect(result.business?.name).toBe('متجر');
     });
 
     it('rejects an unknown locationId', async () => {

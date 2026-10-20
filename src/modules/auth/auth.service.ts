@@ -665,7 +665,7 @@ export class AuthService {
 
   private assertBusinessOnboarding(
     dto: OnboardingDto,
-    image?: Express.Multer.File,
+    _image?: Express.Multer.File,
   ): void {
     const fields: Record<string, string> = {};
     if (!dto.businessName?.trim()) {
@@ -674,15 +674,10 @@ export class AuthService {
     if (!dto.description?.trim()) {
       fields.description = 'مطلوب للورشة/المتجر';
     }
-    if (!dto.services?.length) {
-      fields.services = 'مطلوب للورشة/المتجر';
-    }
     if (dto.experienceYears === undefined || dto.experienceYears === null) {
       fields.experienceYears = 'مطلوب للورشة/المتجر';
     }
-    if (!image) {
-      fields.image = 'مطلوب للورشة/المتجر';
-    }
+    // services + image are optional — can be filled later via updateMe.
     if (Object.keys(fields).length > 0) {
       throw new HttpException(
         {

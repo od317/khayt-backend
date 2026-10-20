@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
-  ArrayMinSize,
   IsArray,
   IsInt,
   IsNotIn,
@@ -72,12 +71,11 @@ export class OnboardingDto {
     type: [String],
     example: ['خياطة', 'قص'],
     description:
-      'Required when role is workshop or store. Enter services one by one (JSON array in multipart).',
+      'Optional for workshop/store. Enter services one by one (JSON array in multipart).',
   })
   @IsOptional()
   @Transform(parseJsonIfString)
   @IsArray()
-  @ArrayMinSize(1)
   @IsString({ each: true })
   services?: string[];
 
@@ -95,7 +93,7 @@ export class OnboardingDto {
   @ApiPropertyOptional({
     type: 'string',
     format: 'binary',
-    description: 'Required when role is workshop or store. Business image file.',
+    description: 'Optional business image for workshop/store.',
   })
   @IsOptional()
   image?: unknown;
