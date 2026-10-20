@@ -15,6 +15,7 @@ import {
   User,
   UserRole,
 } from '@prisma/client';
+import { withDefaultImage } from '../../common/defaults/images';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { paginate, Paginated, skipTake } from '../../common/utils/pagination';
@@ -173,7 +174,7 @@ export class BusinessesService {
         id: row.id,
         name: row.name,
         bio: row.bio,
-        avatarUrl: row.avatarUrl,
+        avatarUrl: withDefaultImage(row.avatarUrl),
         verified: row.verified,
         availableForWork: row.availableForWork,
         location: row.location?.name ?? null,
@@ -374,7 +375,7 @@ export class BusinessesService {
         id: employee.id,
         name: employee.name,
         bio: employee.bio,
-        avatarUrl: employee.avatarUrl,
+        avatarUrl: withDefaultImage(employee.avatarUrl),
         verified: employee.verified,
         availableForWork: employee.availableForWork,
         location: employee.location?.name ?? null,
@@ -386,7 +387,7 @@ export class BusinessesService {
         id: row.id,
         name: row.name,
         bio: row.bio,
-        avatarUrl: row.avatarUrl,
+        avatarUrl: withDefaultImage(row.avatarUrl),
         verified: row.verified,
         availableForWork: row.availableForWork,
         location: row.location?.name ?? null,

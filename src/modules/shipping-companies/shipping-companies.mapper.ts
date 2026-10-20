@@ -1,4 +1,5 @@
 import { ShippingCompany } from '@prisma/client';
+import { withDefaultImage } from '../../common/defaults/images';
 
 export type ShippingCompanyResponse = {
   id: string;
@@ -27,7 +28,7 @@ export function toShippingCompanyResponse(
     pricing: company.pricing,
     fleet: company.fleet,
     phone: company.phone,
-    imageUrl: company.imageUrl,
+    imageUrl: withDefaultImage(company.imageUrl),
     createdAt: company.createdAt.toISOString(),
   };
 }

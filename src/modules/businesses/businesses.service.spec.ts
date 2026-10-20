@@ -316,7 +316,8 @@ describe('BusinessesService', () => {
           id: 'user-marketer',
           name: 'مسوق دمشق',
           bio: 'تسويق أقمشة',
-          avatarUrl: null,
+          avatarUrl:
+            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10',
           verified: true,
           availableForWork: true,
           location: 'دمشق',

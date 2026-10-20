@@ -1212,11 +1212,14 @@ async function main(): Promise<void> {
     }),
   ];
 
+  /** Default placeholder when no custom image is set. */
   const SHARED_AVATAR_URL =
-    'https://media.istockphoto.com/id/2060009001/vector/avatar-user-profile-person-icon-profile-picture-for-social-media-profiles-icons-screensavers.jpg?s=612x612&w=0&k=20&c=onk7rmEoISSvHVlqc-SiBvcUr8ilCm2u9kcw3_Bm_SA=';
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10';
 
-  /** Same fabric/product images used elsewhere in this seed. */
+  /** Directory samples: placeholder + fabric images used elsewhere in this seed. */
   const SEED_DIRECTORY_IMAGES = [
+    SHARED_AVATAR_URL,
+    SHARED_AVATAR_URL,
     SHARED_AVATAR_URL,
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNO36XKY6a7gCZq0CK5bQrqrMjc-VhMWm9QQVwp4TNoQ&s=10',
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa1QmlzxwBlPlhmh6w8BM8dXFL2S3ZP4bguvtm95gAPA&s=10',

@@ -1,4 +1,5 @@
 import { Business, BusinessType, Supply } from '@prisma/client';
+import { withDefaultImage } from '../../common/defaults/images';
 
 export type BusinessCategoryResponse = {
   id: string;
@@ -51,7 +52,7 @@ export function toBusinessResponse(
     location: business.location,
     description: business.description,
     phone: business.phone,
-    imageUrl: business.imageUrl,
+    imageUrl: withDefaultImage(business.imageUrl),
     verified: business.verified,
     capacity: business.capacity,
     equipment: business.equipment,
