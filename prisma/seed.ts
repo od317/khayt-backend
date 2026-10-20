@@ -1262,16 +1262,7 @@ async function main(): Promise<void> {
       role: u.role,
       locationId: u.locationId,
       onboardingCompleted: u.onboardingCompleted,
-      avatarUrl:
-        u.role === UserRole.marketer ||
-        u.role === UserRole.employee ||
-        u.role === UserRole.shipping_company
-          ? directoryImage(
-              Math.abs(
-                [...u.id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0),
-              ),
-            )
-          : SHARED_AVATAR_URL,
+      avatarUrl: SHARED_AVATAR_URL,
       ...(extras.bio !== undefined ? { bio: extras.bio } : {}),
       ...(extras.availableForWork !== undefined
         ? { availableForWork: extras.availableForWork }

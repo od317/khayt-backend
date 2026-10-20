@@ -3,6 +3,7 @@ import {
   BusinessResponse,
   toBusinessResponse,
 } from '../businesses/businesses.mapper';
+import { withDefaultImage } from '../../common/defaults/images';
 import {
   DeliveryBorder,
   LocationWithParent,
@@ -72,7 +73,7 @@ export function toUserResponse(
     deliveryLat: user.deliveryLat,
     deliveryLng: user.deliveryLng,
     bio: user.bio,
-    avatarUrl: user.avatarUrl,
+    avatarUrl: withDefaultImage(user.avatarUrl),
     availableForWork: user.availableForWork,
     verified: user.verified,
     onboardingCompleted: user.onboardingCompleted,
