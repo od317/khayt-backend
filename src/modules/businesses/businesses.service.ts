@@ -22,6 +22,7 @@ import { BusinessResponse, toBusinessResponse } from './businesses.mapper';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { QueryBusinessesDto } from './dto/query-businesses.dto';
+import { QueryMarketersDto } from './dto/query-marketers.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import {
   isEmployeeLikeRole,
@@ -125,6 +126,63 @@ const FACTORY_POST_INCLUDE = {
 @Injectable()
 export class BusinessesService {
   constructor(private readonly prisma: PrismaService) { }
+
+  async listMarketers(
+    query: QueryMarketersDto,
+  ): Promise<Paginated<PublicEmployeeCard>> {
+    const where: Prisma.UserWhereInput = {
+      role: UserRole.marketer,
+      suspended: false,
+      onboardingCompleted: true,
+    };
+
+    if (query.location) {
+      where.location = {
+        name: { contains: query.location, mode: 'insensitive' },
+      };
+    }
+
+    if (query.q) {
+      where.OR = [
+        { name: { contains: query.q, mode: 'insensitive' } },
+        { bio: { contains: query.q, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.verified === 'true') where.verified = true;
+    if (query.verified === 'false') where.verified = false;
+
+    if (query.availableForWork === 'true') where.availableForWork = true;
+    if (query.availableForWork === 'false') where.availableForWork = false;
+
+    const { skip, take } = skipTake(query.page, query.limit);
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        orderBy: [{ verified: 'desc' }, { createdAt: 'desc' }],
+        skip,
+        take,
+        include: { location: true },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return paginate(
+      rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        bio: row.bio,
+        avatarUrl: row.avatarUrl,
+        verified: row.verified,
+        availableForWork: row.availableForWork,
+        location: row.location?.name ?? null,
+      })),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
 
   async list(query: QueryBusinessesDto): Promise<Paginated<BusinessResponse>> {
     const where: Prisma.BusinessWhereInput = {};

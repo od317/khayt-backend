@@ -44,6 +44,7 @@ type PrismaMock = {
   user: {
     findUnique: ReturnType<typeof vi.fn>;
     findMany: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
   };
   post: { findMany: ReturnType<typeof vi.fn> };
   like: { groupBy: ReturnType<typeof vi.fn> };
@@ -67,12 +68,23 @@ describe('BusinessesService', () => {
       user: {
         findUnique: vi.fn().mockResolvedValue(null),
         findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
       },
       post: { findMany: vi.fn().mockResolvedValue([]) },
       like: { groupBy: vi.fn().mockResolvedValue([]) },
       comment: { groupBy: vi.fn().mockResolvedValue([]) },
       $transaction: vi.fn(),
     };
+
+    prisma.$transaction.mockImplementation(async (arg: unknown) => {
+      if (Array.isArray(arg)) {
+        return Promise.all(arg);
+      }
+      if (typeof arg === 'function') {
+        return (arg as (tx: unknown) => unknown)(prisma);
+      }
+      return undefined;
+    });
 
     service = new BusinessesService(prisma as unknown as PrismaService);
   });
@@ -268,6 +280,82 @@ describe('BusinessesService', () => {
     expect((error as NotFoundException).getResponse()).toMatchObject({
       error: 'not_found',
       message: 'الملف غير موجود',
+    });
+  });
+
+  describe('listMarketers', () => {
+    it('lists onboarded marketers as public cards', async () => {
+      prisma.user.findMany.mockResolvedValue([
+        {
+          id: 'user-marketer',
+          name: 'مسوق دمشق',
+          bio: 'تسويق أقمشة',
+          avatarUrl: null,
+          verified: true,
+          availableForWork: true,
+          location: { name: 'دمشق' },
+        },
+      ]);
+      prisma.user.count.mockResolvedValue(1);
+
+      const result = await service.listMarketers({ page: 1, limit: 20 });
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            role: UserRole.marketer,
+            suspended: false,
+            onboardingCompleted: true,
+          },
+          orderBy: [{ verified: 'desc' }, { createdAt: 'desc' }],
+          include: { location: true },
+        }),
+      );
+      expect(result.items).toEqual([
+        {
+          id: 'user-marketer',
+          name: 'مسوق دمشق',
+          bio: 'تسويق أقمشة',
+          avatarUrl: null,
+          verified: true,
+          availableForWork: true,
+          location: 'دمشق',
+        },
+      ]);
+      expect(result.total).toBe(1);
+    });
+
+    it('applies q, location, verified, and availableForWork filters', async () => {
+      prisma.user.findMany.mockResolvedValue([]);
+      prisma.user.count.mockResolvedValue(0);
+
+      await service.listMarketers({
+        page: 1,
+        limit: 20,
+        q: 'أقمشة',
+        location: 'دمشق',
+        verified: 'true',
+        availableForWork: 'true',
+      });
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            role: UserRole.marketer,
+            suspended: false,
+            onboardingCompleted: true,
+            verified: true,
+            availableForWork: true,
+            location: {
+              name: { contains: 'دمشق', mode: 'insensitive' },
+            },
+            OR: [
+              { name: { contains: 'أقمشة', mode: 'insensitive' } },
+              { bio: { contains: 'أقمشة', mode: 'insensitive' } },
+            ],
+          },
+        }),
+      );
     });
   });
 });
