@@ -5,6 +5,9 @@
 >
 > Source of truth: response mappers (`*mapper.ts`) and DTOs (`@IsOptional`).
 > Global prefix: `/api`.
+>
+> **Defaults:** some image fields are never `null` in JSON — the API fills a
+> placeholder URL when the DB value is missing (see notes under each shape).
 
 ---
 
@@ -20,6 +23,14 @@
 
 ## Shared response shapes
 
+### DeliveryBorder
+
+| Field | Can be null |
+|-------|-------------|
+| `centerLat`, `centerLng`, `radiusKm` | no (all required when the object is present) |
+
+When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج سوريا / عمل عن بعد, or location not set).
+
 ### UserResponse
 
 | Field | Can be null |
@@ -27,12 +38,14 @@
 | `name` | yes |
 | `phone` | yes |
 | `email` | yes |
-| `location` | yes |
+| `location` | yes (display name string) |
+| `locationId` | yes |
+| `deliveryBorder` | yes (whole object) |
 | `deliveryAddress` | yes |
 | `deliveryLat` | yes |
 | `deliveryLng` | yes |
 | `bio` | yes |
-| `avatarUrl` | yes |
+| `avatarUrl` | **no** — API always returns a URL (person placeholder if missing) |
 | `id`, `role`, `availableForWork`, `verified`, `onboardingCompleted`, `canOrder` | no |
 
 ### BusinessResponse
@@ -41,13 +54,23 @@
 |-------|-------------|
 | `description` | yes |
 | `phone` | yes |
-| `imageUrl` | yes |
 | `capacity` | yes |
 | `equipment` | yes |
 | `minOrder` | yes |
 | `experience` | yes |
 | `duration` | yes |
+| `imageUrl` | **no** — API always returns a URL (building placeholder if missing) |
 | `id`, `type`, `name`, `location`, `verified`, `services[]`, `topics[]`, `categories[]`, `createdAt` | no |
+
+### PublicEmployeeCard (marketers list / profile similar)
+
+| Field | Can be null |
+|-------|-------------|
+| `name` | yes |
+| `bio` | yes |
+| `location` | yes |
+| `avatarUrl` | **no** — API always returns a URL (person placeholder if missing) |
+| `id`, `verified`, `availableForWork` | no |
 
 ### ProductResponse
 
@@ -83,7 +106,7 @@
 | `product` | yes (whole object) |
 | `author.name` | yes |
 | `author.location` | yes |
-| `author.avatarUrl` | yes |
+| `author.avatarUrl` | yes (raw DB; **no** placeholder applied here) |
 | `id`, `body`, `media`, `imageUrls[]`, `active`, `createdAt`, `updatedAt`, `skills[]`, `workType[]`, `categories[]`, `likes`, `comments`, `likedByMe`, `savedByMe` | no |
 
 ### CommentResponse
@@ -92,7 +115,7 @@
 |-------|-------------|
 | `parentId` | yes |
 | `author.name` | yes |
-| `author.avatarUrl` | yes |
+| `author.avatarUrl` | yes (raw DB; **no** placeholder applied here) |
 | `replies[]` | same shape (recursive) |
 
 ### CartItemResponse
@@ -173,6 +196,16 @@
 |-------|-------------|
 | `pricing` | yes |
 | `fleet` | yes |
+| `imageUrl` | **no** — API always returns a URL (building placeholder if missing) |
+| `id`, `name`, `location`, `verified`, `coverage[]`, `deliveryTime`, `phone`, `createdAt` | no |
+
+### CityResponse / CityFlatResponse (locations)
+
+| Field | Can be null |
+|-------|-------------|
+| `deliveryBorder` | yes (whole object) |
+| `id`, `name` | no |
+| `areas[]` (CityResponse only) | no (may be empty) |
 
 ### PostOptionItem
 
@@ -207,7 +240,7 @@
 ### GET `/api/auth/me`
 
 - **Response can be null:**
-  - `user` → UserResponse nullables
+  - `user` → UserResponse nullables (`locationId`, `deliveryBorder`, profile scalars)
   - **`business`** (whole object — null when user has no business)
   - when `business` present → BusinessResponse nullables
 - **Request optional:** (none)
@@ -233,9 +266,9 @@
 
 - **Response can be null:**
   - `user` → UserResponse nullables
-  - **`business`** (null for roles without a business, e.g. employee)
-- **Request optional:** `businessName`, `description`, `services`, `experienceYears`, `image`  
-  (required together when role is workshop/store)
+  - **`business`** (null for roles without a business, e.g. employee / marketer)
+- **Request optional:** `businessName`, `description`, `services`, `experienceYears`, `image`
+- **When role is workshop/store:** `businessName`, `description`, `experienceYears` are **required**; `services` and `image` are **optional** (can be filled later via `PATCH /auth/me`)
 
 ---
 
@@ -373,12 +406,23 @@
 
 ---
 
+## Marketers — `/api/marketers`
+
+### GET `/api/marketers`
+
+- **Response can be null:** `items[]` → PublicEmployeeCard nullables (`name`, `bio`, `location`; **`avatarUrl` is never null**)
+- **Request optional:** `page`, `limit`, `q`, `location`, `verified`, `availableForWork`
+
+---
+
 ## Profiles — `/api/profiles`
 
 ### GET `/api/profiles/:id`
 
-- **Response can be null (workshop/store factory card):** `profile.description`, `profile.imageUrl`, `profile.phone`, `profile.experience`; `posts[]` → PostResponse
-- **Response can be null (employee / marketer / shipping_company card):** `profile.name`, `profile.bio`, `profile.avatarUrl`, `profile.location`, `profile.phone`; `posts[]` → PostResponse; `similar[]` card nullables
+- **Response can be null (workshop/store factory card):** `profile.description`, `profile.phone`, `profile.experience`; `posts[]` → PostResponse  
+  **`profile.imageUrl` is never null** (building placeholder if missing)
+- **Response can be null (employee / marketer / shipping_company card):** `profile.name`, `profile.bio`, `profile.location`, `profile.phone`; `posts[]` → PostResponse; `similar[]` card nullables  
+  **`profile.avatarUrl` / `similar[].avatarUrl` are never null** (person placeholder if missing)
 - **Request optional:** (none)
 
 ### GET `/api/profiles/:id/similar`
@@ -432,7 +476,8 @@
 ### POST `/api/orders`
 
 - **Response can be null:** OrderDetailResponse nullables
-- **Request optional:** `lines[].variant`, `address`, `lat`, `lng`
+- **Request optional:** `lines[].variant`, `address`, `lat`, `lng`  
+  Drop-off pin is required on first order (or when changing pin). If the user has a governorate `deliveryBorder`, lat/lng outside the circle → `400 validation_failed` on `lat`/`lng`.
 
 ### PATCH `/api/orders/:id/status`
 
@@ -486,7 +531,17 @@
 
 ## Locations — `/api/locations`
 
-### GET `/api/locations` · GET `/api/locations/cities` · GET `/api/locations/:id/areas`
+### GET `/api/locations`
+
+- **Response can be null:** `items[].deliveryBorder` (whole object)
+- **Request optional:** (none)
+
+### GET `/api/locations/cities`
+
+- **Response can be null:** `items[].deliveryBorder` (whole object)
+- **Request optional:** (none)
+
+### GET `/api/locations/:id/areas`
 
 - **Response can be null:** (none)
 - **Request optional:** (none)
@@ -616,12 +671,14 @@
 
 ### GET `/api/shipping-companies`
 
-- **Response can be null:** `items[]` → `pricing`, `fleet`
+- **Response can be null:** `items[]` → `pricing`, `fleet`  
+  **`imageUrl` is never null**
 - **Request optional:** `page`, `limit`, `q`, `location`, `verified`
 
 ### GET `/api/shipping-companies/:id`
 
-- **Response can be null:** `company.pricing`, `company.fleet`
+- **Response can be null:** `company.pricing`, `company.fleet`  
+  **`company.imageUrl` is never null**
 - **Request optional:** (none)
 
 ---
@@ -639,12 +696,16 @@
 
 | You call… | Watch for null |
 |-----------|----------------|
-| `GET /auth/me` | `user.*` profile scalars; **`business`** |
-| `PATCH /auth/me` | `user.*` only in response |
-| Posts feed/detail | many post scalars; **`business`**, **`product`**; author avatar/name |
+| `GET /auth/me` | `user.locationId`, `user.deliveryBorder`, profile scalars; **`business`**; `avatarUrl` / business `imageUrl` always URLs |
+| `PATCH /auth/me` | same as me |
+| `POST /auth/onboarding` | workshop/store: `services` + `image` optional; name/description/experience required |
+| `GET /marketers` | `name`/`bio`/`location`; `avatarUrl` always URL |
+| `GET /locations` · `/cities` | `deliveryBorder` |
+| Posts feed/detail | many post scalars; **`business`**, **`product`**; author avatar/name (author avatar **can** be null) |
 | Products | `description`, `offer`, `supplierBusinessId`, `colorImages[].hex` |
 | Cart | `variant`, `variantImage`, `unavailableReason` |
-| Orders | `lat`/`lng`, **`delivery`**, **`delivery.driver`**, line images |
+| Orders | `lat`/`lng`, **`delivery`**, **`delivery.driver`**, line images; border geo validation on create |
 | Deliveries | `driverId`/`driverName`/`deliveredAt`; detail **`driver`** |
+| Shipping companies | `pricing`, `fleet`; `imageUrl` always URL |
 | Notifications | `linkTo` |
 | Bills | `dueAt`, `recordedByName` |
