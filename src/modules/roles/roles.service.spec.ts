@@ -20,7 +20,9 @@ describe('RolesService', () => {
     id: 'role-employee',
     value: 'employee',
     label: 'موظف',
-    description: '',
+    description: 'ابحث عن فرص عمل',
+    iconUrl:
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10',
     selectable: true,
     system: true,
     sortOrder: 10,
@@ -42,11 +44,16 @@ describe('RolesService', () => {
     service = new RolesService(prisma as unknown as PrismaService);
   });
 
-  it('lists selectable roles with description', async () => {
+  it('lists selectable roles with description and iconUrl', async () => {
     prisma.role.findMany.mockResolvedValue([employee]);
     const result = await service.list();
     expect(result.items).toEqual([
-      { value: 'employee', label: 'موظف', description: '' },
+      {
+        value: 'employee',
+        label: 'موظف',
+        description: 'ابحث عن فرص عمل',
+        iconUrl: employee.iconUrl,
+      },
     ]);
   });
 

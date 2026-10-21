@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, Role } from '@prisma/client';
+import { withDefaultAvatar } from '../../common/defaults/images';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
@@ -13,6 +14,8 @@ export type RoleResponse = {
   value: string;
   label: string;
   description: string;
+  /** Always a URL (placeholder if empty in DB). */
+  iconUrl: string;
 };
 
 export type AdminRoleResponse = RoleResponse & {
@@ -27,6 +30,7 @@ export function toPublicRole(role: Role): RoleResponse {
     value: role.value,
     label: role.label,
     description: role.description ?? '',
+    iconUrl: withDefaultAvatar(role.iconUrl),
   };
 }
 
@@ -66,6 +70,7 @@ export class RolesService {
           value: dto.value,
           label: dto.label,
           description: dto.description ?? '',
+          iconUrl: dto.iconUrl?.trim() ?? '',
           selectable: dto.visibleInApp,
           sortOrder: dto.sortOrder ?? 50,
           system: false,
@@ -101,6 +106,7 @@ export class RolesService {
     const data: Prisma.RoleUpdateInput = {};
     if (dto.label !== undefined) data.label = dto.label;
     if (dto.description !== undefined) data.description = dto.description;
+    if (dto.iconUrl !== undefined) data.iconUrl = dto.iconUrl.trim();
     if (dto.visibleInApp !== undefined) data.selectable = dto.visibleInApp;
     if (dto.sortOrder !== undefined) data.sortOrder = dto.sortOrder;
 

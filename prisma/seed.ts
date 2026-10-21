@@ -31,11 +31,22 @@ async function main(): Promise<void> {
   // ------------------------------------------------------------
   // Roles
   // ------------------------------------------------------------
+  /** Same placeholders used for avatars / business images elsewhere in seed. */
+  const ROLE_ICON_PERSON =
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10';
+  const ROLE_ICON_BUILDING =
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRKFSey5bgsBA3-2Z7f27pym50-ySDrxPZWoIJ1bOCQ9pQVdvEun88f-iPX&s=10';
+  const ROLE_ICON_FABRIC =
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNO36XKY6a7gCZq0CK5bQrqrMjc-VhMWm9QQVwp4TNoQ&s=10';
+
   const roles = [
     {
       id: 'role-employee',
       value: 'employee',
       label: 'موظف',
+      description:
+        'ابحث عن فرص عمل، اعرض مهاراتك، وتواصل مع المعامل والمتاجر في قطاع النسيج.',
+      iconUrl: ROLE_ICON_PERSON,
       selectable: true,
       system: true,
       sortOrder: 10,
@@ -44,6 +55,9 @@ async function main(): Promise<void> {
       id: 'role-workshop',
       value: 'workshop',
       label: 'مشغل / معمل',
+      description:
+        'اعرض منتجاتك وخدماتك، وظّف عمالاً، واطلب من مستودع خيط أو استقبل طلبات المتاجر.',
+      iconUrl: ROLE_ICON_FABRIC,
       selectable: true,
       system: true,
       sortOrder: 20,
@@ -52,6 +66,9 @@ async function main(): Promise<void> {
       id: 'role-store',
       value: 'store',
       label: 'متجر',
+      description:
+        'اطلب بالجملة من المستودع، ابحث عن موردين ومعامل، وتابع طلباتك وتوصيلك.',
+      iconUrl: ROLE_ICON_BUILDING,
       selectable: true,
       system: true,
       sortOrder: 30,
@@ -60,6 +77,9 @@ async function main(): Promise<void> {
       id: 'role-marketer',
       value: 'marketer',
       label: 'مسوق',
+      description:
+        'روّج للمنتجات والخدمات في سوق النسيج وتواصل مع المعامل والمتاجر.',
+      iconUrl: ROLE_ICON_PERSON,
       selectable: true,
       system: true,
       sortOrder: 35,
@@ -68,6 +88,9 @@ async function main(): Promise<void> {
       id: 'role-shipping-company',
       value: 'shipping_company',
       label: 'شركة شحن',
+      description:
+        'اعرض خدمات الشحن والأسعار والأسطول ليجدك التجار والمعامل بسهولة.',
+      iconUrl: ROLE_ICON_BUILDING,
       selectable: true,
       system: true,
       sortOrder: 36,
@@ -76,6 +99,9 @@ async function main(): Promise<void> {
       id: 'role-institute',
       value: 'institute',
       label: 'معهد',
+      description:
+        'انشر الدورات التدريبية في الخياطة والتصميم واجذب الطلاب والمتدربين.',
+      iconUrl: ROLE_ICON_BUILDING,
       selectable: true,
       system: true,
       sortOrder: 40,
@@ -84,6 +110,8 @@ async function main(): Promise<void> {
       id: 'role-super-admin',
       value: 'super_admin',
       label: 'مدير عام',
+      description: 'صلاحيات كاملة على المنصة بما فيها إدارة المدراء والمدفوعات.',
+      iconUrl: ROLE_ICON_PERSON,
       selectable: false,
       system: true,
       sortOrder: 100,
@@ -92,6 +120,9 @@ async function main(): Promise<void> {
       id: 'role-admin',
       value: 'admin',
       label: 'مدير',
+      description:
+        'إدارة المحتوى والمستخدمين والكتالوج من لوحة التحكم (بدون إدارة المدراء).',
+      iconUrl: ROLE_ICON_PERSON,
       selectable: false,
       system: true,
       sortOrder: 110,
@@ -100,6 +131,8 @@ async function main(): Promise<void> {
       id: 'role-inventory',
       value: 'inventory',
       label: 'مستودع',
+      description: 'إدارة المخزون والاستلام والفواتير داخل مستودع خيط.',
+      iconUrl: ROLE_ICON_BUILDING,
       selectable: false,
       system: true,
       sortOrder: 120,
@@ -108,6 +141,8 @@ async function main(): Promise<void> {
       id: 'role-delivery',
       value: 'delivery',
       label: 'توصيل',
+      description: 'تحديث حالات الطلبات والتوصيل وإتمام التسليمات.',
+      iconUrl: ROLE_ICON_PERSON,
       selectable: false,
       system: true,
       sortOrder: 130,
@@ -120,11 +155,13 @@ async function main(): Promise<void> {
       update: {
         value: role.value,
         label: role.label,
+        description: role.description,
+        iconUrl: role.iconUrl,
         selectable: role.selectable,
         system: role.system,
         sortOrder: role.sortOrder,
       },
-      create: { ...role, description: '' },
+      create: role,
     });
   }
 

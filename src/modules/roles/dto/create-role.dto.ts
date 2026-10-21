@@ -32,6 +32,16 @@ export class CreateRoleDto {
   @MaxLength(2000)
   description?: string;
 
+  @ApiPropertyOptional({
+    example:
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10',
+    description: 'Public icon URL for the role picker.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  iconUrl?: string;
+
   @ApiProperty({
     example: true,
     description:

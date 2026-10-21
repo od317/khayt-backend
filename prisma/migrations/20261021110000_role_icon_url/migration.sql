@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Role" ADD COLUMN "iconUrl" TEXT NOT NULL DEFAULT '';

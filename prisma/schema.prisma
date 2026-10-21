@@ -189,8 +189,10 @@ model Role {
   id          String   @id @default(uuid())
   value       String   @unique
   label       String
-  description String  @default("")
-  selectable  Boolean @default(true)
+  description String   @default("")
+  /// Public icon URL shown in onboarding / role picker.
+  iconUrl     String   @default("")
+  selectable  Boolean  @default(true)
   system      Boolean  @default(false)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
