@@ -250,7 +250,7 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 - **Response can be null:** `user` → UserResponse nullables; `business` (null if user has no business)
 - **Request optional:** `name`, `bio`, `availableForWork`, `avatarUrl`, `image` (multipart file), `locationId`, `deliveryAddress`, `deliveryLat`, `deliveryLng`, `description`, `services`
   Empty `deliveryAddress` / null coords are treated as omitted.
-  Uploaded `image` sets `user.avatarUrl` and syncs `business.imageUrl` for workshop/store.
+  Uploaded `image` sets `user.avatarUrl` and syncs `business.imageUrl` for workshop/store/institute.
 
 ### PATCH `/api/auth/me/available-for-work`
 
@@ -267,8 +267,8 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 - **Response can be null:**
   - `user` → UserResponse nullables
   - **`business`** (null for roles without a business, e.g. employee / marketer)
-- **Request optional:** `businessName`, `description`, `services`, `experienceYears`, `image`
-- **When role is workshop/store:** `businessName`, `description`, `experienceYears` are **required**; `services` and `image` are **optional** (can be filled later via `PATCH /auth/me`)
+- **Request optional:** `name`, `businessName`, `description`, `services`, `experienceYears`, `image`
+- **When role is workshop/store/institute:** `businessName`, `description`, `experienceYears` are **required**; `services` and `image` are **optional** (can be filled later via `PATCH /auth/me`). `name` sets the user display name when provided.
 
 ---
 

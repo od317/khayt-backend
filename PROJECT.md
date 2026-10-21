@@ -94,8 +94,9 @@ backend/
 - One user → at most **one** `Business` (`Business.ownerId` unique).
 - Stores and workshops place `Order`s against platform `Product` / `Supply`
   (staff-managed catalog). `user.canOrder` reflects that after onboarding.
-- Onboarding: employee finishes with role + location; workshop/store must
-  also submit business profile (name, image, description, services, years).
+- Onboarding: employee finishes with role + location; workshop/store/institute
+  must also submit business profile (`businessName`, description, experience;
+  services/image optional) and may set user `name`.
 
 ---
 

@@ -45,6 +45,19 @@ describe('OnboardingDto', () => {
     );
   });
 
+  it('accepts optional name with business role', async () => {
+    expect(
+      await run({
+        role: 'workshop',
+        locationId: 'loc-damascus',
+        name: 'أحمد',
+        businessName: 'معمل',
+        description: 'وصف',
+        experienceYears: 3,
+      }),
+    ).toEqual([]);
+  });
+
   it('rejects admin', async () => {
     expect(
       (await run({ role: 'admin', locationId: 'loc-damascus' })).length,

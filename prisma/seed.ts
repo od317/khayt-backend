@@ -76,7 +76,7 @@ async function main(): Promise<void> {
       id: 'role-institute',
       value: 'institute',
       label: 'معهد',
-      selectable: false,
+      selectable: true,
       system: true,
       sortOrder: 40,
     },

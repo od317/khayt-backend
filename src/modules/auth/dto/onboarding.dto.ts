@@ -47,9 +47,20 @@ export class OnboardingDto {
   locationId!: string;
 
   @ApiPropertyOptional({
+    example: 'أحمد',
+    description:
+      'Display name for the user account. Recommended for workshop, store, and institute.',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  name?: string;
+
+  @ApiPropertyOptional({
     example: 'معمل النسيج',
     description:
-      'Required when role is workshop (مصنع) or store. Business display name.',
+      'Required when role is workshop, store, or institute. Business display name.',
   })
   @IsOptional()
   @IsString()
@@ -59,7 +70,7 @@ export class OnboardingDto {
 
   @ApiPropertyOptional({
     example: 'نصنع ألبسة رجالية',
-    description: 'Required when role is workshop or store.',
+    description: 'Required when role is workshop, store, or institute.',
   })
   @IsOptional()
   @IsString()
@@ -71,7 +82,7 @@ export class OnboardingDto {
     type: [String],
     example: ['خياطة', 'قص'],
     description:
-      'Optional for workshop/store. Enter services one by one (JSON array in multipart).',
+      'Optional for workshop/store/institute. Enter services one by one (JSON array in multipart).',
   })
   @IsOptional()
   @Transform(parseJsonIfString)
@@ -81,7 +92,8 @@ export class OnboardingDto {
 
   @ApiPropertyOptional({
     example: 5,
-    description: 'Required when role is workshop or store. Years of experience.',
+    description:
+      'Required when role is workshop, store, or institute. Years of experience.',
   })
   @IsOptional()
   @Type(() => Number)
@@ -93,7 +105,7 @@ export class OnboardingDto {
   @ApiPropertyOptional({
     type: 'string',
     format: 'binary',
-    description: 'Optional business image for workshop/store.',
+    description: 'Optional business image for workshop, store, or institute.',
   })
   @IsOptional()
   image?: unknown;

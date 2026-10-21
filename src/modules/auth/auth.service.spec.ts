@@ -632,6 +632,121 @@ describe('AuthService', () => {
       expect(result.business?.name).toBe('متجر');
     });
 
+    it('saves user name when provided during business onboarding', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: false,
+      });
+      prisma.location.findFirst.mockResolvedValue({
+        id: LOCATION_ID,
+        name: 'دمشق',
+      });
+      prisma.role.findFirst.mockResolvedValue({ value: UserRole.workshop });
+      const updated = makeUser({
+        role: UserRole.workshop,
+        name: 'أحمد',
+        onboardingCompleted: true,
+        locationId: LOCATION_ID,
+      });
+      prisma.user.update.mockResolvedValue(updated);
+      prisma.business.create.mockResolvedValue({
+        id: 'biz-1',
+        ownerId: actor.id,
+        type: 'workshop',
+        name: 'معمل النسيج',
+        location: 'دمشق',
+        description: 'وصف',
+        phone: null,
+        imageUrl: null,
+        verified: false,
+        capacity: null,
+        equipment: null,
+        minOrder: null,
+        experience: '5',
+        services: [],
+        duration: null,
+        topics: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const result = await service.onboarding(actor, {
+        role: UserRole.workshop,
+        locationId: LOCATION_ID,
+        name: 'أحمد',
+        businessName: 'معمل النسيج',
+        description: 'وصف',
+        experienceYears: 5,
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ name: 'أحمد' }),
+        }),
+      );
+      expect(result.user.name).toBe('أحمد');
+      expect(result.business?.name).toBe('معمل النسيج');
+    });
+
+    it('creates an institute business profile on onboarding', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        onboardingCompleted: false,
+      });
+      prisma.location.findFirst.mockResolvedValue({
+        id: LOCATION_ID,
+        name: 'دمشق',
+      });
+      prisma.role.findFirst.mockResolvedValue({ value: UserRole.institute });
+      const updated = makeUser({
+        role: UserRole.institute,
+        name: 'سارة',
+        onboardingCompleted: true,
+        locationId: LOCATION_ID,
+      });
+      prisma.user.update.mockResolvedValue(updated);
+      prisma.business.create.mockResolvedValue({
+        id: 'biz-inst-1',
+        ownerId: actor.id,
+        type: 'institute',
+        name: 'معهد الخياطة',
+        location: 'دمشق',
+        description: 'دورات خياطة',
+        phone: null,
+        imageUrl: null,
+        verified: false,
+        capacity: null,
+        equipment: null,
+        minOrder: null,
+        experience: '10',
+        services: ['خياطة'],
+        duration: null,
+        topics: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const result = await service.onboarding(actor, {
+        role: UserRole.institute,
+        locationId: LOCATION_ID,
+        name: 'سارة',
+        businessName: 'معهد الخياطة',
+        description: 'دورات خياطة',
+        services: ['خياطة'],
+        experienceYears: 10,
+      });
+
+      expect(prisma.business.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            type: 'institute',
+            name: 'معهد الخياطة',
+          }),
+        }),
+      );
+      expect(result.user.role).toBe(UserRole.institute);
+      expect(result.user.canOrder).toBe(false);
+      expect(result.business?.name).toBe('معهد الخياطة');
+    });
+
     it('rejects an unknown locationId', async () => {
       prisma.user.findUnique.mockResolvedValueOnce({
         onboardingCompleted: false,

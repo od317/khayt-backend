@@ -332,7 +332,9 @@ export class AuthService {
     image?: Express.Multer.File,
   ): Promise<{ user: UserResponse; business: BusinessResponse | null }> {
     const isBusinessOwner =
-      actor.role === UserRole.workshop || actor.role === UserRole.store;
+      actor.role === UserRole.workshop ||
+      actor.role === UserRole.store ||
+      actor.role === UserRole.institute;
 
     if (
       (dto.description !== undefined || dto.services !== undefined) &&
@@ -341,15 +343,15 @@ export class AuthService {
       throw new HttpException(
         {
           error: 'validation_failed',
-          message: 'الوصف/الخدمات للورشة أو المتجر فقط',
+          message: 'الوصف/الخدمات للورشة أو المتجر أو المعهد فقط',
           fields: {
             description:
               dto.description !== undefined
-                ? 'مسموح للورشة أو المتجر فقط'
+                ? 'مسموح للورشة أو المتجر أو المعهد فقط'
                 : undefined,
             services:
               dto.services !== undefined
-                ? 'مسموح للورشة أو المتجر فقط'
+                ? 'مسموح للورشة أو المتجر أو المعهد فقط'
                 : undefined,
           },
         },
@@ -610,7 +612,9 @@ export class AuthService {
     }
 
     const needsBusiness =
-      role.value === UserRole.workshop || role.value === UserRole.store;
+      role.value === UserRole.workshop ||
+      role.value === UserRole.store ||
+      role.value === UserRole.institute;
     if (needsBusiness) {
       this.assertBusinessOnboarding(dto, image);
     }
@@ -620,7 +624,9 @@ export class AuthService {
         ? BusinessType.workshop
         : role.value === UserRole.store
           ? BusinessType.store
-          : null;
+          : role.value === UserRole.institute
+            ? BusinessType.institute
+            : null;
 
     const result = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.update({
@@ -629,6 +635,7 @@ export class AuthService {
           role: role.value,
           location: { connect: { id: dto.locationId } },
           onboardingCompleted: true,
+          ...(dto.name?.trim() ? { name: dto.name.trim() } : {}),
         },
         include: userLocationInclude,
       });
@@ -669,13 +676,13 @@ export class AuthService {
   ): void {
     const fields: Record<string, string> = {};
     if (!dto.businessName?.trim()) {
-      fields.businessName = 'مطلوب للورشة/المتجر';
+      fields.businessName = 'مطلوب للورشة/المتجر/المعهد';
     }
     if (!dto.description?.trim()) {
-      fields.description = 'مطلوب للورشة/المتجر';
+      fields.description = 'مطلوب للورشة/المتجر/المعهد';
     }
     if (dto.experienceYears === undefined || dto.experienceYears === null) {
-      fields.experienceYears = 'مطلوب للورشة/المتجر';
+      fields.experienceYears = 'مطلوب للورشة/المتجر/المعهد';
     }
     // services + image are optional — can be filled later via updateMe.
     if (Object.keys(fields).length > 0) {
