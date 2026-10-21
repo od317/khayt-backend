@@ -142,6 +142,42 @@ export class PostsController {
     return this.posts.listMine(user, query, 'reels');
   }
 
+  @Get('liked')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'List posts I liked',
+    description:
+      'Authenticated. Posts the current user liked, newest like first. Paginated via page & limit.',
+  })
+  @ApiOkResponse({
+    description: 'Paginated liked posts',
+    schema: { example: paginated(samplePost) },
+  })
+  listLiked(
+    @RequireUser() user: AuthenticatedUser,
+    @Query() query: PaginationDto,
+  ): Promise<Paginated<PostResponse>> {
+    return this.posts.listLiked(user, query);
+  }
+
+  @Get('saved')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'List posts I saved',
+    description:
+      'Authenticated. Posts the current user saved, newest save first. Paginated via page & limit.',
+  })
+  @ApiOkResponse({
+    description: 'Paginated saved posts',
+    schema: { example: paginated(samplePost) },
+  })
+  listSaved(
+    @RequireUser() user: AuthenticatedUser,
+    @Query() query: PaginationDto,
+  ): Promise<Paginated<PostResponse>> {
+    return this.posts.listSaved(user, query);
+  }
+
   @Public()
   @Get(':id')
   @ApiSecurity({})

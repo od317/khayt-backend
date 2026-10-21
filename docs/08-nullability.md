@@ -330,6 +330,18 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 - **Response can be null:** `items[]` → PostResponse nullables (reels only)
 - **Request optional:** `page`, `limit`
 
+### GET `/api/posts/liked`
+
+- **Response can be null:** `items[]` → PostResponse nullables
+- **Request optional:** `page`, `limit`
+- Auth required. Ordered by newest like first.
+
+### GET `/api/posts/saved`
+
+- **Response can be null:** `items[]` → PostResponse nullables
+- **Request optional:** `page`, `limit`
+- Auth required. Ordered by newest save first. (Also available as `GET /posts?savedBy=me`.)
+
 ### GET `/api/posts/:id`
 
 - **Response can be null:** `post` → PostResponse nullables

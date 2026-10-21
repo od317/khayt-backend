@@ -98,6 +98,7 @@ type PrismaMock = {
     upsert: ReturnType<typeof vi.fn>;
     deleteMany: ReturnType<typeof vi.fn>;
     findMany: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
   };
   comment: {
     findMany: ReturnType<typeof vi.fn>;
@@ -151,6 +152,7 @@ describe('PostsService', () => {
         upsert: vi.fn().mockResolvedValue(undefined),
         deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
         findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
       },
       comment: {
         findMany: vi.fn().mockResolvedValue([]),
@@ -232,6 +234,50 @@ describe('PostsService', () => {
           },
         }),
       );
+    });
+  });
+
+  describe('listLiked / listSaved', () => {
+    it('lists posts the user liked, newest like first', async () => {
+      const liked = makePost({ id: 'post-liked' });
+      prisma.like.findMany.mockResolvedValue([{ post: liked }]);
+      prisma.like.count.mockResolvedValue(1);
+
+      const result = await service.listLiked(actor, { page: 1, limit: 20 });
+
+      expect(prisma.like.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: actor.id,
+            post: { deletedAt: null },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.id).toBe('post-liked');
+      expect(result.total).toBe(1);
+    });
+
+    it('lists posts the user saved, newest save first', async () => {
+      const saved = makePost({ id: 'post-saved' });
+      prisma.savedPost.findMany.mockResolvedValue([{ post: saved }]);
+      prisma.savedPost.count.mockResolvedValue(1);
+
+      const result = await service.listSaved(actor, { page: 1, limit: 20 });
+
+      expect(prisma.savedPost.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: actor.id,
+            post: { deletedAt: null },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.id).toBe('post-saved');
+      expect(result.total).toBe(1);
     });
   });
 

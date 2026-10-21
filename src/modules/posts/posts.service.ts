@@ -219,6 +219,60 @@ export class PostsService {
     return paginate(items, total, query.page, query.limit);
   }
 
+  /** Posts the current user liked, newest like first. */
+  async listLiked(
+    actor: AuthenticatedUser,
+    query: { page: number; limit: number },
+  ): Promise<Paginated<PostResponse>> {
+    const where: Prisma.LikeWhereInput = {
+      userId: actor.id,
+      post: { deletedAt: null },
+    };
+    const { skip, take } = skipTake(query.page, query.limit);
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.like.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: { post: { include: POST_INCLUDE } },
+      }),
+      this.prisma.like.count({ where }),
+    ]);
+
+    const posts = rows.map((row) => row.post);
+    const items = await this.attachCounts(posts, actor);
+    return paginate(items, total, query.page, query.limit);
+  }
+
+  /** Posts the current user saved, newest save first. */
+  async listSaved(
+    actor: AuthenticatedUser,
+    query: { page: number; limit: number },
+  ): Promise<Paginated<PostResponse>> {
+    const where: Prisma.SavedPostWhereInput = {
+      userId: actor.id,
+      post: { deletedAt: null },
+    };
+    const { skip, take } = skipTake(query.page, query.limit);
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.savedPost.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: { post: { include: POST_INCLUDE } },
+      }),
+      this.prisma.savedPost.count({ where }),
+    ]);
+
+    const posts = rows.map((row) => row.post);
+    const items = await this.attachCounts(posts, actor);
+    return paginate(items, total, query.page, query.limit);
+  }
+
   async detail(
     id: string,
     actor: AuthenticatedUser | undefined,
