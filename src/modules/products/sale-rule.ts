@@ -33,13 +33,22 @@ export type SizePack = {
   qtyPerSize: number;
 };
 
+/** First color → allowed second colors (case 3). */
+export type PairWithMap = Record<string, string[]>;
+
 export type ParsedSaleRule =
   | { mode: 'locked_axis'; lockedAxis: SaleRuleAxis }
   | { mode: 'color_size_pack'; sizePack: SizePack }
   | {
       mode: 'color_pair_pack';
       sizePack: SizePack;
-      allowedPairColors: string[];
+      /** Preferred: companions allowed for each first color. */
+      pairWith: PairWithMap;
+      /**
+       * Legacy flat list. When pairWith is empty, any first color may pair
+       * with these (except itself).
+       */
+      legacyAllowedPairColors?: string[];
     };
 
 /** @deprecated Prefer ParsedSaleRule — kept for callers that only used lockedAxis. */
@@ -64,12 +73,18 @@ export type SaleRuleResponse =
       mode: 'color_size_pack';
       sizePack: SizePack;
       unitsPerPack: number;
+      /** Set price = product.price × unitsPerPack. */
+      packPrice: number;
     }
   | {
       mode: 'color_pair_pack';
       sizePack: SizePack;
+      /** First color → allowed second colors. */
+      pairWith: PairWithMap;
+      /** Flat union of all second colors (convenience for FE). */
       allowedPairColors: string[];
       unitsPerPack: number;
+      packPrice: number;
     };
 
 type VariantTree = {
@@ -246,16 +261,74 @@ export function parseSaleRuleStored(raw: unknown): ParsedSaleRule | null {
     return { mode: 'color_size_pack', sizePack };
   }
 
-  const pairsRaw = obj.allowedPairColors;
-  if (!Array.isArray(pairsRaw)) return null;
-  const allowedPairColors = uniquePreserveOrder(
-    pairsRaw
+  const pairWith = parsePairWithMap(obj.pairWith);
+  // Accept stored `allowedPairColors` and already-parsed `legacyAllowedPairColors`.
+  const legacyAllowed = parseStringList(
+    obj.allowedPairColors ?? obj.legacyAllowedPairColors,
+  );
+
+  if (Object.keys(pairWith).length === 0 && legacyAllowed.length === 0) {
+    return null;
+  }
+
+  return {
+    mode: 'color_pair_pack',
+    sizePack,
+    pairWith,
+    legacyAllowedPairColors:
+      legacyAllowed.length > 0 ? legacyAllowed : undefined,
+  };
+}
+
+function parseStringList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return uniquePreserveOrder(
+    raw
       .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
       .map((c) => c.trim()),
   );
-  if (allowedPairColors.length === 0) return null;
+}
 
-  return { mode: 'color_pair_pack', sizePack, allowedPairColors };
+function parsePairWithMap(raw: unknown): PairWithMap {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: PairWithMap = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const from = key.trim();
+    if (!from) continue;
+    const list = parseStringList(value);
+    if (list.length === 0) continue;
+    out[from] = list;
+  }
+  return out;
+}
+
+/**
+ * Resolve first→second color map for color_pair_pack (supports legacy flat list).
+ */
+export function effectivePairWith(
+  rule: Extract<ParsedSaleRule, { mode: 'color_pair_pack' }>,
+  variants: unknown,
+): PairWithMap {
+  if (Object.keys(rule.pairWith).length > 0) {
+    return rule.pairWith;
+  }
+  const legacy = rule.legacyAllowedPairColors ?? [];
+  if (legacy.length === 0) return {};
+  const colors = listColorNames(variants);
+  const out: PairWithMap = {};
+  for (const c of colors) {
+    const to = legacy.filter((s) => s !== c);
+    if (to.length > 0) out[c] = to;
+  }
+  return out;
+}
+
+export function flattenPairSeconds(pairWith: PairWithMap): string[] {
+  const all: string[] = [];
+  for (const list of Object.values(pairWith)) {
+    all.push(...list);
+  }
+  return uniquePreserveOrder(all);
 }
 
 /**
@@ -383,9 +456,10 @@ export function pieceUnitPrice(
   basePrice: number,
   variants: unknown,
   variant: Record<string, string> | null | undefined,
-  rule: ParsedSaleRule | null,
+  saleRuleRaw: unknown,
 ): number {
-  const resolved = resolveCartSale(rule, variants, variant);
+  const rule = parseSaleRuleStored(saleRuleRaw);
+  const resolved = resolveCartSale(saleRuleRaw, variants, variant);
   if (resolved.type === 'pack') return basePrice;
   if (rule?.mode === 'locked_axis') return basePrice;
   const color = variant?.color;
@@ -398,6 +472,7 @@ export function pieceUnitPrice(
 export function toSaleRuleResponse(
   saleRuleRaw: unknown,
   variants: unknown,
+  basePrice = 0,
 ): SaleRuleResponse | null {
   const rule = parseSaleRuleStored(saleRuleRaw);
   if (!rule) return null;
@@ -416,21 +491,39 @@ export function toSaleRuleResponse(
 
   const perPack = unitsPerPack(rule);
   if (perPack === null) return null;
+  const packPrice = basePrice * perPack;
 
   if (rule.mode === 'color_size_pack') {
     return {
       mode: 'color_size_pack',
       sizePack: rule.sizePack,
       unitsPerPack: perPack,
+      packPrice,
     };
   }
 
+  const pairWith = effectivePairWith(rule, variants);
   return {
     mode: 'color_pair_pack',
     sizePack: rule.sizePack,
-    allowedPairColors: rule.allowedPairColors,
+    pairWith,
+    allowedPairColors: flattenPairSeconds(pairWith),
     unitsPerPack: perPack,
+    packPrice,
   };
+}
+
+/** Product-level pack/set price when the whole product uses one pack rule. */
+export function productPackPrice(
+  saleRuleRaw: unknown,
+  variants: unknown,
+  basePrice: number,
+): number | null {
+  const rule = parseSaleRuleStored(saleRuleRaw);
+  if (!rule || !isPackSaleMode(rule)) return null;
+  const perPack = unitsPerPack(rule);
+  if (perPack === null) return null;
+  return basePrice * perPack;
 }
 
 function validationFailed(
@@ -496,11 +589,29 @@ export function assertSaleRuleMatchesVariants(
         saleRule: 'ألوان غير كافية',
       });
     }
-    for (const c of resolved.allowedPairColors) {
-      if (!colors.has(c)) {
-        validationFailed('ألوان الاقتران يجب أن تكون من ألوان المنتج', {
-          allowedPairColors: `لون غير موجود: ${c}`,
+    const pairWith = effectivePairWith(resolved, variants);
+    if (Object.keys(pairWith).length === 0) {
+      validationFailed('يجب تحديد ألوان الاقتران', {
+        pairWith: 'مطلوب',
+      });
+    }
+    for (const [from, tos] of Object.entries(pairWith)) {
+      if (!colors.has(from)) {
+        validationFailed('لون الاقتران الأول غير موجود في المنتج', {
+          pairWith: from,
         });
+      }
+      for (const to of tos) {
+        if (!colors.has(to)) {
+          validationFailed('لون الاقتران الثاني غير موجود في المنتج', {
+            pairWith: `${from} → ${to}`,
+          });
+        }
+        if (to === from) {
+          validationFailed('لون الاقتران يجب أن يختلف عن اللون الأول', {
+            pairWith: from,
+          });
+        }
       }
     }
   }
@@ -561,8 +672,15 @@ export function assertCartVariantForSaleMode(
         pairColor: 'يجب أن يختلف',
       });
     }
-    if (!rule.allowedPairColors.includes(pairColor)) {
-      validationFailed('لون الاقتران غير مسموح لهذا المنتج', {
+    const pairWith = effectivePairWith(rule, variants);
+    const allowedSeconds = pairWith[color];
+    if (!allowedSeconds || allowedSeconds.length === 0) {
+      validationFailed('هذا اللون لا يدعم لون اقتران', {
+        color: 'لا يوجد أزواج',
+      });
+    }
+    if (!allowedSeconds.includes(pairColor)) {
+      validationFailed('لون الاقتران غير مسموح مع اللون الأول', {
         pairColor: 'غير مسموح',
       });
     }

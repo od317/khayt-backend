@@ -63,6 +63,7 @@ describe('cart.mapper', () => {
     expect(result.unitPrice).toBe(9000);
     expect(result.totalPieces).toBe(2);
     expect(result.unitsPerPack).toBeNull();
+    expect(result.packPrice).toBeNull();
     expect(result.breakdown).toBeNull();
     expect(result.lineTotal).toBe(18000);
   });
@@ -85,6 +86,7 @@ describe('cart.mapper', () => {
     );
 
     expect(result.unitsPerPack).toBe(30);
+    expect(result.packPrice).toBe(300000);
     expect(result.totalPieces).toBe(60);
     expect(result.breakdown).toHaveLength(6);
     expect(result.breakdown?.[0]).toEqual({

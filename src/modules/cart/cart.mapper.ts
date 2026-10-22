@@ -1,7 +1,6 @@
 import { CartItem, Product } from '@prisma/client';
 import {
   buildBreakdownFromResolved,
-  parseSaleRuleStored,
   pieceUnitPrice,
   resolveCartSale,
   type PackBreakdownLine,
@@ -34,6 +33,8 @@ export type CartItemResponse = {
   originalUnitPrice: number;
   /** Effective unit price per piece (after free-mode color discount). */
   unitPrice: number;
+  /** Price of one pack step (`unitPrice × unitsPerPack`); null when not a pack. */
+  packPrice: number | null;
   variant: Record<string, string> | null;
   variantKey: string;
   product: CartItemProductResponse;
@@ -120,7 +121,6 @@ export function toCartItemResponse(item: CartItemWithProduct): CartItemResponse 
       ? (item.variant as Record<string, string>)
       : null;
 
-  const rule = parseSaleRuleStored(product.saleRule);
   const resolved = resolveCartSale(product.saleRule, product.variants, variant);
   const perPack = resolved.type === 'pack' ? resolved.unitsPerPack : null;
   const breakdown =
@@ -135,7 +135,7 @@ export function toCartItemResponse(item: CartItemWithProduct): CartItemResponse 
     product.price,
     product.variants,
     variant,
-    rule,
+    product.saleRule,
   );
   const lineTotal = unitPrice * totalPieces;
   const available = product.available && product.deletedAt === null;
@@ -154,6 +154,7 @@ export function toCartItemResponse(item: CartItemWithProduct): CartItemResponse 
     breakdown,
     originalUnitPrice,
     unitPrice,
+    packPrice: perPack !== null ? unitPrice * perPack : null,
     variant,
     variantKey: item.variantKey,
     product: {

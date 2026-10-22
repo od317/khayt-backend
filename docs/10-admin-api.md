@@ -824,7 +824,9 @@ Units: `قطعة` | `متر` | `طقم` | `دورة`
 **Per-color size rules (same product):** on each `variants.options[]` color, optional `sizePack: { sizes, qtyPerSize }`.  
 - No `sizePack` → buyer picks `{ color, size }` (optional `discountPercent` on that color).  
 - With `sizePack` → buyer sends `{ color }` only; qty = packs.  
-`colorImages[]` exposes `sizeMode` (`free`|`pack`), `sizePack`, `unitsPerPack`, `originalPrice`, `price`.
+`colorImages[]` exposes `sizeMode` (`free`|`pack`), `sizePack`, `unitsPerPack`, `packPrice`, `originalPrice`, `price`.
+
+**`packPrice`:** product-level when `saleCase` is `color_size_pack` / `color_pair_pack` (`price × unitsPerPack`); null for free/mixed/locked. For `mixed`, use each color’s `colorImages[].packPrice`. Also on cart lines when the line is a pack.
 
 **Product `saleRule`:** `null` for `free`/`mixed`. Product-wide modes:
 
@@ -832,7 +834,7 @@ Units: `قطعة` | `متر` | `طقم` | `دورة`
 |------|------------|-------------|---------------|
 | `locked_axis` | `{ "mode":"locked_axis", "lockedAxis":"color"\|"size" }` or legacy `{ "lockedAxis":… }` | unlocked axis only | pieces |
 | `color_size_pack` | all colors forced to one pack | `color` only | packs |
-| `color_pair_pack` | + `allowedPairColors` | `color` + `pairColor` | packs |
+| `color_pair_pack` | + `pairWith` (first→seconds) or legacy `allowedPairColors` | `color` + `pairColor` | packs |
 
 Pack checkout expands into one order line per color+size. FE lists products via `GET /api/products` only (ids are normal product ids).
 

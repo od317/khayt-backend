@@ -68,6 +68,7 @@ describe('toColorImages', () => {
         sizeMode: 'free',
         sizePack: null,
         unitsPerPack: null,
+        packPrice: null,
       },
       {
         name: 'أزرق',
@@ -80,6 +81,7 @@ describe('toColorImages', () => {
         sizeMode: 'free',
         sizePack: null,
         unitsPerPack: null,
+        packPrice: null,
       },
     ]);
   });
@@ -114,6 +116,7 @@ describe('toColorImages', () => {
       sizeMode: 'pack',
       sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 1 },
       unitsPerPack: 3,
+      packPrice: 30000,
       discountPercent: null,
       price: 10000,
     });
@@ -122,6 +125,7 @@ describe('toColorImages', () => {
       sizeMode: 'free',
       sizePack: null,
       unitsPerPack: null,
+      packPrice: null,
       discountPercent: 10,
       price: 9000,
     });
@@ -147,6 +151,8 @@ describe('toProductResponse', () => {
       category: 'قمصان',
       price: 5000,
       supplierBusinessId: null,
+      saleCase: 'free',
+      packPrice: null,
       saleRule: null,
     });
     expect(result).not.toHaveProperty('businessId');
@@ -180,12 +186,56 @@ describe('toProductResponse', () => {
     });
 
     expect(result.saleCase).toBe('locked_axis');
+    expect(result.packPrice).toBeNull();
     expect(result.saleRule).toEqual({
       mode: 'locked_axis',
       lockedAxis: 'color',
       label: 'لون',
       options: ['أحمر', 'أزرق', 'أبيض'],
       optionCount: 3,
+    });
+  });
+
+  it('exposes product packPrice and pairWith for color_pair_pack', () => {
+    const result = toProductResponse({
+      ...baseProduct(),
+      price: 45000,
+      saleRule: {
+        mode: 'color_pair_pack',
+        sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 5 },
+        pairWith: { أحمر: ['أسود'], أزرق: ['أسود'] },
+      },
+      variants: {
+        axes: [
+          { key: 'color', label: 'لون' },
+          { key: 'size', label: 'قياس' },
+        ],
+        options: [
+          {
+            name: 'أحمر',
+            children: [{ name: 'M' }, { name: 'L' }, { name: 'XL' }],
+          },
+          {
+            name: 'أزرق',
+            children: [{ name: 'M' }, { name: 'L' }, { name: 'XL' }],
+          },
+          {
+            name: 'أسود',
+            children: [{ name: 'M' }, { name: 'L' }, { name: 'XL' }],
+          },
+        ],
+      },
+    });
+
+    expect(result.saleCase).toBe('color_pair_pack');
+    expect(result.packPrice).toBe(1350000);
+    expect(result.saleRule).toEqual({
+      mode: 'color_pair_pack',
+      sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 5 },
+      pairWith: { أحمر: ['أسود'], أزرق: ['أسود'] },
+      allowedPairColors: ['أسود'],
+      unitsPerPack: 30,
+      packPrice: 1350000,
     });
   });
 });

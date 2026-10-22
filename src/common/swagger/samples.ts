@@ -129,6 +129,7 @@ export const sampleProduct = {
     | 'color_size_pack'
     | 'color_pair_pack'
     | 'locked_axis',
+  packPrice: null as number | null,
   saleRule: {
     mode: 'locked_axis',
     lockedAxis: 'color',
@@ -147,12 +148,15 @@ export const sampleProduct = {
         mode: 'color_size_pack';
         sizePack: { sizes: string[]; qtyPerSize: number };
         unitsPerPack: number;
+        packPrice: number;
       }
     | {
         mode: 'color_pair_pack';
         sizePack: { sizes: string[]; qtyPerSize: number };
+        pairWith: Record<string, string[]>;
         allowedPairColors: string[];
         unitsPerPack: number;
+        packPrice: number;
       }
     | null,
   createdAt: AT,

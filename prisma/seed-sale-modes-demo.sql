@@ -2,7 +2,7 @@
 --
 -- prod-sale-free   — free color+size; أحمر 10% discount
 -- prod-sale-mixed  — أحمر free+discount, أسود admin sizePack (same product)
--- prod-sale-pair   — saleRule color_pair_pack
+-- prod-sale-pair   — saleRule color_pair_pack (pairWith: second color = أسود only)
 -- prod-sale-locked — saleRule locked_axis (color)
 
 WITH imgs AS (
@@ -168,7 +168,10 @@ CROSS JOIN LATERAL (
         'sizes', jsonb_build_array('M', 'L', 'XL'),
         'qtyPerSize', 5
       ),
-      'allowedPairColors', jsonb_build_array('أسود', 'أزرق')
+      'pairWith', jsonb_build_object(
+        'أحمر', jsonb_build_array('أسود'),
+        'أزرق', jsonb_build_array('أسود')
+      )
     )
   ),
   (
@@ -214,6 +217,23 @@ CROSS JOIN LATERAL (
   )
 ) AS v(id, name, description, variants, sale_rule)
 ON CONFLICT (id) DO NOTHING;
+
+-- Refresh pair demo so re-runs pick up pairWith (second color = أسود only).
+UPDATE "Product"
+SET
+  "saleRule" = jsonb_build_object(
+    'mode', 'color_pair_pack',
+    'sizePack', jsonb_build_object(
+      'sizes', jsonb_build_array('M', 'L', 'XL'),
+      'qtyPerSize', 5
+    ),
+    'pairWith', jsonb_build_object(
+      'أحمر', jsonb_build_array('أسود'),
+      'أزرق', jsonb_build_array('أسود')
+    )
+  ),
+  "updatedAt" = NOW()
+WHERE id = 'prod-sale-pair';
 
 INSERT INTO "Supply" (id, "productId", sent, remaining, "unitPrice", "updatedAt")
 SELECT 'supply-' || id, id, 200, 120, 37000, NOW()

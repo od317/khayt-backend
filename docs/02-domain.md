@@ -165,7 +165,7 @@ Do not use one for the other.
 | colors    | jsonb    | `[{ name, hex, image, sizes[] }]`         |
 | sizes     | string[] | when colors are absent                    |
 | packaging | jsonb    | `{ onlyPackage, unitsPerPackage, label }` |
-| saleRule  | jsonb    | Sale mode: `null` free; `locked_axis`; `color_size_pack` (+ sizePack); `color_pair_pack` (+ sizePack, allowedPairColors). Legacy `{ lockedAxis }` = locked_axis |
+| saleRule  | jsonb    | Sale mode: `null` free; `locked_axis`; `color_size_pack` (+ sizePack); `color_pair_pack` (+ sizePack, `pairWith` or legacy `allowedPairColors`). Legacy `{ lockedAxis }` = locked_axis |
 | discount  | jsonb    | `{ percent, originalPrice }`              |
 | offer     | string   | free-text promotion                       |
 

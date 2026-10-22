@@ -69,7 +69,7 @@ describe('sale-rule', () => {
     });
   });
 
-  it('builds pack mode responses with unitsPerPack', () => {
+  it('builds pack mode responses with unitsPerPack and packPrice', () => {
     expect(
       toSaleRuleResponse(
         {
@@ -77,20 +77,42 @@ describe('sale-rule', () => {
           sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 1 },
         },
         colorSizeTree,
+        45000,
       ),
     ).toEqual({
       mode: 'color_size_pack',
       sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 1 },
       unitsPerPack: 3,
+      packPrice: 135000,
     });
 
     expect(
       unitsPerPack({
         mode: 'color_pair_pack',
         sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 5 },
-        allowedPairColors: ['أسود'],
+        pairWith: {},
+        legacyAllowedPairColors: ['أسود'],
       }),
     ).toBe(30);
+
+    expect(
+      toSaleRuleResponse(
+        {
+          mode: 'color_pair_pack',
+          sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 5 },
+          pairWith: { أحمر: ['أسود'], أزرق: ['أسود'] },
+        },
+        colorSizeTree,
+        45000,
+      ),
+    ).toEqual({
+      mode: 'color_pair_pack',
+      sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 5 },
+      pairWith: { أحمر: ['أسود'], أزرق: ['أسود'] },
+      allowedPairColors: ['أسود'],
+      unitsPerPack: 30,
+      packPrice: 1350000,
+    });
   });
 
   it('rejects saleRule when the axis is missing from variants', () => {
@@ -171,11 +193,11 @@ describe('sale-rule', () => {
     ).toThrow(HttpException);
   });
 
-  it('validates color_pair_pack cart variant', () => {
+  it('validates color_pair_pack cart variant with pairWith', () => {
     const rule = {
       mode: 'color_pair_pack',
       sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 5 },
-      allowedPairColors: ['أسود', 'أزرق'],
+      pairWith: { أحمر: ['أسود'], أزرق: ['أسود'] },
     };
     expect(() =>
       assertCartVariantForSaleMode(rule, colorSizeTree, {
@@ -186,16 +208,40 @@ describe('sale-rule', () => {
     expect(() =>
       assertCartVariantForSaleMode(rule, colorSizeTree, {
         color: 'أحمر',
-        pairColor: 'وردي',
+        pairColor: 'أزرق',
       }),
     ).toThrow(HttpException);
+    expect(() =>
+      assertCartVariantForSaleMode(rule, colorSizeTree, {
+        color: 'أسود',
+        pairColor: 'أحمر',
+      }),
+    ).toThrow(HttpException);
+  });
+
+  it('expands legacy allowedPairColors into pairWith', () => {
+    const rule = parseSaleRuleStored({
+      mode: 'color_pair_pack',
+      sizePack: { sizes: ['M', 'L'], qtyPerSize: 1 },
+      allowedPairColors: ['أسود'],
+    });
+    expect(rule).toMatchObject({
+      mode: 'color_pair_pack',
+      legacyAllowedPairColors: ['أسود'],
+    });
+    expect(() =>
+      assertCartVariantForSaleMode(rule, colorSizeTree, {
+        color: 'أحمر',
+        pairColor: 'أسود',
+      }),
+    ).not.toThrow();
   });
 
   it('builds pack breakdown for color_pair_pack', () => {
     const rule = parseSaleRuleStored({
       mode: 'color_pair_pack',
       sizePack: { sizes: ['M', 'XL'], qtyPerSize: 5 },
-      allowedPairColors: ['أسود'],
+      pairWith: { أحمر: ['أسود'] },
     });
     expect(
       buildPackBreakdown(rule, { color: 'أحمر', pairColor: 'أسود' }, 1),
@@ -231,7 +277,7 @@ describe('sale-rule', () => {
         {
           mode: 'color_pair_pack',
           sizePack: { sizes: ['M'], qtyPerSize: 1 },
-          allowedPairColors: ['أسود'],
+          pairWith: { أحمر: ['أسود'] },
         },
         colorSizeTree,
       ),

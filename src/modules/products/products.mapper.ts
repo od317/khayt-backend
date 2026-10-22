@@ -1,6 +1,7 @@
 import { Product } from '@prisma/client';
 import {
   parseSizePack,
+  productPackPrice,
   resolveProductSaleCase,
   sizePackUnits,
   SaleRuleResponse,
@@ -31,6 +32,8 @@ export type ColorImagesResponse = {
   sizePack: SizePack | null;
   /** Pieces in one pack for this color; null when free. */
   unitsPerPack: number | null;
+  /** Set price for this color’s pack (`price × unitsPerPack`); null when free. */
+  packPrice: number | null;
 };
 
 export type ProductResponse = {
@@ -57,6 +60,12 @@ export type ProductResponse = {
    * Prefer this over inferring from saleRule + colorImages.
    */
   saleCase: ProductSaleCase;
+  /**
+   * Set/pack price when the whole product uses one pack rule
+   * (`color_size_pack` / `color_pair_pack`). Null for free/mixed/locked.
+   * For mixed, use each color’s `colorImages[].packPrice`.
+   */
+  packPrice: number | null;
   /**
    * Detailed sale rule payload (null when saleCase is free/mixed from per-color only).
    */
@@ -133,6 +142,9 @@ export function toColorImages(
         sizeMode,
         sizePack,
         unitsPerPack: sizePack ? sizePackUnits(sizePack, 1) : null,
+        packPrice: sizePack
+          ? price * sizePackUnits(sizePack, 1)
+          : null,
       },
     ];
   });
@@ -157,7 +169,16 @@ export function toProductResponse(product: Product): ProductResponse {
     discount: product.discount,
     offer: product.offer,
     saleCase: resolveProductSaleCase(product.saleRule, product.variants),
-    saleRule: toSaleRuleResponse(product.saleRule, product.variants),
+    packPrice: productPackPrice(
+      product.saleRule,
+      product.variants,
+      product.price,
+    ),
+    saleRule: toSaleRuleResponse(
+      product.saleRule,
+      product.variants,
+      product.price,
+    ),
     createdAt: product.createdAt.toISOString(),
   };
 }

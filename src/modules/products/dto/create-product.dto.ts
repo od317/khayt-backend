@@ -8,6 +8,7 @@ import {
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -230,9 +231,19 @@ export class ProductSaleRuleDto {
   sizePack?: ProductSizePackDto;
 
   @ApiPropertyOptional({
+    example: { أسود: ['أزرق', 'رمادي'] },
+    description:
+      'color_pair_pack: map of first color → allowed second colors (e.g. second only with black).',
+  })
+  @IsOptional()
+  @IsObject()
+  pairWith?: Record<string, string[]>;
+
+  @ApiPropertyOptional({
     type: [String],
     example: ['أسود', 'أزرق'],
-    description: 'Required for color_pair_pack: allowed second colors.',
+    description:
+      'Legacy flat list for color_pair_pack. Prefer `pairWith`. Still accepted.',
   })
   @IsOptional()
   @IsArray()
