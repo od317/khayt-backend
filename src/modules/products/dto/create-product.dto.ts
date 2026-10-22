@@ -56,6 +56,28 @@ export class ProductVariantLeafDto {
   hex?: string;
 }
 
+/** Must be declared before any DTO that references it (emitDecoratorMetadata TDZ). */
+export class ProductSizePackDto {
+  @ApiProperty({
+    type: [String],
+    example: ['M', 'L', 'XL'],
+    description: 'Sizes included in every pack (admin-forced).',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  sizes!: string[];
+
+  @ApiProperty({
+    example: 5,
+    description: 'Same qty of each size in the pack (Option A).',
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  qtyPerSize!: number;
+}
+
 export class ProductVariantOptionDto {
   @ApiProperty({ example: 'أحمر' })
   @IsString()
@@ -89,6 +111,7 @@ export class ProductVariantOptionDto {
   images?: string[];
 
   @ApiPropertyOptional({
+    type: () => ProductSizePackDto,
     description:
       'When set, this color forces admin sizes (buyer picks color only). When omitted, buyer picks size freely for this color. Same product can mix both.',
   })
@@ -103,27 +126,6 @@ export class ProductVariantOptionDto {
   @ValidateNested({ each: true })
   @Type(() => ProductVariantLeafDto)
   children?: ProductVariantLeafDto[];
-}
-
-export class ProductSizePackDto {
-  @ApiProperty({
-    type: [String],
-    example: ['M', 'L', 'XL'],
-    description: 'Sizes included in every pack (admin-forced).',
-  })
-  @IsArray()
-  @ArrayMinSize(1)
-  @IsString({ each: true })
-  sizes!: string[];
-
-  @ApiProperty({
-    example: 5,
-    description: 'Same qty of each size in the pack (Option A).',
-  })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  qtyPerSize!: number;
 }
 
 export class ProductVariantAxisDto {
