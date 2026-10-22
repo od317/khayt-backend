@@ -67,6 +67,17 @@ export class ProductVariantOptionDto {
   hex?: string;
 
   @ApiPropertyOptional({
+    example: 10,
+    description:
+      'Only when this color has free size pick (no sizePack): percent off unit price.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  discountPercent?: number;
+
+  @ApiPropertyOptional({
     type: [String],
     description:
       'Optional. Prefer uploading files as variant_0, variant_0_img_1, … — stored as images[] on the color option.',
@@ -76,12 +87,42 @@ export class ProductVariantOptionDto {
   @IsString({ each: true })
   images?: string[];
 
+  @ApiPropertyOptional({
+    description:
+      'When set, this color forces admin sizes (buyer picks color only). When omitted, buyer picks size freely for this color. Same product can mix both.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProductSizePackDto)
+  sizePack?: ProductSizePackDto;
+
   @ApiPropertyOptional({ type: () => [ProductVariantLeafDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ProductVariantLeafDto)
   children?: ProductVariantLeafDto[];
+}
+
+export class ProductSizePackDto {
+  @ApiProperty({
+    type: [String],
+    example: ['M', 'L', 'XL'],
+    description: 'Sizes included in every pack (admin-forced).',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  sizes!: string[];
+
+  @ApiProperty({
+    example: 5,
+    description: 'Same qty of each size in the pack (Option A).',
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  qtyPerSize!: number;
 }
 
 export class ProductVariantAxisDto {
@@ -156,18 +197,47 @@ export class ProductPackagingDto {
 }
 
 /**
- * When set, quantity 1 buys every option of this axis (e.g. all 3 colors).
- * The buyer cannot pick that axis in the cart.
+ * Sale mode on the product. Omit / null = free (buyer picks color + size).
+ *
+ * - `locked_axis` (or legacy `{ lockedAxis }` only): buyer cannot pick that axis; qty 1 includes all its options.
+ * - `color_size_pack`: buyer picks color only; sizes come from sizePack.
+ * - `color_pair_pack`: buyer picks color + pairColor; sizes from sizePack; both colors get the same pack.
  */
 export class ProductSaleRuleDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
+    enum: ['locked_axis', 'color_size_pack', 'color_pair_pack'],
+    example: 'color_size_pack',
+    description:
+      'Omit with only lockedAxis for legacy locked-axis products. Pack modes require sizePack.',
+  })
+  @IsOptional()
+  @IsIn(['locked_axis', 'color_size_pack', 'color_pair_pack'])
+  mode?: 'locked_axis' | 'color_size_pack' | 'color_pair_pack';
+
+  @ApiPropertyOptional({
     enum: ['color', 'size'],
     example: 'color',
-    description:
-      'Axis sold as a full set. `color` = all colors together; `size` = all sizes together. Must exist on `variants.axes`.',
+    description: 'Required for locked_axis (also accepted alone as legacy shape).',
   })
+  @IsOptional()
   @IsIn(['color', 'size'])
-  lockedAxis!: 'color' | 'size';
+  lockedAxis?: 'color' | 'size';
+
+  @ApiPropertyOptional({ type: () => ProductSizePackDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProductSizePackDto)
+  sizePack?: ProductSizePackDto;
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['أسود', 'أزرق'],
+    description: 'Required for color_pair_pack: allowed second colors.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowedPairColors?: string[];
 }
 
 export class ProductDiscountDto {
@@ -230,7 +300,7 @@ export class CreateProductDto {
   @ApiPropertyOptional({
     type: () => ProductSaleRuleDto,
     description:
-      'Optional. Lock color or size so qty 1 includes every option of that axis; buyer cannot pick it.',
+      'Optional sale mode: locked_axis | color_size_pack | color_pair_pack. Null/omit = free pick.',
   })
   @IsOptional()
   @Transform(nestedJson(ProductSaleRuleDto))

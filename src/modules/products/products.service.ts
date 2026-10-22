@@ -16,6 +16,7 @@ import { ProductResponse, toProductResponse } from './products.mapper';
 import { applyVariantImageFiles, galleryPaths } from './product-uploads';
 import {
   assertSaleRuleMatchesVariants,
+  assertVariantColorSizePacks,
   parseSaleRuleStored,
 } from './sale-rule';
 
@@ -234,9 +235,15 @@ export class ProductsService {
     const uploaded = galleryPaths(files ?? []);
     const variants = applyVariantImageFiles(dto.variants, files ?? []);
 
+    if (variants) {
+      assertVariantColorSizePacks(variants);
+    }
     if (dto.saleRule) {
       assertSaleRuleMatchesVariants(dto.saleRule, variants);
     }
+    const storedSaleRule = dto.saleRule
+      ? parseSaleRuleStored(dto.saleRule)
+      : null;
 
     const product = await this.prisma.product.create({
       data: {
@@ -253,7 +260,7 @@ export class ProductsService {
         packaging: dto.packaging ? toJson(dto.packaging) : Prisma.JsonNull,
         discount: dto.discount ? toJson(dto.discount) : Prisma.JsonNull,
         offer: dto.offer ?? null,
-        saleRule: dto.saleRule ? toJson(dto.saleRule) : Prisma.JsonNull,
+        saleRule: storedSaleRule ? toJson(storedSaleRule) : Prisma.JsonNull,
       },
     });
 
@@ -292,10 +299,17 @@ export class ProductsService {
       dto.variants !== undefined ? variants : existing.variants;
     const effectiveSaleRule =
       dto.saleRule !== undefined
-        ? dto.saleRule
+        ? dto.saleRule === null
+          ? null
+          : parseSaleRuleStored(dto.saleRule)
         : parseSaleRuleStored(existing.saleRule);
 
-    if (effectiveSaleRule) {
+    if (effectiveVariants) {
+      assertVariantColorSizePacks(effectiveVariants);
+    }
+    if (dto.saleRule !== undefined && dto.saleRule !== null) {
+      assertSaleRuleMatchesVariants(dto.saleRule, effectiveVariants);
+    } else if (effectiveSaleRule) {
       assertSaleRuleMatchesVariants(effectiveSaleRule, effectiveVariants);
     }
 
@@ -312,8 +326,12 @@ export class ProductsService {
     if (dto.offer !== undefined) data.offer = dto.offer;
     if (dto.guarantee !== undefined) data.guarantee = dto.guarantee;
     if (dto.saleRule !== undefined) {
-      data.saleRule =
-        dto.saleRule === null ? Prisma.JsonNull : toJson(dto.saleRule);
+      if (dto.saleRule === null) {
+        data.saleRule = Prisma.JsonNull;
+      } else {
+        const stored = parseSaleRuleStored(dto.saleRule);
+        data.saleRule = stored ? toJson(stored) : Prisma.JsonNull;
+      }
     }
     if (dto.supplierBusinessId !== undefined) {
       data.supplier =

@@ -80,8 +80,10 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 | `supplierBusinessId` | yes |
 | `offer` | yes |
 | `colorImages[].hex` | yes |
+| `colorImages[].discountPercent` | yes — null when that color has no discount |
+| `colorImages[].originalPrice` / `colorImages[].price` | no — always set (`price` = discounted or same as original) |
 | `id`, `name`, `category`, `images[]`, `unit`, `price`, `inWarehouse`, `available`, `guarantee`, `variants`, `colorImages[]`, `packaging`, `discount`, `createdAt` | no |
-| **`saleRule`** | **yes** — `null` when the product is sold with normal per-option picking; otherwise `{ lockedAxis, label, options[], optionCount }` |
+| **`saleRule`** | **yes** — `null` = free pick (color+size). Else one of: `locked_axis` (`mode`, `lockedAxis`, `label`, `options[]`, `optionCount`), `color_size_pack` (`mode`, `sizePack`, `unitsPerPack`), `color_pair_pack` (+ `allowedPairColors`) |
 
 ### PostResponse
 
@@ -126,6 +128,9 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 | `variant` | yes |
 | `unavailableReason` | yes |
 | `product.variantImage` | yes |
+| `unitsPerPack` | yes — `null` for free / locked_axis (quantity is pieces) |
+| `breakdown` | yes — `null` unless pack mode |
+| `originalUnitPrice` / `unitPrice` | no — list price vs effective (after color discount in free mode) |
 
 ### OrderListItemResponse
 
@@ -305,7 +310,7 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 
 - **Response can be null:** `product` → ProductResponse nullables
 - **Request optional:** all product fields  
-- **Request nullable:** `supplierBusinessId` (`null` clears the workshop link); `saleRule` (`null` clears the locked-axis rule)
+- **Request nullable:** `supplierBusinessId` (`null` clears the workshop link); `saleRule` (`null` clears sale mode → free pick)
 
 ### DELETE `/api/products/:id`
 

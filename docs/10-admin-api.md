@@ -799,6 +799,7 @@ Public browse endpoints (`GET /products`, `GET /products/:id`, similar) are **no
   "discount": null,
   "offer": null,
   "saleRule": {
+    "mode": "locked_axis",
     "lockedAxis": "color",
     "label": "لون",
     "options": ["أحمر", "أزرق", "أبيض"],
@@ -810,7 +811,20 @@ Public browse endpoints (`GET /products`, `GET /products/:id`, similar) are **no
 
 Units: `قطعة` | `متر` | `طقم` | `دورة`
 
-**`saleRule`:** `null` for normal picking. When set, qty **1** buys **every** option of `lockedAxis` (`color` or `size`); the app must **not** let the user pick that axis. The other axis (if any) stays selectable. Admin sets it as `{ "lockedAxis": "color" }` (or `"size"`); the API expands `label` / `options` / `optionCount` from `variants`.
+**Per-color size rules (same product):** on each `variants.options[]` color, optional `sizePack: { sizes, qtyPerSize }`.  
+- No `sizePack` → buyer picks `{ color, size }` (optional `discountPercent` on that color).  
+- With `sizePack` → buyer sends `{ color }` only; qty = packs.  
+`colorImages[]` exposes `sizeMode` (`free`|`pack`), `sizePack`, `unitsPerPack`, `originalPrice`, `price`.
+
+**Product `saleRule`:** `null` for normal/per-color rules. Product-wide modes:
+
+| mode | Admin sets | Buyer picks | Cart quantity |
+|------|------------|-------------|---------------|
+| `locked_axis` | `{ "mode":"locked_axis", "lockedAxis":"color"\|"size" }` or legacy `{ "lockedAxis":… }` | unlocked axis only | pieces |
+| `color_size_pack` | all colors forced to one pack | `color` only | packs |
+| `color_pair_pack` | + `allowedPairColors` | `color` + `pairColor` | packs |
+
+Pack checkout expands into one order line per color+size. FE lists products via `GET /api/products` only (ids are normal product ids).
 
 ### `GET /products/names`
 
@@ -818,14 +832,14 @@ Units: `قطعة` | `متر` | `طقم` | `دورة`
 
 ### `POST /products` — `multipart/form-data`
 
-**Fields:** `name`, `category`, `unit`, `price` (required); `description?`, `variants?` (JSON string), `packaging?`, `saleRule?` (JSON `{ "lockedAxis": "color"|"size" }`), `discount?`, `offer?`, `guarantee?`, `supplierBusinessId?`  
+**Fields:** `name`, `category`, `unit`, `price` (required); `description?`, `variants?` (JSON string), `packaging?`, `saleRule?` (JSON sale mode), `discount?`, `offer?`, `guarantee?`, `supplierBusinessId?`  
 **Files:** `images` (≤8), plus variant file fields (`variant_<i>`, …)
 
 **Response:** `{ "product": { /* ProductResponse */ } }`
 
 ### `PATCH /products/:id` — `multipart/form-data`
 
-Same fields as create, all optional. Pass `saleRule: null` to clear the rule.
+Same fields as create, all optional. Pass `saleRule: null` to clear (free pick).
 
 **Response:** `{ "product": { /* ProductResponse */ } }`
 

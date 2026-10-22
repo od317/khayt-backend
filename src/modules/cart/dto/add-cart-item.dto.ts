@@ -23,7 +23,7 @@ export class AddCartItemDto {
     @ApiPropertyOptional({
         example: { color: 'أبيض', size: 'L' },
         description:
-            'Selected variant options for the product. Keys match the product variant axes.',
+            'Per color: free size → `{ color, size }`; color with sizePack → `{ color }` only (qty = packs). Product color_pair_pack → `{ color, pairColor }`. locked_axis → unlocked axis only.',
     })
     @IsOptional()
     @IsObject()

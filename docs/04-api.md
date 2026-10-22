@@ -166,6 +166,12 @@ Soft delete. Fails if the product has been ordered.
 
 text
 
+**saleRule modes** (on Product): `null` = free pick color+size (optional `discountPercent` on a color option).  
+`locked_axis` | `color_size_pack` | `color_pair_pack` — see admin API / nullability docs.  
+Cart: pack modes store **packs** in `quantity`; response includes `unitsPerPack`, `totalPieces`, `breakdown`. Checkout expands packs into one order line per color+size.
+
+text
+
 ---
 
 ## 4. Posts

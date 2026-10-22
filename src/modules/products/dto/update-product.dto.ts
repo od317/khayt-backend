@@ -71,7 +71,7 @@ export class UpdateProductDto {
     type: () => ProductSaleRuleDto,
     nullable: true,
     description:
-      'Lock color or size as a full set. Pass null to clear. Must match variants.axes.',
+      'Sale mode (locked_axis | color_size_pack | color_pair_pack). Pass null to clear (free pick).',
   })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => {

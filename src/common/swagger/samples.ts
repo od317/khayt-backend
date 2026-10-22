@@ -112,22 +112,41 @@ export const sampleProduct = {
         '/uploads/products/red.jpg',
         '/uploads/products/red-2.jpg',
       ],
+      originalPrice: 0,
+      price: 0,
+      discountPercent: null as number | null,
+      sizeMode: 'free' as 'free' | 'pack',
+      sizePack: null as { sizes: string[]; qtyPerSize: number } | null,
+      unitsPerPack: null as number | null,
     },
   ],
   packaging: null as unknown,
   discount: null as unknown,
   offer: null as string | null,
   saleRule: {
+    mode: 'locked_axis',
     lockedAxis: 'color',
     label: 'لون',
     options: ['أحمر'],
     optionCount: 1,
   } as
     | {
+        mode: 'locked_axis';
         lockedAxis: 'color' | 'size';
         label: string;
         options: string[];
         optionCount: number;
+      }
+    | {
+        mode: 'color_size_pack';
+        sizePack: { sizes: string[]; qtyPerSize: number };
+        unitsPerPack: number;
+      }
+    | {
+        mode: 'color_pair_pack';
+        sizePack: { sizes: string[]; qtyPerSize: number };
+        allowedPairColors: string[];
+        unitsPerPack: number;
       }
     | null,
   createdAt: AT,

@@ -1,7 +1,10 @@
 import { Product } from '@prisma/client';
 import {
+  parseSizePack,
+  sizePackUnits,
   SaleRuleResponse,
   toSaleRuleResponse,
+  type SizePack,
 } from './sale-rule';
 
 export type ColorImagesResponse = {
@@ -11,6 +14,21 @@ export type ColorImagesResponse = {
   image: string;
   /** All images for this color — FE switches gallery when color changes. */
   images: string[];
+  /** Product list price (before this color’s discount). */
+  originalPrice: number;
+  /** Price after color `discountPercent` (same as originalPrice when none). */
+  price: number;
+  /** Free-size color discount; null when none. */
+  discountPercent: number | null;
+  /**
+   * `free` = buyer picks size for this color.
+   * `pack` = admin sizePack; buyer must not send size.
+   */
+  sizeMode: 'free' | 'pack';
+  /** Present when sizeMode is pack. */
+  sizePack: SizePack | null;
+  /** Pieces in one pack for this color; null when free. */
+  unitsPerPack: number | null;
 };
 
 export type ProductResponse = {
@@ -33,8 +51,8 @@ export type ProductResponse = {
   discount: unknown;
   offer: string | null;
   /**
-   * When set, qty 1 buys every option of `lockedAxis` (e.g. all 3 colors).
-   * Frontend must not let the user pick that axis.
+   * Sale mode for the FE picker / cart.
+   * null = free (pick color + size). See SaleRuleResponse modes.
    */
   saleRule: SaleRuleResponse | null;
   createdAt: string;
@@ -45,6 +63,8 @@ type VariantOptionLike = {
   hex?: unknown;
   image?: unknown;
   images?: unknown;
+  discountPercent?: unknown;
+  sizePack?: unknown;
 };
 
 type VariantTreeLike = {
@@ -52,7 +72,18 @@ type VariantTreeLike = {
   options?: VariantOptionLike[];
 };
 
-export function toColorImages(variants: unknown): ColorImagesResponse[] {
+function colorDiscountPercent(option: VariantOptionLike): number | null {
+  const pct = option.discountPercent;
+  if (typeof pct !== 'number' || !Number.isFinite(pct) || pct <= 0 || pct > 100) {
+    return null;
+  }
+  return Math.round(pct);
+}
+
+export function toColorImages(
+  variants: unknown,
+  basePrice = 0,
+): ColorImagesResponse[] {
   if (!variants || typeof variants !== 'object') return [];
   const tree = variants as VariantTreeLike;
   const firstAxis = tree.axes?.[0]?.key;
@@ -73,6 +104,16 @@ export function toColorImages(variants: unknown): ColorImagesResponse[] {
     if (!primary) return [];
 
     const images = fromImages.length > 0 ? fromImages : [primary];
+    const sizePack = parseSizePack(option.sizePack);
+    const sizeMode = sizePack ? ('pack' as const) : ('free' as const);
+    // Color discount only meaningful when the buyer picks size freely.
+    const discountPercent =
+      sizeMode === 'free' ? colorDiscountPercent(option) : null;
+    const originalPrice = basePrice;
+    const price =
+      discountPercent === null
+        ? originalPrice
+        : Math.round(originalPrice * (1 - discountPercent / 100));
 
     return [
       {
@@ -80,6 +121,12 @@ export function toColorImages(variants: unknown): ColorImagesResponse[] {
         hex: typeof option.hex === 'string' ? option.hex : null,
         image: primary,
         images,
+        originalPrice,
+        price,
+        discountPercent,
+        sizeMode,
+        sizePack,
+        unitsPerPack: sizePack ? sizePackUnits(sizePack, 1) : null,
       },
     ];
   });
@@ -99,7 +146,7 @@ export function toProductResponse(product: Product): ProductResponse {
     guarantee: product.guarantee,
     supplierBusinessId: product.supplierBusinessId ?? null,
     variants: product.variants,
-    colorImages: toColorImages(product.variants),
+    colorImages: toColorImages(product.variants, product.price),
     packaging: product.packaging,
     discount: product.discount,
     offer: product.offer,

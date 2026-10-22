@@ -299,8 +299,10 @@ model Product {
   packaging Json?
   discount  Json?
   offer     String?
-  /// When set, qty 1 buys all options of this axis (buyer cannot pick that axis).
-  /// Shape: `{ "lockedAxis": "color" | "size" }`.
+  /// Sale mode JSON. null = free (pick color+size).
+  /// locked_axis: `{ "mode":"locked_axis", "lockedAxis":"color"|"size" }` (legacy: `{ "lockedAxis" }` only).
+  /// color_size_pack: `{ "mode":"color_size_pack", "sizePack": { "sizes": string[], "qtyPerSize": number } }`.
+  /// color_pair_pack: same + `"allowedPairColors": string[]`.
   saleRule  Json?
 
   supplier       Business?       @relation(fields: [supplierBusinessId], references: [id])

@@ -22,7 +22,11 @@ import {
 import { OrdersService } from '../orders/orders.service';
 import { OrderDetailResponse } from '../orders/orders.mapper';
 import { CheckoutDto } from './dto/checkout.dto';
-import { assertCartVariantAllowsSaleRule } from '../products/sale-rule';
+import {
+    assertCartVariantForSaleMode,
+    buildBreakdownFromResolved,
+    resolveCartSale,
+} from '../products/sale-rule';
 
 const MAX_CART_ITEMS = 100;
 const MAX_QUANTITY_PER_ITEM = 10000;
@@ -93,7 +97,11 @@ export class CartService {
         }
 
         const variant = dto.variant ?? null;
-        assertCartVariantAllowsSaleRule(product.saleRule, variant);
+        assertCartVariantForSaleMode(
+            product.saleRule,
+            product.variants,
+            variant,
+        );
         const variantKey = buildVariantKey(variant);
 
         // Enforce the max items per cart.
@@ -235,6 +243,8 @@ export class CartService {
                         id: true,
                         deletedAt: true,
                         available: true,
+                        saleRule: true,
+                        variants: true,
                     },
                 },
             },
@@ -266,16 +276,46 @@ export class CartService {
         }
 
         // 3. Map cart items → CreateOrderDto lines.
-        const lines = cartItems.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            variant:
+        //    Pack modes expand into one order line per color+size.
+        const lines: {
+            productId: string;
+            quantity: number;
+            variant?: Record<string, string>;
+        }[] = [];
+
+        for (const item of cartItems) {
+            const variant =
                 item.variant &&
-                    typeof item.variant === 'object' &&
-                    !Array.isArray(item.variant)
+                typeof item.variant === 'object' &&
+                !Array.isArray(item.variant)
                     ? (item.variant as Record<string, string>)
-                    : undefined,
-        }));
+                    : null;
+            const resolved = resolveCartSale(
+                item.product.saleRule,
+                item.product.variants,
+                variant,
+            );
+
+            if (resolved.type === 'pack') {
+                const breakdown = buildBreakdownFromResolved(
+                    resolved,
+                    item.quantity,
+                );
+                for (const row of breakdown) {
+                    lines.push({
+                        productId: item.productId,
+                        quantity: row.qty,
+                        variant: { color: row.color, size: row.size },
+                    });
+                }
+            } else {
+                lines.push({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    variant: variant ?? undefined,
+                });
+            }
+        }
 
         // 4. Delegate to the existing order pipeline.
         //    Forward the delivery address so `resolveOrderDropoff` gets it.
