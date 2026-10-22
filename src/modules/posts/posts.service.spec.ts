@@ -96,8 +96,10 @@ type PrismaMock = {
   };
   savedPost: {
     upsert: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
     deleteMany: ReturnType<typeof vi.fn>;
     findMany: ReturnType<typeof vi.fn>;
+    findUnique: ReturnType<typeof vi.fn>;
     count: ReturnType<typeof vi.fn>;
   };
   comment: {
@@ -150,8 +152,10 @@ describe('PostsService', () => {
       },
       savedPost: {
         upsert: vi.fn().mockResolvedValue(undefined),
+        create: vi.fn().mockResolvedValue(undefined),
         deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
         findMany: vi.fn().mockResolvedValue([]),
+        findUnique: vi.fn().mockResolvedValue(null),
         count: vi.fn().mockResolvedValue(0),
       },
       comment: {
@@ -716,6 +720,34 @@ describe('PostsService', () => {
 
       expect(result.liked).toBe(false);
       expect(result.likes).toBe(0);
+    });
+  });
+
+  describe('toggleSave', () => {
+    it('saves when the post was not saved', async () => {
+      prisma.post.findFirst.mockResolvedValue({ active: true });
+      prisma.savedPost.findUnique.mockResolvedValue(null);
+
+      const result = await service.toggleSave('post-1', actor);
+
+      expect(result).toEqual({ saved: true });
+      expect(prisma.savedPost.create).toHaveBeenCalledWith({
+        data: { userId: actor.id, postId: 'post-1' },
+      });
+      expect(prisma.savedPost.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('unsaves when the post was already saved', async () => {
+      prisma.post.findFirst.mockResolvedValue({ active: true });
+      prisma.savedPost.findUnique.mockResolvedValue({ userId: actor.id });
+
+      const result = await service.toggleSave('post-1', actor);
+
+      expect(result).toEqual({ saved: false });
+      expect(prisma.savedPost.deleteMany).toHaveBeenCalledWith({
+        where: { userId: actor.id, postId: 'post-1' },
+      });
+      expect(prisma.savedPost.create).not.toHaveBeenCalled();
     });
   });
 

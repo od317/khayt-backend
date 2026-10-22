@@ -896,6 +896,9 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   'delete /posts/{id}/like': {
     '200': ok({ liked: false, likes: 0 }),
   },
+  'post /posts/{id}/save/toggle': {
+    '200': ok({ saved: true }),
+  },
   'post /posts/{id}/save': {
     '200': ok({ saved: true }),
   },

@@ -369,6 +369,12 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 - **Response can be null:** (none)
 - **Request optional:** (none)
 
+### POST `/api/posts/:id/save/toggle`
+
+- **Response can be null:** (none)
+- **Request optional:** (none)
+- Auth required. Flips save state → `{ saved: boolean }`.
+
 ### POST `/api/posts/:id/save` · DELETE `/api/posts/:id/save`
 
 - **Response can be null:** (none)

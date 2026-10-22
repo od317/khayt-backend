@@ -710,6 +710,31 @@ export class PostsService {
     return { saved: false };
   }
 
+  /** Flip save state in one call. Prefer this from clients that share one handler for save/unsave. */
+  async toggleSave(
+    postId: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ saved: boolean }> {
+    await this.assertPostVisible(postId);
+
+    const existing = await this.prisma.savedPost.findUnique({
+      where: { userId_postId: { userId: actor.id, postId } },
+      select: { userId: true },
+    });
+
+    if (existing) {
+      await this.prisma.savedPost.deleteMany({
+        where: { userId: actor.id, postId },
+      });
+      return { saved: false };
+    }
+
+    await this.prisma.savedPost.create({
+      data: { userId: actor.id, postId },
+    });
+    return { saved: true };
+  }
+
   async listComments(
     postId: string,
     page: number,

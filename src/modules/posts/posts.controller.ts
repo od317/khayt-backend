@@ -294,6 +294,25 @@ export class PostsController {
     return this.posts.unlike(id, user);
   }
 
+  @Post(':id/save/toggle')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Toggle save on a post',
+    description:
+      'Single request for save/unsave. Returns the resulting state: `{ saved: true }` if now saved, `{ saved: false }` if unsaved. POST/DELETE `/posts/:id/save` remain available.',
+  })
+  @ApiOkResponse({
+    description: 'Resulting save state',
+    schema: { example: { saved: true } },
+  })
+  toggleSave(
+    @Param('id') id: string,
+    @RequireUser() user: AuthenticatedUser,
+  ): Promise<{ saved: boolean }> {
+    return this.posts.toggleSave(id, user);
+  }
+
   @Post(':id/save')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('access-token')

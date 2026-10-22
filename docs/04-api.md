@@ -265,6 +265,25 @@ text
 
 text
 
+### POST /posts/:id/save/toggle
+
+Preferred for clients with one save/unsave handler.
+→ 200 { saved: boolean }
+
+text
+
+### POST /posts/:id/save
+
+→ 200 { saved: true }
+
+text
+
+### DELETE /posts/:id/save
+
+→ 200 { saved: false }
+
+text
+
 ---
 
 ## 6. Categories
