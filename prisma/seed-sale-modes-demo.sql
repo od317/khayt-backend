@@ -1,9 +1,9 @@
--- Demo products for sale / cart cases (fixed ids, ON CONFLICT DO NOTHING).
+-- Demo products: one example per FE saleCase (fixed ids).
 --
--- prod-sale-free   — free color+size; أحمر 10% discount
--- prod-sale-mixed  — أحمر free+discount, أسود admin sizePack (same product)
--- prod-sale-pair   — saleRule color_pair_pack (pairWith: second color = أسود only)
--- prod-sale-locked — saleRule locked_axis (color)
+-- prod-sale-free  — free
+-- prod-sale-mixed — mixed (per-color free vs sizePack)
+-- prod-sale-pack  — color_size_pack (pick color only; sizes admin)
+-- prod-sale-pair  — color_pair_pack (first color → list of seconds; pairColor required)
 
 WITH imgs AS (
   SELECT ARRAY[
@@ -124,9 +124,56 @@ CROSS JOIN LATERAL (
     NULL::jsonb
   ),
   (
+    'prod-sale-pack',
+    'طقم قياسات بلون',
+    'اختر اللون فقط — القياسات إدارية (طقم)',
+    jsonb_build_object(
+      'axes', jsonb_build_array(
+        jsonb_build_object('key', 'color', 'label', 'لون'),
+        jsonb_build_object('key', 'size', 'label', 'قياس')
+      ),
+      'options', jsonb_build_array(
+        jsonb_build_object(
+          'name', 'أحمر', 'hex', '#DC2626',
+          'image', b.u1, 'images', jsonb_build_array(b.u1),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', b.u1),
+            jsonb_build_object('name', 'L', 'image', b.u1),
+            jsonb_build_object('name', 'XL', 'image', b.u1)
+          )
+        ),
+        jsonb_build_object(
+          'name', 'أزرق', 'hex', '#2563EB',
+          'image', b.u2, 'images', jsonb_build_array(b.u2),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', b.u2),
+            jsonb_build_object('name', 'L', 'image', b.u2),
+            jsonb_build_object('name', 'XL', 'image', b.u2)
+          )
+        ),
+        jsonb_build_object(
+          'name', 'أسود', 'hex', '#111827',
+          'image', b.u3, 'images', jsonb_build_array(b.u3),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', b.u3),
+            jsonb_build_object('name', 'L', 'image', b.u3),
+            jsonb_build_object('name', 'XL', 'image', b.u3)
+          )
+        )
+      )
+    ),
+    jsonb_build_object(
+      'mode', 'color_size_pack',
+      'sizePack', jsonb_build_object(
+        'sizes', jsonb_build_array('M', 'L', 'XL'),
+        'qtyPerSize', 1
+      )
+    )
+  ),
+  (
     'prod-sale-pair',
     'طقم لونين',
-    'لون + لون اقتران بقياسات إدارية',
+    'بعد اختيار اللون الأول تظهر قائمة ألوان ثانية (اختيار إلزامي)',
     jsonb_build_object(
       'axes', jsonb_build_array(
         jsonb_build_object('key', 'color', 'label', 'لون'),
@@ -169,84 +216,210 @@ CROSS JOIN LATERAL (
         'qtyPerSize', 5
       ),
       'pairWith', jsonb_build_object(
-        'أحمر', jsonb_build_array('أسود'),
-        'أزرق', jsonb_build_array('أسود')
+        'أحمر', jsonb_build_array('أزرق', 'أسود'),
+        'أزرق', jsonb_build_array('أحمر', 'أسود'),
+        'أسود', jsonb_build_array('أحمر', 'أزرق')
       )
     )
-  ),
-  (
-    'prod-sale-locked',
-    'طقم ألوان كامل',
-    'كل الألوان معاً — اختر القياس فقط',
-    jsonb_build_object(
-      'axes', jsonb_build_array(
-        jsonb_build_object('key', 'color', 'label', 'لون'),
-        jsonb_build_object('key', 'size', 'label', 'قياس')
-      ),
-      'options', jsonb_build_array(
-        jsonb_build_object(
-          'name', 'أحمر', 'hex', '#DC2626',
-          'image', b.u1, 'images', jsonb_build_array(b.u1),
-          'children', jsonb_build_array(
-            jsonb_build_object('name', 'M', 'image', b.u1),
-            jsonb_build_object('name', 'L', 'image', b.u1),
-            jsonb_build_object('name', 'XL', 'image', b.u1)
-          )
-        ),
-        jsonb_build_object(
-          'name', 'أزرق', 'hex', '#2563EB',
-          'image', b.u2, 'images', jsonb_build_array(b.u2),
-          'children', jsonb_build_array(
-            jsonb_build_object('name', 'M', 'image', b.u2),
-            jsonb_build_object('name', 'L', 'image', b.u2),
-            jsonb_build_object('name', 'XL', 'image', b.u2)
-          )
-        ),
-        jsonb_build_object(
-          'name', 'أسود', 'hex', '#111827',
-          'image', b.u3, 'images', jsonb_build_array(b.u3),
-          'children', jsonb_build_array(
-            jsonb_build_object('name', 'M', 'image', b.u3),
-            jsonb_build_object('name', 'L', 'image', b.u3),
-            jsonb_build_object('name', 'XL', 'image', b.u3)
-          )
-        )
-      )
-    ),
-    jsonb_build_object('mode', 'locked_axis', 'lockedAxis', 'color')
   )
 ) AS v(id, name, description, variants, sale_rule)
 ON CONFLICT (id) DO NOTHING;
 
--- Refresh pair demo so re-runs pick up pairWith (second color = أسود only).
-UPDATE "Product"
+-- Refresh all four demos on re-run (shapes + drop obsolete extras).
+UPDATE "Product" p
 SET
-  "saleRule" = jsonb_build_object(
-    'mode', 'color_pair_pack',
-    'sizePack', jsonb_build_object(
-      'sizes', jsonb_build_array('M', 'L', 'XL'),
-      'qtyPerSize', 5
+  name = v.name,
+  description = v.description,
+  variants = v.variants,
+  "saleRule" = v.sale_rule,
+  price = 45000,
+  "updatedAt" = NOW()
+FROM (
+  SELECT * FROM (VALUES
+    (
+      'prod-sale-free',
+      'قميص اختيار حر',
+      'ألوان حرة + خصم على الأحمر',
+      NULL::jsonb
     ),
-    'pairWith', jsonb_build_object(
-      'أحمر', jsonb_build_array('أسود'),
-      'أزرق', jsonb_build_array('أسود')
+    (
+      'prod-sale-mixed',
+      'قميص مختلط الألوان',
+      'أحمر حر+خصم، أسود طقم قياسات إداري',
+      NULL::jsonb
+    ),
+    (
+      'prod-sale-pack',
+      'طقم قياسات بلون',
+      'اختر اللون فقط — القياسات إدارية (طقم)',
+      jsonb_build_object(
+        'mode', 'color_size_pack',
+        'sizePack', jsonb_build_object(
+          'sizes', jsonb_build_array('M', 'L', 'XL'),
+          'qtyPerSize', 1
+        )
+      )
+    ),
+    (
+      'prod-sale-pair',
+      'طقم لونين',
+      'بعد اختيار اللون الأول تظهر قائمة ألوان ثانية (اختيار إلزامي)',
+      jsonb_build_object(
+        'mode', 'color_pair_pack',
+        'sizePack', jsonb_build_object(
+          'sizes', jsonb_build_array('M', 'L', 'XL'),
+          'qtyPerSize', 5
+        ),
+        'pairWith', jsonb_build_object(
+          'أحمر', jsonb_build_array('أزرق', 'أسود'),
+          'أزرق', jsonb_build_array('أحمر', 'أسود'),
+          'أسود', jsonb_build_array('أحمر', 'أزرق')
+        )
+      )
     )
+  ) AS t(id, name, description, sale_rule)
+) AS v
+WHERE p.id = v.id;
+
+-- Re-apply full variants for free/mixed/pack/pair (images from existing product rows).
+UPDATE "Product" p
+SET
+  variants = jsonb_build_object(
+    'axes', jsonb_build_array(
+      jsonb_build_object('key', 'color', 'label', 'لون'),
+      jsonb_build_object('key', 'size', 'label', 'قياس')
+    ),
+    'options', CASE p.id
+      WHEN 'prod-sale-mixed' THEN jsonb_build_array(
+        jsonb_build_object(
+          'name', 'أحمر', 'hex', '#DC2626', 'discountPercent', 10,
+          'image', p.images[1], 'images', jsonb_build_array(p.images[1]),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', p.images[1]),
+            jsonb_build_object('name', 'L', 'image', p.images[1]),
+            jsonb_build_object('name', 'XL', 'image', p.images[1])
+          )
+        ),
+        jsonb_build_object(
+          'name', 'أزرق', 'hex', '#2563EB',
+          'image', COALESCE(p.images[2], p.images[1]),
+          'images', jsonb_build_array(COALESCE(p.images[2], p.images[1])),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', COALESCE(p.images[2], p.images[1])),
+            jsonb_build_object('name', 'L', 'image', COALESCE(p.images[2], p.images[1])),
+            jsonb_build_object('name', 'XL', 'image', COALESCE(p.images[2], p.images[1]))
+          )
+        ),
+        jsonb_build_object(
+          'name', 'أسود', 'hex', '#111827',
+          'image', COALESCE(p.images[1], p.images[1]),
+          'images', jsonb_build_array(COALESCE(p.images[1], p.images[1])),
+          'sizePack', jsonb_build_object(
+            'sizes', jsonb_build_array('M', 'L', 'XL'),
+            'qtyPerSize', 1
+          ),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', COALESCE(p.images[1], p.images[1])),
+            jsonb_build_object('name', 'L', 'image', COALESCE(p.images[1], p.images[1])),
+            jsonb_build_object('name', 'XL', 'image', COALESCE(p.images[1], p.images[1]))
+          )
+        )
+      )
+      WHEN 'prod-sale-free' THEN jsonb_build_array(
+        jsonb_build_object(
+          'name', 'أحمر', 'hex', '#DC2626', 'discountPercent', 10,
+          'image', p.images[1], 'images', jsonb_build_array(p.images[1]),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', p.images[1]),
+            jsonb_build_object('name', 'L', 'image', p.images[1]),
+            jsonb_build_object('name', 'XL', 'image', p.images[1])
+          )
+        ),
+        jsonb_build_object(
+          'name', 'أزرق', 'hex', '#2563EB',
+          'image', COALESCE(p.images[2], p.images[1]),
+          'images', jsonb_build_array(COALESCE(p.images[2], p.images[1])),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', COALESCE(p.images[2], p.images[1])),
+            jsonb_build_object('name', 'L', 'image', COALESCE(p.images[2], p.images[1])),
+            jsonb_build_object('name', 'XL', 'image', COALESCE(p.images[2], p.images[1]))
+          )
+        ),
+        jsonb_build_object(
+          'name', 'أسود', 'hex', '#111827',
+          'image', COALESCE(p.images[1], p.images[1]),
+          'images', jsonb_build_array(COALESCE(p.images[1], p.images[1])),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', COALESCE(p.images[1], p.images[1])),
+            jsonb_build_object('name', 'L', 'image', COALESCE(p.images[1], p.images[1])),
+            jsonb_build_object('name', 'XL', 'image', COALESCE(p.images[1], p.images[1]))
+          )
+        )
+      )
+      ELSE jsonb_build_array(
+        jsonb_build_object(
+          'name', 'أحمر', 'hex', '#DC2626',
+          'image', p.images[1], 'images', jsonb_build_array(p.images[1]),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', p.images[1]),
+            jsonb_build_object('name', 'L', 'image', p.images[1]),
+            jsonb_build_object('name', 'XL', 'image', p.images[1])
+          )
+        ),
+        jsonb_build_object(
+          'name', 'أزرق', 'hex', '#2563EB',
+          'image', COALESCE(p.images[2], p.images[1]),
+          'images', jsonb_build_array(COALESCE(p.images[2], p.images[1])),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', COALESCE(p.images[2], p.images[1])),
+            jsonb_build_object('name', 'L', 'image', COALESCE(p.images[2], p.images[1])),
+            jsonb_build_object('name', 'XL', 'image', COALESCE(p.images[2], p.images[1]))
+          )
+        ),
+        jsonb_build_object(
+          'name', 'أسود', 'hex', '#111827',
+          'image', COALESCE(p.images[1], p.images[1]),
+          'images', jsonb_build_array(COALESCE(p.images[1], p.images[1])),
+          'children', jsonb_build_array(
+            jsonb_build_object('name', 'M', 'image', COALESCE(p.images[1], p.images[1])),
+            jsonb_build_object('name', 'L', 'image', COALESCE(p.images[1], p.images[1])),
+            jsonb_build_object('name', 'XL', 'image', COALESCE(p.images[1], p.images[1]))
+          )
+        )
+      )
+    END
   ),
   "updatedAt" = NOW()
-WHERE id = 'prod-sale-pair';
+WHERE p.id IN (
+  'prod-sale-free',
+  'prod-sale-mixed',
+  'prod-sale-pack',
+  'prod-sale-pair'
+);
+
+-- Soft-remove old demo ids that are no longer one-per-case.
+UPDATE "Product"
+SET available = false, "deletedAt" = COALESCE("deletedAt", NOW()), "updatedAt" = NOW()
+WHERE id IN ('prod-sale-locked', 'prod-sale-pair-list')
+  AND "deletedAt" IS NULL;
 
 INSERT INTO "Supply" (id, "productId", sent, remaining, "unitPrice", "updatedAt")
 SELECT 'supply-' || id, id, 200, 120, 37000, NOW()
 FROM (VALUES
   ('prod-sale-free'),
   ('prod-sale-mixed'),
-  ('prod-sale-pair'),
-  ('prod-sale-locked')
+  ('prod-sale-pack'),
+  ('prod-sale-pair')
 ) AS t(id)
 WHERE EXISTS (SELECT 1 FROM "Product" p WHERE p.id = t.id)
 ON CONFLICT ("productId") DO NOTHING;
 
 SELECT id, name, COALESCE("saleRule"->>'mode', 'per-color / free') AS mode
 FROM "Product"
-WHERE id LIKE 'prod-sale-%'
+WHERE id IN (
+  'prod-sale-free',
+  'prod-sale-mixed',
+  'prod-sale-pack',
+  'prod-sale-pair'
+)
 ORDER BY id;

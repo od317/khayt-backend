@@ -6,8 +6,8 @@ Demo product ids (after `prisma/seed-sale-modes-demo.sql`):
 |----|------------|-----|
 | `prod-sale-free` | `free` | Pick color + size; optional color discount |
 | `prod-sale-mixed` | `mixed` | Some colors free size, some admin pack |
-| `prod-sale-pair` | `color_pair_pack` | Pick color + pairColor; sizes forced |
-| `prod-sale-locked` | `locked_axis` | Locked color set; pick size only |
+| `prod-sale-pack` | `color_size_pack` | Pick color only; sizes shown disabled (admin pack) |
+| `prod-sale-pair` | `color_pair_pack` | First color → **list** of seconds; **pairColor required** |
 
 Auth for cart: **store or workshop** bearer token. Base path: `/api`.
 
@@ -30,12 +30,23 @@ Prefer **`product.saleCase`** over inferring from `saleRule` + `colorImages`.
 | `free` | `{ color, size }` | pieces | — (`colorImages[].price` for unit) |
 | `mixed` | free color → `{ color, size }`; pack color → `{ color }` | pieces or packs | `colorImages[].packPrice` when `sizeMode === "pack"` |
 | `color_size_pack` | `{ color }` | packs | `product.packPrice` / `saleRule.packPrice` |
-| `color_pair_pack` | `{ color, pairColor }` | packs | `product.packPrice` / `saleRule.packPrice`; seconds from `saleRule.pairWith[color]` |
-| `locked_axis` | unlocked axis only (e.g. `{ size }`) | pieces | — |
+| `color_pair_pack` | `{ color, pairColor }` — **both required** | packs | `product.packPrice` / `saleRule.packPrice`; seconds from `saleRule.pairWith[color]` |
+
+### Size chips UX (important)
+
+**Never hide the size row.** When the buyer cannot pick a size, keep the size chips visible but **disabled**, and show the sizes the admin configured for that pack/set.
+
+| Situation | Size UI |
+|-----------|---------|
+| `free` / mixed free color | Enabled — buyer selects one size |
+| mixed pack color (`sizeMode: "pack"`) | Disabled — show `colorImages[].sizePack.sizes` (and qty via `qtyPerSize` / `unitsPerPack`) |
+| `color_size_pack` / `color_pair_pack` | Disabled — show `saleRule.sizePack.sizes` |
+
+Cart payload still omits `size` when sizes are admin-forced (disabled chips are display-only).
 
 **New fields (this release):**
 
-- `product.packPrice` — product-wide set price; `null` for free/mixed/locked
+- `product.packPrice` — product-wide set price; `null` for free/mixed
 - `colorImages[].packPrice` — per-color set price when `sizeMode === "pack"`
 - `saleRule.packPrice` — same as product for pack modes
 - `saleRule.pairWith` — map first color → allowed second colors (pair UI)
@@ -290,8 +301,8 @@ One order line: أحمر / M × 2 pieces @ 40500.
 
 **Flow:** switch UI **per selected color** using `colorImages[].sizeMode`.
 
-- أحمر / أزرق: `sizeMode: "free"` → pick size; discount on أحمر
-- أسود: `sizeMode: "pack"` → hide size picker; qty = packs; show `packPrice`
+- أحمر / أزرق: `sizeMode: "free"` → size chips **enabled**; buyer picks one; discount on أحمر
+- أسود: `sizeMode: "pack"` → size chips stay visible but **disabled**, showing admin pack sizes (`M`, `L`, `XL`); qty = packs; show `packPrice`
 
 `product.packPrice` is `null` (not a product-wide pack).
 
@@ -472,11 +483,100 @@ Three order lines: أسود/M×2, أسود/L×2, أسود/XL×2.
 
 ---
 
-# Case 3 — `color_pair_pack` (`prod-sale-pair`)
+# Case 3 — `color_size_pack` (`prod-sale-pack`)
 
-**Flow:** pick first color → second color options = `saleRule.pairWith[first]` only (demo: both أحمر and أزرق pair with **أسود** only). No size picker. Show set price `packPrice` (45000 × 30 = 1_350_000).
+**Flow:** pick color only. Size chips stay visible but **disabled**, showing `saleRule.sizePack.sizes` (`M`, `L`, `XL`). Qty = packs. `packPrice` = 45000 × 3 = 135000.
 
-`unitsPerPack` = sizes × qtyPerSize × **2 colors** = 3 × 5 × 2 = 30.
+### Product (key fields)
+
+```http
+GET /api/products/prod-sale-pack
+```
+
+```json
+{
+  "product": {
+    "id": "prod-sale-pack",
+    "name": "طقم قياسات بلون",
+    "description": "اختر اللون فقط — القياسات إدارية (طقم)",
+    "price": 45000,
+    "saleCase": "color_size_pack",
+    "packPrice": 135000,
+    "saleRule": {
+      "mode": "color_size_pack",
+      "sizePack": { "sizes": ["M", "L", "XL"], "qtyPerSize": 1 },
+      "unitsPerPack": 3,
+      "packPrice": 135000
+    }
+  },
+  "availableQuantity": 120
+}
+```
+
+Drive UI from **`saleCase`**. `colorImages[].sizeMode` may stay `"free"`; sizes come from `saleRule.sizePack`.
+
+### Add to cart
+
+```json
+{
+  "productId": "prod-sale-pack",
+  "quantity": 2,
+  "variant": { "color": "أحمر" }
+}
+```
+
+```json
+{
+  "id": "c5555555-5555-5555-5555-555555555555",
+  "quantity": 2,
+  "unitsPerPack": 3,
+  "totalPieces": 6,
+  "breakdown": [
+    { "color": "أحمر", "size": "M", "qty": 2 },
+    { "color": "أحمر", "size": "L", "qty": 2 },
+    { "color": "أحمر", "size": "XL", "qty": 2 }
+  ],
+  "originalUnitPrice": 45000,
+  "unitPrice": 45000,
+  "packPrice": 135000,
+  "variant": { "color": "أحمر" },
+  "variantKey": "color:أحمر",
+  "product": {
+    "id": "prod-sale-pack",
+    "name": "طقم قياسات بلون",
+    "price": 45000,
+    "unit": "قطعة",
+    "images": ["IMG1", "IMG2"],
+    "available": true,
+    "inWarehouse": true,
+    "guarantee": true,
+    "variantImage": "IMG1"
+  },
+  "lineTotal": 270000,
+  "available": true,
+  "unavailableReason": null
+}
+```
+
+Rejected: sending `size` or `pairColor`.
+
+### Checkout expand
+
+Three order lines: أحمر/M×2, أحمر/L×2, أحمر/XL×2.
+
+---
+
+# Case 4 — `color_pair_pack` (`prod-sale-pair`)
+
+**Flow:**
+
+1. Pick first color.
+2. Second-color list from `saleRule.pairWith[first]` (e.g. أحمر → أزرق, أسود).
+3. Pick **`pairColor` — required**. Add to cart stays disabled until both are set.
+4. Size chips visible but **disabled** (`saleRule.sizePack`: M/L/XL × 5).
+5. Show `packPrice` (45000 × 30 = 1_350_000).
+
+`unitsPerPack` = 3 × 5 × 2 = 30.
 
 ### Product
 
@@ -490,7 +590,7 @@ GET /api/products/prod-sale-pair
     "id": "prod-sale-pair",
     "name": "طقم لونين",
     "category": "قمصان",
-    "description": "لون + لون اقتران بقياسات إدارية",
+    "description": "بعد اختيار اللون الأول تظهر قائمة ألوان ثانية (اختيار إلزامي)",
     "images": ["IMG1", "IMG2"],
     "unit": "قطعة",
     "price": 45000,
@@ -589,10 +689,11 @@ GET /api/products/prod-sale-pair
       "mode": "color_pair_pack",
       "sizePack": { "sizes": ["M", "L", "XL"], "qtyPerSize": 5 },
       "pairWith": {
-        "أحمر": ["أسود"],
-        "أزرق": ["أسود"]
+        "أحمر": ["أزرق", "أسود"],
+        "أزرق": ["أحمر", "أسود"],
+        "أسود": ["أحمر", "أزرق"]
       },
-      "allowedPairColors": ["أسود"],
+      "allowedPairColors": ["أزرق", "أسود", "أحمر"],
       "unitsPerPack": 30,
       "packPrice": 1350000
     },
@@ -602,15 +703,13 @@ GET /api/products/prod-sale-pair
 }
 ```
 
-Note: for product-wide pack modes, `colorImages[].sizeMode` stays `"free"` (size is forced by `saleRule`, not per-color `sizePack`). Drive the UI from **`saleCase`**, not `colorImages.sizeMode`.
-
 ### Add to cart (1 pack)
 
 ```json
 {
   "productId": "prod-sale-pair",
   "quantity": 1,
-  "variant": { "color": "أحمر", "pairColor": "أسود" }
+  "variant": { "color": "أحمر", "pairColor": "أزرق" }
 }
 ```
 
@@ -624,15 +723,15 @@ Note: for product-wide pack modes, `colorImages[].sizeMode` stays `"free"` (size
     { "color": "أحمر", "size": "M", "qty": 5 },
     { "color": "أحمر", "size": "L", "qty": 5 },
     { "color": "أحمر", "size": "XL", "qty": 5 },
-    { "color": "أسود", "size": "M", "qty": 5 },
-    { "color": "أسود", "size": "L", "qty": 5 },
-    { "color": "أسود", "size": "XL", "qty": 5 }
+    { "color": "أزرق", "size": "M", "qty": 5 },
+    { "color": "أزرق", "size": "L", "qty": 5 },
+    { "color": "أزرق", "size": "XL", "qty": 5 }
   ],
   "originalUnitPrice": 45000,
   "unitPrice": 45000,
   "packPrice": 1350000,
-  "variant": { "color": "أحمر", "pairColor": "أسود" },
-  "variantKey": "color:أحمر|pairColor:أسود",
+  "variant": { "color": "أحمر", "pairColor": "أزرق" },
+  "variantKey": "color:أحمر|pairColor:أزرق",
   "product": {
     "id": "prod-sale-pair",
     "name": "طقم لونين",
@@ -650,10 +749,10 @@ Note: for product-wide pack modes, `colorImages[].sizeMode` stays `"free"` (size
 }
 ```
 
-Rejected examples:
+Rejected (FE should disable Add until valid):
 
-- `{ "color": "أحمر", "pairColor": "أزرق" }` — not in `pairWith.أحمر`
-- `{ "color": "أسود", "pairColor": "أحمر" }` — أسود is not a first-color key in `pairWith`
+- `{ "color": "أحمر" }` — **missing `pairColor`** (required)
+- `{ "color": "أحمر", "pairColor": "وردي" }` — not in `pairWith.أحمر`
 - sending `size` — validation error
 
 ### Checkout expand
@@ -662,190 +761,12 @@ Six order lines (each color × each size × 5).
 
 ---
 
-# Case 4 — `locked_axis` (`prod-sale-locked`)
-
-**Flow:** all colors sold as a set; buyer picks **size only**. No pack expansion; quantity = pieces of that size across the locked set (pricing stays per piece at list price).
-
-### Product
-
-```http
-GET /api/products/prod-sale-locked
-```
-
-```json
-{
-  "product": {
-    "id": "prod-sale-locked",
-    "name": "طقم ألوان كامل",
-    "category": "قمصان",
-    "description": "كل الألوان معاً — اختر القياس فقط",
-    "images": ["IMG1", "IMG2"],
-    "unit": "قطعة",
-    "price": 45000,
-    "inWarehouse": true,
-    "available": true,
-    "guarantee": true,
-    "supplierBusinessId": null,
-    "variants": {
-      "axes": [
-        { "key": "color", "label": "لون" },
-        { "key": "size", "label": "قياس" }
-      ],
-      "options": [
-        {
-          "name": "أحمر",
-          "hex": "#DC2626",
-          "image": "IMG1",
-          "images": ["IMG1"],
-          "children": [
-            { "name": "M", "image": "IMG1" },
-            { "name": "L", "image": "IMG1" },
-            { "name": "XL", "image": "IMG1" }
-          ]
-        },
-        {
-          "name": "أزرق",
-          "hex": "#2563EB",
-          "image": "IMG2",
-          "images": ["IMG2"],
-          "children": [
-            { "name": "M", "image": "IMG2" },
-            { "name": "L", "image": "IMG2" },
-            { "name": "XL", "image": "IMG2" }
-          ]
-        },
-        {
-          "name": "أسود",
-          "hex": "#111827",
-          "image": "IMG3",
-          "images": ["IMG3"],
-          "children": [
-            { "name": "M", "image": "IMG3" },
-            { "name": "L", "image": "IMG3" },
-            { "name": "XL", "image": "IMG3" }
-          ]
-        }
-      ]
-    },
-    "colorImages": [
-      {
-        "name": "أحمر",
-        "hex": "#DC2626",
-        "image": "IMG1",
-        "images": ["IMG1"],
-        "originalPrice": 45000,
-        "price": 45000,
-        "discountPercent": null,
-        "sizeMode": "free",
-        "sizePack": null,
-        "unitsPerPack": null,
-        "packPrice": null
-      },
-      {
-        "name": "أزرق",
-        "hex": "#2563EB",
-        "image": "IMG2",
-        "images": ["IMG2"],
-        "originalPrice": 45000,
-        "price": 45000,
-        "discountPercent": null,
-        "sizeMode": "free",
-        "sizePack": null,
-        "unitsPerPack": null,
-        "packPrice": null
-      },
-      {
-        "name": "أسود",
-        "hex": "#111827",
-        "image": "IMG3",
-        "images": ["IMG3"],
-        "originalPrice": 45000,
-        "price": 45000,
-        "discountPercent": null,
-        "sizeMode": "free",
-        "sizePack": null,
-        "unitsPerPack": null,
-        "packPrice": null
-      }
-    ],
-    "packaging": null,
-    "discount": null,
-    "offer": null,
-    "saleCase": "locked_axis",
-    "packPrice": null,
-    "saleRule": {
-      "mode": "locked_axis",
-      "lockedAxis": "color",
-      "label": "لون",
-      "options": ["أحمر", "أزرق", "أسود"],
-      "optionCount": 3
-    },
-    "createdAt": "2026-10-22T07:00:00.000Z"
-  },
-  "availableQuantity": 120
-}
-```
-
-UI hint: show locked colors from `saleRule.options` (read-only chips); picker only for size.
-
-### Add to cart
-
-```json
-{
-  "productId": "prod-sale-locked",
-  "quantity": 3,
-  "variant": { "size": "M" }
-}
-```
-
-```json
-{
-  "id": "c4444444-4444-4444-4444-444444444444",
-  "quantity": 3,
-  "unitsPerPack": null,
-  "totalPieces": 3,
-  "breakdown": null,
-  "originalUnitPrice": 45000,
-  "unitPrice": 45000,
-  "packPrice": null,
-  "variant": { "size": "M" },
-  "variantKey": "size:M",
-  "product": {
-    "id": "prod-sale-locked",
-    "name": "طقم ألوان كامل",
-    "price": 45000,
-    "unit": "قطعة",
-    "images": ["IMG1", "IMG2"],
-    "available": true,
-    "inWarehouse": true,
-    "guarantee": true,
-    "variantImage": null
-  },
-  "lineTotal": 135000,
-  "available": true,
-  "unavailableReason": null
-}
-```
-
-Rejected: `{ "color": "أحمر", "size": "M" }` — locked axis must not be sent.
-
-### Checkout
-
-One order line with `variant: { size: "M" }`, quantity 3 (no pack expand).
-
----
-
-## Case not in demo seed: `color_size_pack`
-
-Same as pair but without `pairColor`: buyer sends `{ color }` only; `saleRule.mode === "color_size_pack"`; `product.packPrice = price × sizes × qtyPerSize`.
-
----
-
 ## Quick FE checklist
 
-1. Switch screens on `saleCase`.
-2. Show strikethrough with `colorImages[].originalPrice` / `.price` when discount.
-3. Show set price from `packPrice` (product or per-color).
-4. Pair seconds from `saleRule.pairWith[selectedColor]` (not a flat list of all colors).
-5. Cart: treat `quantity` as packs when `unitsPerPack != null`; display `packPrice` and optional `breakdown`.
-6. Do not send `size` for pack / pair modes; do not send locked axis for `locked_axis`.
+1. Switch screens on `saleCase` (four demos: free / mixed / pack / pair).
+2. **Never hide sizes** — when the buyer cannot pick, **disable** the chips and show `sizePack.sizes`.
+3. Show strikethrough with `colorImages[].originalPrice` / `.price` when discount.
+4. Show set price from `packPrice` (product or per-color).
+5. Pair: after first color, show `saleRule.pairWith[selectedColor]` list; second pick is **required**.
+6. Cart: treat `quantity` as packs when `unitsPerPack != null`; display `packPrice` and optional `breakdown`.
+7. Do not send `size` for pack / pair modes.
