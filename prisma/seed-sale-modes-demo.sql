@@ -245,63 +245,20 @@ CROSS JOIN LATERAL (
     )
   )
 ) AS v(id, name, description, variants, sale_rule)
-ON CONFLICT (id) DO NOTHING;
-
--- Refresh all four demos on re-run (shapes + drop obsolete extras).
-UPDATE "Product" p
-SET
-  name = v.name,
-  description = v.description,
-  variants = v.variants,
-  "saleRule" = v.sale_rule,
-  price = 45000,
-  "updatedAt" = NOW()
-FROM (
-  SELECT * FROM (VALUES
-    (
-      'prod-sale-free',
-      'قميص اختيار حر',
-      'ألوان حرة + خصم على الأحمر',
-      NULL::jsonb
-    ),
-    (
-      'prod-sale-mixed',
-      'قميص مختلط الألوان',
-      'أحمر حر+خصم، أسود طقم قياسات إداري',
-      NULL::jsonb
-    ),
-    (
-      'prod-sale-pack',
-      'طقم قياسات بلون',
-      'اختر اللون فقط — القياسات إدارية (طقم)',
-      jsonb_build_object(
-        'mode', 'color_size_pack',
-        'sizePack', jsonb_build_object(
-          'sizes', jsonb_build_array('M', 'L', 'XL'),
-          'qtyPerSize', 1
-        )
-      )
-    ),
-    (
-      'prod-sale-pair',
-      'طقم لونين',
-      'بعد اختيار اللون الأول تظهر قائمة ألوان ثانية (اختيار إلزامي)',
-      jsonb_build_object(
-        'mode', 'color_pair_pack',
-        'sizePack', jsonb_build_object(
-          'sizes', jsonb_build_array('M', 'L', 'XL'),
-          'qtyPerSize', 5
-        ),
-        'pairWith', jsonb_build_object(
-          'أحمر', jsonb_build_array('أزرق', 'أسود'),
-          'أزرق', jsonb_build_array('أحمر', 'أسود'),
-          'أسود', jsonb_build_array('أحمر', 'أزرق')
-        )
-      )
-    )
-  ) AS t(id, name, description, sale_rule)
-) AS v
-WHERE p.id = v.id;
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  images = EXCLUDED.images,
+  unit = EXCLUDED.unit,
+  price = EXCLUDED.price,
+  "inWarehouse" = EXCLUDED."inWarehouse",
+  available = EXCLUDED.available,
+  guarantee = EXCLUDED.guarantee,
+  "supplierBusinessId" = COALESCE(EXCLUDED."supplierBusinessId", "Product"."supplierBusinessId"),
+  variants = EXCLUDED.variants,
+  "saleRule" = EXCLUDED."saleRule",
+  "deletedAt" = NULL,
+  "updatedAt" = NOW();
 
 -- Re-apply full variants for free/mixed/pack/pair (images from existing product rows).
 UPDATE "Product" p
