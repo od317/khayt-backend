@@ -538,18 +538,13 @@ function validationFailed(
 
 /**
  * Ensures saleRule matches the product variants tree.
- * Accepts ParsedSaleRule or raw DTO / stored JSON.
+ * Accepts ParsedSaleRule, ProductSaleRuleDto, or stored JSON.
  */
 export function assertSaleRuleMatchesVariants(
-  saleRule:
-    | ParsedSaleRule
-    | SaleRuleInput
-    | Record<string, unknown>
-    | null
-    | undefined,
+  saleRule: unknown,
   variants: unknown,
 ): void {
-  if (!saleRule) return;
+  if (saleRule === null || saleRule === undefined) return;
 
   const resolved = parseSaleRuleStored(saleRule);
   if (!resolved) {
