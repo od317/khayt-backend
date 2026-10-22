@@ -1,9 +1,31 @@
 -- Demo products: one example per FE saleCase (fixed ids).
 --
--- prod-sale-free  — free
--- prod-sale-mixed — mixed (per-color free vs sizePack)
--- prod-sale-pack  — color_size_pack (pick color only; sizes admin)
--- prod-sale-pair  — color_pair_pack (first color → list of seconds; pairColor required)
+-- KEEP ONLY:
+--   prod-sale-free  — free
+--   prod-sale-mixed — mixed (per-color free vs sizePack)
+--   prod-sale-pack  — color_size_pack (pick color only; sizes admin)
+--   prod-sale-pair  — color_pair_pack (first color → list of seconds; pairColor required)
+--
+-- Soft-delete every other demo sample (old sale demos + prod-vps-*).
+
+UPDATE "Product"
+SET
+  available = false,
+  "deletedAt" = COALESCE("deletedAt", NOW()),
+  "updatedAt" = NOW()
+WHERE "deletedAt" IS NULL
+  AND (
+    id LIKE 'prod-vps-%'
+    OR (
+      id LIKE 'prod-sale-%'
+      AND id NOT IN (
+        'prod-sale-free',
+        'prod-sale-mixed',
+        'prod-sale-pack',
+        'prod-sale-pair'
+      )
+    )
+  );
 
 WITH imgs AS (
   SELECT ARRAY[
@@ -396,12 +418,6 @@ WHERE p.id IN (
   'prod-sale-pack',
   'prod-sale-pair'
 );
-
--- Soft-remove old demo ids that are no longer one-per-case.
-UPDATE "Product"
-SET available = false, "deletedAt" = COALESCE("deletedAt", NOW()), "updatedAt" = NOW()
-WHERE id IN ('prod-sale-locked', 'prod-sale-pair-list')
-  AND "deletedAt" IS NULL;
 
 INSERT INTO "Supply" (id, "productId", sent, remaining, "unitPrice", "updatedAt")
 SELECT 'supply-' || id, id, 200, 120, 37000, NOW()
