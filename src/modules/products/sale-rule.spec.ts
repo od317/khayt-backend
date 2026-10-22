@@ -8,6 +8,7 @@ import {
   collectAxisOptions,
   parseSaleRuleStored,
   pieceUnitPrice,
+  resolveProductSaleCase,
   toSaleRuleResponse,
   unitsPerPack,
 } from './sale-rule';
@@ -218,5 +219,35 @@ describe('sale-rule', () => {
         { mode: 'color_size_pack', sizePack: { sizes: ['M'], qtyPerSize: 1 } },
       ),
     ).toBe(10000);
+  });
+
+  it('resolves product saleCase for the FE', () => {
+    expect(resolveProductSaleCase(null, colorSizeTree)).toBe('free');
+    expect(
+      resolveProductSaleCase({ lockedAxis: 'color' }, colorSizeTree),
+    ).toBe('locked_axis');
+    expect(
+      resolveProductSaleCase(
+        {
+          mode: 'color_pair_pack',
+          sizePack: { sizes: ['M'], qtyPerSize: 1 },
+          allowedPairColors: ['أسود'],
+        },
+        colorSizeTree,
+      ),
+    ).toBe('color_pair_pack');
+
+    const mixed = {
+      axes: colorSizeTree.axes,
+      options: [
+        { name: 'أحمر', children: [{ name: 'M' }] },
+        {
+          name: 'أسود',
+          sizePack: { sizes: ['M', 'L'], qtyPerSize: 1 },
+          children: [{ name: 'M' }, { name: 'L' }],
+        },
+      ],
+    };
+    expect(resolveProductSaleCase(null, mixed)).toBe('mixed');
   });
 });

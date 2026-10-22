@@ -83,7 +83,8 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 | `colorImages[].discountPercent` | yes — null when that color has no discount |
 | `colorImages[].originalPrice` / `colorImages[].price` | no — always set (`price` = discounted or same as original) |
 | `id`, `name`, `category`, `images[]`, `unit`, `price`, `inWarehouse`, `available`, `guarantee`, `variants`, `colorImages[]`, `packaging`, `discount`, `createdAt` | no |
-| **`saleRule`** | **yes** — `null` = free pick (color+size). Else one of: `locked_axis` (`mode`, `lockedAxis`, `label`, `options[]`, `optionCount`), `color_size_pack` (`mode`, `sizePack`, `unitsPerPack`), `color_pair_pack` (+ `allowedPairColors`) |
+| **`saleCase`** | **no** — always one of: `free` \| `mixed` \| `color_size_pack` \| `color_pair_pack` \| `locked_axis` (FE switch) |
+| **`saleRule`** | **yes** — `null` when `saleCase` is `free`/`mixed` from per-color only. Else payload for locked/pair/product pack |
 
 ### PostResponse
 

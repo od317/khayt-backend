@@ -123,6 +123,12 @@ export const sampleProduct = {
   packaging: null as unknown,
   discount: null as unknown,
   offer: null as string | null,
+  saleCase: 'locked_axis' as
+    | 'free'
+    | 'mixed'
+    | 'color_size_pack'
+    | 'color_pair_pack'
+    | 'locked_axis',
   saleRule: {
     mode: 'locked_axis',
     lockedAxis: 'color',

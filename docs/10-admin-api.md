@@ -811,12 +811,22 @@ Public browse endpoints (`GET /products`, `GET /products/:id`, similar) are **no
 
 Units: `قطعة` | `متر` | `طقم` | `دورة`
 
+**`saleCase` (always on product list/detail):** FE should switch UI on this enum:
+
+| `saleCase` | Meaning |
+|------------|---------|
+| `free` | Every color: pick color + size |
+| `mixed` | Some colors free size, some colors admin `sizePack` |
+| `color_size_pack` | Size pack for all colors (product rule or every color has `sizePack`) |
+| `color_pair_pack` | Pick color + pairColor; sizes forced |
+| `locked_axis` | Locked set on one axis; pick the other only |
+
 **Per-color size rules (same product):** on each `variants.options[]` color, optional `sizePack: { sizes, qtyPerSize }`.  
 - No `sizePack` → buyer picks `{ color, size }` (optional `discountPercent` on that color).  
 - With `sizePack` → buyer sends `{ color }` only; qty = packs.  
 `colorImages[]` exposes `sizeMode` (`free`|`pack`), `sizePack`, `unitsPerPack`, `originalPrice`, `price`.
 
-**Product `saleRule`:** `null` for normal/per-color rules. Product-wide modes:
+**Product `saleRule`:** `null` for `free`/`mixed`. Product-wide modes:
 
 | mode | Admin sets | Buyer picks | Cart quantity |
 |------|------------|-------------|---------------|

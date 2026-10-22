@@ -179,6 +179,7 @@ describe('toProductResponse', () => {
       },
     });
 
+    expect(result.saleCase).toBe('locked_axis');
     expect(result.saleRule).toEqual({
       mode: 'locked_axis',
       lockedAxis: 'color',

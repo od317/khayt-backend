@@ -10,6 +10,24 @@ export const SALE_MODES = [
 ] as const;
 export type SaleMode = (typeof SALE_MODES)[number];
 
+/**
+ * Top-level product enum for the FE picker UI.
+ * Derived from `saleRule` + per-color `sizePack` (not stored separately).
+ */
+export const PRODUCT_SALE_CASES = [
+  /** Buyer picks color + size on every color (optional color discounts). */
+  'free',
+  /** Same product: some colors free size, some colors admin sizePack. */
+  'mixed',
+  /** Every color (or product rule) forces a size pack; buyer picks color only. */
+  'color_size_pack',
+  /** Buyer picks color + pairColor; sizes forced for both. */
+  'color_pair_pack',
+  /** Locked axis set (e.g. all colors); buyer picks the other axis only. */
+  'locked_axis',
+] as const;
+export type ProductSaleCase = (typeof PRODUCT_SALE_CASES)[number];
+
 export type SizePack = {
   sizes: string[];
   qtyPerSize: number;
@@ -117,6 +135,34 @@ export function getColorSizePack(
 
 export function sizePackUnits(sizePack: SizePack, colorCount = 1): number {
   return sizePack.sizes.length * sizePack.qtyPerSize * colorCount;
+}
+
+/**
+ * Single enum the FE should switch on for product detail / add-to-cart UI.
+ */
+export function resolveProductSaleCase(
+  saleRuleRaw: unknown,
+  variants: unknown,
+): ProductSaleCase {
+  const rule = parseSaleRuleStored(saleRuleRaw);
+  if (rule?.mode === 'locked_axis') return 'locked_axis';
+  if (rule?.mode === 'color_pair_pack') return 'color_pair_pack';
+  if (rule?.mode === 'color_size_pack') return 'color_size_pack';
+
+  if (!variants || typeof variants !== 'object') return 'free';
+  const tree = variants as VariantTree;
+  const options = Array.isArray(tree.options) ? tree.options : [];
+  let withPack = 0;
+  let withoutPack = 0;
+  for (const option of options) {
+    if (typeof option.name !== 'string' || !option.name.trim()) continue;
+    if (parseSizePack(option.sizePack)) withPack += 1;
+    else withoutPack += 1;
+  }
+
+  if (withPack > 0 && withoutPack > 0) return 'mixed';
+  if (withPack > 0 && withoutPack === 0) return 'color_size_pack';
+  return 'free';
 }
 
 /**

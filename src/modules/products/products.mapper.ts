@@ -1,9 +1,11 @@
 import { Product } from '@prisma/client';
 import {
   parseSizePack,
+  resolveProductSaleCase,
   sizePackUnits,
   SaleRuleResponse,
   toSaleRuleResponse,
+  type ProductSaleCase,
   type SizePack,
 } from './sale-rule';
 
@@ -51,8 +53,12 @@ export type ProductResponse = {
   discount: unknown;
   offer: string | null;
   /**
-   * Sale mode for the FE picker / cart.
-   * null = free (pick color + size). See SaleRuleResponse modes.
+   * Enum for FE UI: `free` | `mixed` | `color_size_pack` | `color_pair_pack` | `locked_axis`.
+   * Prefer this over inferring from saleRule + colorImages.
+   */
+  saleCase: ProductSaleCase;
+  /**
+   * Detailed sale rule payload (null when saleCase is free/mixed from per-color only).
    */
   saleRule: SaleRuleResponse | null;
   createdAt: string;
@@ -150,6 +156,7 @@ export function toProductResponse(product: Product): ProductResponse {
     packaging: product.packaging,
     discount: product.discount,
     offer: product.offer,
+    saleCase: resolveProductSaleCase(product.saleRule, product.variants),
     saleRule: toSaleRuleResponse(product.saleRule, product.variants),
     createdAt: product.createdAt.toISOString(),
   };
