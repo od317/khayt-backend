@@ -172,6 +172,7 @@ export const samplePost = {
   videoUrl: null as string | null,
   location: '',
   active: true,
+  approvalStatus: 'approved' as 'pending' | 'approved' | 'rejected',
   createdAt: AT,
   updatedAt: AT,
   specialty: null as string | null,

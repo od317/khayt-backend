@@ -14,6 +14,7 @@ import {
   MediaType,
   NotificationType,
   Post,
+  PostApprovalStatus,
   PostType,
   Prisma,
   User,
@@ -113,6 +114,7 @@ export class PostsService {
       where.authorId = actor.id;
     } else {
       where.active = true;
+      where.approvalStatus = PostApprovalStatus.approved;
       if (query.authorId) where.authorId = query.authorId;
     }
 
@@ -226,7 +228,11 @@ export class PostsService {
   ): Promise<Paginated<PostResponse>> {
     const where: Prisma.LikeWhereInput = {
       userId: actor.id,
-      post: { deletedAt: null },
+      post: {
+        deletedAt: null,
+        active: true,
+        approvalStatus: PostApprovalStatus.approved,
+      },
     };
     const { skip, take } = skipTake(query.page, query.limit);
 
@@ -253,7 +259,11 @@ export class PostsService {
   ): Promise<Paginated<PostResponse>> {
     const where: Prisma.SavedPostWhereInput = {
       userId: actor.id,
-      post: { deletedAt: null },
+      post: {
+        deletedAt: null,
+        active: true,
+        approvalStatus: PostApprovalStatus.approved,
+      },
     };
     const { skip, take } = skipTake(query.page, query.limit);
 
@@ -290,7 +300,12 @@ export class PostsService {
     }
 
     const isAuthor = actor !== undefined && actor.id === post.authorId;
-    if (!post.active && !isAuthor) {
+    const isStaff =
+      actor !== undefined &&
+      (actor.role === UserRole.admin || actor.role === UserRole.super_admin);
+    const isPublic =
+      post.active && post.approvalStatus === PostApprovalStatus.approved;
+    if (!isPublic && !isAuthor && !isStaff) {
       throw new NotFoundException({
         error: 'not_found',
         message: 'المنشور غير موجود',
@@ -381,6 +396,7 @@ export class PostsService {
         imageUrls,
         videoUrl: videoUrl ?? null,
         thumbnailUrl,
+        approvalStatus: PostApprovalStatus.pending,
         specialty: dto.specialty ?? null,
         skills: dto.skills ?? [],
         workType: dto.workType ?? [],
@@ -569,6 +585,9 @@ export class PostsService {
         if (dto.price !== undefined) data.price = dto.price;
         if (dto.currency !== undefined) data.currency = dto.currency;
         if (dto.active !== undefined) data.active = dto.active;
+
+        // Author edits must be re-approved before the post is public again.
+        data.approvalStatus = PostApprovalStatus.pending;
 
         if (productPatch !== undefined) data.product = productPatch;
 
@@ -948,7 +967,7 @@ export class PostsService {
   ): Promise<void> {
     const post = await this.prisma.post.findFirst({
       where: { id: postId, deletedAt: null },
-      select: { active: true },
+      select: { active: true, approvalStatus: true },
     });
 
     if (!post) {
@@ -958,7 +977,10 @@ export class PostsService {
       });
     }
 
-    if (opts.requireActive && !post.active) {
+    if (
+      opts.requireActive &&
+      (!post.active || post.approvalStatus !== PostApprovalStatus.approved)
+    ) {
       throw new NotFoundException({
         error: 'not_found',
         message: 'المنشور غير موجود',
@@ -1128,6 +1150,10 @@ export class PostsService {
     if (query.active === 'true') where.active = true;
     if (query.active === 'false') where.active = false;
 
+    if (query.approvalStatus) {
+      where.approvalStatus = query.approvalStatus;
+    }
+
     if (query.type && query.type.length > 0) {
       where.type = { in: query.type };
     }
@@ -1201,6 +1227,67 @@ export class PostsService {
       });
     }
     return { post: response, deleted: true };
+  }
+
+  async adminSetApproval(
+    id: string,
+    approvalStatus: PostApprovalStatus,
+    actor: AuthenticatedUser,
+  ): Promise<{ post: PostResponse }> {
+    const existing = await this.prisma.post.findFirst({
+      where: { id, deletedAt: null },
+      select: { authorId: true, approvalStatus: true },
+    });
+    if (!existing) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'المنشور غير موجود',
+      });
+    }
+
+    if (existing.approvalStatus === approvalStatus) {
+      const current = await this.prisma.post.findFirst({
+        where: { id, deletedAt: null },
+        include: POST_INCLUDE,
+      });
+      if (!current) {
+        throw new NotFoundException({
+          error: 'not_found',
+          message: 'المنشور غير موجود',
+        });
+      }
+      const [response] = await this.attachCounts([current], actor);
+      return { post: response! };
+    }
+
+    const post = await this.prisma.post.update({
+      where: { id },
+      data: { approvalStatus },
+      include: POST_INCLUDE,
+    });
+
+    if (existing.authorId !== actor.id) {
+      const approved = approvalStatus === PostApprovalStatus.approved;
+      void this.notifications.notify({
+        userId: existing.authorId,
+        type: NotificationType.post_moderated,
+        title: approved ? 'تمت الموافقة على منشورك' : 'تم رفض منشورك',
+        body: approved
+          ? 'تمت مراجعة منشورك والموافقة عليه — أصبح ظاهراً للجميع.'
+          : 'تمت مراجعة منشورك ورفضه. يمكنك تعديله وإعادة الإرسال للمراجعة.',
+        linkTo: `/posts/${id}`,
+        actorId: actor.id,
+      });
+    }
+
+    const [response] = await this.attachCounts([post], actor);
+    if (!response) {
+      throw new NotFoundException({
+        error: 'not_found',
+        message: 'المنشور غير موجود',
+      });
+    }
+    return { post: response };
   }
 
   async adminSetActive(

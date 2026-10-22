@@ -93,7 +93,7 @@ export class PostsController {
   @ApiOperation({
     summary: 'List posts',
     description:
-      'Public. Filters: type, businessId, categoryId, location, q, media, active, savedBy=me, authorId, forMe=true. If `active=false`, only the current user sees their own inactive posts.',
+      'Public feed is `active` + `approvalStatus=approved` only. Filters: type, businessId, categoryId, location, q, media, active, savedBy=me, authorId, forMe=true. If `active=false`, only the current user sees their own inactive posts. Authors see pending/rejected via `/posts/me` and `/posts/me/reels`.',
   })
   @ApiOkResponse({
     description: 'Paginated list of posts',

@@ -13,6 +13,7 @@ import {
   CategoryApplies,
   MediaType,
   NotificationType,
+  PostApprovalStatus,
   PostOptionKind,
   PostType,
   PrismaClient,
@@ -3004,10 +3005,14 @@ async function main(): Promise<void> {
 
   for (const p of postsWithImages) {
     const { id, ...rest } = p;
+    const data = {
+      ...rest,
+      approvalStatus: PostApprovalStatus.approved,
+    };
     await prisma.post.upsert({
       where: { id },
-      create: { id, ...rest },
-      update: rest,
+      create: { id, ...data },
+      update: data,
     });
   }
   console.log(`  posts: ${postsWithImages.length}`);
@@ -3104,6 +3109,7 @@ async function main(): Promise<void> {
           videoUrl: null as string | null,
           thumbnailUrl: null as string | null,
           active: true,
+          approvalStatus: PostApprovalStatus.approved,
           specialty: postType === PostType.job_seeking ? 'خياطة' : null,
           skills: postType === PostType.job_seeking ? ['خياطة'] : [],
           workType: postType === PostType.job_seeking ? ['كامل'] : [],
@@ -3121,6 +3127,7 @@ async function main(): Promise<void> {
           videoUrl: REEL_VIDEOS[(i - 1) % REEL_VIDEOS.length]!,
           thumbnailUrl: `https://picsum.photos/id/${(i % 80) + 10}/600/800`,
           active: true,
+          approvalStatus: PostApprovalStatus.approved,
           createdAt: hoursAgo(i + 15),
         };
         await prisma.post.upsert({

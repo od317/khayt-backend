@@ -9,7 +9,7 @@ import {
     Query,
     UseGuards,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { PostApprovalStatus, UserRole } from '@prisma/client';
 import {
     ApiBearerAuth,
     ApiOkResponse,
@@ -37,13 +37,47 @@ export class AdminPostsController {
     @ApiOperation({
         summary: 'List all posts (including inactive and soft-deleted)',
         description:
-            'Admin-only. By default returns everything except soft-deleted. Pass `includeDeleted=true` to also see soft-deleted posts.',
+            'Admin-only. By default returns everything except soft-deleted. Filter with `approvalStatus=pending` for the moderation queue.',
     })
     @ApiOkResponse({ description: 'Paginated list of posts' })
     listAll(
         @Query() query: AdminQueryPostsDto,
     ): Promise<Paginated<PostResponse>> {
         return this.posts.adminList(query);
+    }
+
+    @Patch(':id/approve')
+    @ApiOperation({
+        summary: 'Approve a post (make public)',
+        description:
+            'Admin-only. Sets `approvalStatus: approved`. Author is notified. Post appears in public listings when also `active`.',
+    })
+    approve(
+        @Param('id') id: string,
+        @RequireUser() actor: AuthenticatedUser,
+    ): Promise<{ post: PostResponse }> {
+        return this.posts.adminSetApproval(
+            id,
+            PostApprovalStatus.approved,
+            actor,
+        );
+    }
+
+    @Patch(':id/reject')
+    @ApiOperation({
+        summary: 'Reject a post',
+        description:
+            'Admin-only. Sets `approvalStatus: rejected`. Author is notified and can edit to resubmit (edit resets to pending).',
+    })
+    reject(
+        @Param('id') id: string,
+        @RequireUser() actor: AuthenticatedUser,
+    ): Promise<{ post: PostResponse }> {
+        return this.posts.adminSetApproval(
+            id,
+            PostApprovalStatus.rejected,
+            actor,
+        );
     }
 
     @Delete(':id')

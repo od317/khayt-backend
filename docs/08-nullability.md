@@ -113,7 +113,7 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 | `author.name` | yes |
 | `author.location` | yes |
 | `author.avatarUrl` | yes (raw DB; **no** placeholder applied here) |
-| `id`, `body`, `media`, `imageUrls[]`, `active`, `createdAt`, `updatedAt`, `skills[]`, `workType[]`, `categories[]`, `likes`, `comments`, `likedByMe`, `savedByMe` | no |
+| `id`, `body`, `media`, `imageUrls[]`, `active`, `approvalStatus` (`pending`\|`approved`\|`rejected`), `createdAt`, `updatedAt`, `skills[]`, `workType[]`, `categories[]`, `likes`, `comments`, `likedByMe`, `savedByMe` | no |
 
 ### CommentResponse
 

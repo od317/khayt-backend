@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { PostType } from '@prisma/client';
+import { PostApprovalStatus, PostType } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
     IsBooleanString,
@@ -52,6 +52,14 @@ export class AdminQueryPostsDto extends PaginationDto {
     @IsOptional()
     @IsBooleanString()
     active?: string;
+
+    @ApiPropertyOptional({
+        enum: PostApprovalStatus,
+        description: 'Filter by moderation status (pending / approved / rejected).',
+    })
+    @IsOptional()
+    @IsEnum(PostApprovalStatus)
+    approvalStatus?: PostApprovalStatus;
 
     @ApiPropertyOptional({
         enum: ['true', 'false'],

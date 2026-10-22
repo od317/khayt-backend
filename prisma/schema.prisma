@@ -88,7 +88,14 @@ enum NotificationType {
   new_comment
   new_like
   receiving_confirmed
-  post_moderated 
+  post_moderated
+}
+
+/** Admin gate before a post is public. */
+enum PostApprovalStatus {
+  pending
+  approved
+  rejected
 }
 
 enum CategoryApplies {
@@ -348,6 +355,8 @@ model Post {
   videoUrl  String?
   location  String?
   active    Boolean   @default(true)
+  /// pending until an admin approves; create + author edits reset to pending.
+  approvalStatus PostApprovalStatus @default(pending)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt  DateTime?
@@ -379,6 +388,7 @@ model Post {
   @@index([authorId])
   @@index([type])
   @@index([active])
+  @@index([approvalStatus])
   @@index([createdAt])
 }
 

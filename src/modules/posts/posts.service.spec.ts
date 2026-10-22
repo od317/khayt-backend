@@ -54,6 +54,7 @@ const makePost = (overrides: Record<string, unknown> = {}) => ({
   videoUrl: null,
   location: 'دمشق',
   active: true,
+  approvalStatus: 'approved' as const,
   specialty: 'إنتاج/صناعة',
   skills: ['خياطة'],
   workType: ['كامل'],
@@ -253,7 +254,11 @@ describe('PostsService', () => {
         expect.objectContaining({
           where: {
             userId: actor.id,
-            post: { deletedAt: null },
+            post: {
+              deletedAt: null,
+              active: true,
+              approvalStatus: 'approved',
+            },
           },
           orderBy: { createdAt: 'desc' },
         }),
@@ -274,7 +279,11 @@ describe('PostsService', () => {
         expect.objectContaining({
           where: {
             userId: actor.id,
-            post: { deletedAt: null },
+            post: {
+              deletedAt: null,
+              active: true,
+              approvalStatus: 'approved',
+            },
           },
           orderBy: { createdAt: 'desc' },
         }),
@@ -308,6 +317,7 @@ describe('PostsService', () => {
           type: PostType.job_offering,
           specialty: 'إنتاج/صناعة',
           salaryType: 'حسب الاتفاق',
+          approvalStatus: 'pending',
         }),
         include: expect.objectContaining({
           author: { include: { location: true } },
@@ -639,12 +649,15 @@ describe('PostsService', () => {
       );
     });
 
-    it('defaults to active: true', async () => {
+    it('defaults to active: true and approved only', async () => {
       await service.list({ page: 1, limit: 20 }, actor);
 
       expect(prisma.post.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ active: true }),
+          where: expect.objectContaining({
+            active: true,
+            approvalStatus: 'approved',
+          }),
         }),
       );
     });
@@ -701,7 +714,10 @@ describe('PostsService', () => {
 
   describe('likes', () => {
     it('liking twice returns the same count', async () => {
-      prisma.post.findFirst.mockResolvedValue({ active: true });
+      prisma.post.findFirst.mockResolvedValue({
+        active: true,
+        approvalStatus: 'approved',
+      });
       prisma.like.count.mockResolvedValue(1);
 
       const first = await service.like('post-1', actor);
@@ -725,7 +741,10 @@ describe('PostsService', () => {
 
   describe('toggleSave', () => {
     it('saves when the post was not saved', async () => {
-      prisma.post.findFirst.mockResolvedValue({ active: true });
+      prisma.post.findFirst.mockResolvedValue({
+        active: true,
+        approvalStatus: 'approved',
+      });
       prisma.savedPost.findUnique.mockResolvedValue(null);
 
       const result = await service.toggleSave('post-1', actor);
@@ -738,7 +757,10 @@ describe('PostsService', () => {
     });
 
     it('unsaves when the post was already saved', async () => {
-      prisma.post.findFirst.mockResolvedValue({ active: true });
+      prisma.post.findFirst.mockResolvedValue({
+        active: true,
+        approvalStatus: 'approved',
+      });
       prisma.savedPost.findUnique.mockResolvedValue({ userId: actor.id });
 
       const result = await service.toggleSave('post-1', actor);
@@ -808,7 +830,10 @@ describe('PostsService', () => {
         postId: 'post-1',
         authorId: other.id,
       });
-      prisma.post.findFirst.mockResolvedValue({ active: true });
+      prisma.post.findFirst.mockResolvedValue({
+        active: true,
+        approvalStatus: 'approved',
+      });
       prisma.comment.create.mockResolvedValue({
         id: 'reply-1',
         body: 'رد',
@@ -844,7 +869,10 @@ describe('PostsService', () => {
         id: 'comment-1',
         postId: 'post-1',
       });
-      prisma.post.findFirst.mockResolvedValue({ active: true });
+      prisma.post.findFirst.mockResolvedValue({
+        active: true,
+        approvalStatus: 'approved',
+      });
       prisma.comment.findMany.mockResolvedValue([
         {
           id: 'comment-1',

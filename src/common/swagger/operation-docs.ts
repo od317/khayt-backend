@@ -1372,6 +1372,12 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   'get /admin/posts': {
     '200': ok(paginated(samplePost)),
   },
+  'patch /admin/posts/{id}/approve': {
+    '200': ok({ post: { ...samplePost, approvalStatus: 'approved' } }),
+  },
+  'patch /admin/posts/{id}/reject': {
+    '200': ok({ post: { ...samplePost, approvalStatus: 'rejected' } }),
+  },
   'delete /admin/posts/{id}': {
     '200': ok({ post: samplePost, deleted: true }),
   },

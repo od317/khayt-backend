@@ -51,6 +51,8 @@ export type PostResponse = {
   thumbnailUrl: string | null;
   location: string | null;
   active: boolean;
+  /** pending | approved | rejected — public feed only shows approved. */
+  approvalStatus: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt: string;
   specialty: string | null;
@@ -161,6 +163,7 @@ export function toPostResponse(
     thumbnailUrl: post.thumbnailUrl,
     location: post.location,
     active: post.active,
+    approvalStatus: post.approvalStatus,
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
     specialty: post.specialty,

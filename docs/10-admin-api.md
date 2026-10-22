@@ -416,11 +416,21 @@ Auth: `admin` | `super_admin`
 
 ### `GET /admin/posts`
 
-**Query:** `page`, `limit`, `type?`, `authorId?`, `businessId?`, `location?`, `q?`, `active?` (`true`|`false`), `includeDeleted?` (default `false`)
+**Query:** `page`, `limit`, `type?`, `authorId?`, `businessId?`, `location?`, `q?`, `active?` (`true`|`false`), `approvalStatus?` (`pending`|`approved`|`rejected`), `includeDeleted?` (default `false`)
 
 **Response `200`:** `Paginated<PostResponse>`
 
-`PostResponse` (main fields): `id`, `type`, `title`, `body`, `media`, `imageUrls`, `videoUrl`, `thumbnailUrl`, `location`, `active`, `createdAt`, `updatedAt`, option chips (`specialty`, `skills`, …), `categories`, `author`, `business`, `product`, `likes`, `comments`, `likedByMe`, `savedByMe`.
+`PostResponse` (main fields): `id`, `type`, `title`, `body`, `media`, `imageUrls`, `videoUrl`, `thumbnailUrl`, `location`, `active`, `approvalStatus`, `createdAt`, `updatedAt`, option chips (`specialty`, `skills`, …), `categories`, `author`, `business`, `product`, `likes`, `comments`, `likedByMe`, `savedByMe`.
+
+**Moderation:** new posts and author edits start as `approvalStatus: pending` and stay off the public feed until approved. Use `GET /admin/posts?approvalStatus=pending` for the queue.
+
+### `PATCH /admin/posts/:id/approve`
+
+**Response `200`:** `{ "post": { /* approvalStatus: "approved" */ } }` — author notified; public when also `active`.
+
+### `PATCH /admin/posts/:id/reject`
+
+**Response `200`:** `{ "post": { /* approvalStatus: "rejected" */ } }` — author notified; edit by author resets to `pending`.
 
 ### `DELETE /admin/posts/:id`
 
@@ -873,7 +883,7 @@ Same fields as create, all optional. Pass `saleRule: null` to clear (free pick).
 | GET/POST/PATCH/DELETE | `/admin/locations` |
 | GET/POST/PATCH/DELETE | `/admin/categories` |
 | GET/POST/PATCH/DELETE | `/admin/post-options` |
-| GET/DELETE/PATCH | `/admin/posts`, `…/deactivate`, `…/activate` |
+| GET/DELETE/PATCH | `/admin/posts`, `…/approve`, `…/reject`, `…/deactivate`, `…/activate` |
 | CRUD | `/admin/shipping-companies` |
 | GET/POST | `/bills`, `/bills/summary`, `/bills/:id/payments` |
 | GET/POST | `/receiving` |
