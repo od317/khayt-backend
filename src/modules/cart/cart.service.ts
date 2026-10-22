@@ -22,6 +22,7 @@ import {
 import { OrdersService } from '../orders/orders.service';
 import { OrderDetailResponse } from '../orders/orders.mapper';
 import { CheckoutDto } from './dto/checkout.dto';
+import { assertCartVariantAllowsSaleRule } from '../products/sale-rule';
 
 const MAX_CART_ITEMS = 100;
 const MAX_QUANTITY_PER_ITEM = 10000;
@@ -92,6 +93,7 @@ export class CartService {
         }
 
         const variant = dto.variant ?? null;
+        assertCartVariantAllowsSaleRule(product.saleRule, variant);
         const variantKey = buildVariantKey(variant);
 
         // Enforce the max items per cart.

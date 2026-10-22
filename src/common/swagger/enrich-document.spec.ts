@@ -76,6 +76,28 @@ describe('enrichOpenApiDocument', () => {
     });
   });
 
+  it('documents recent role and location fields in samples', () => {
+    const roles = OPERATION_DOCS['get /roles']?.['200']?.examples?.success
+      ?.value as { items: Array<{ iconUrl?: string }> };
+    expect(roles.items[0]?.iconUrl).toBeTruthy();
+
+    const cities = OPERATION_DOCS['get /locations/cities']?.['200']?.examples
+      ?.success?.value as {
+      items: Array<{ deliveryBorder?: unknown }>;
+    };
+    expect(cities.items[0]?.deliveryBorder).toMatchObject({
+      centerLat: expect.any(Number),
+      centerLng: expect.any(Number),
+      radiusKm: expect.any(Number),
+    });
+
+    expect(OPERATION_DOCS['get /posts/liked']).toBeTruthy();
+    expect(OPERATION_DOCS['get /posts/saved']).toBeTruthy();
+    expect(OPERATION_DOCS['get /marketers']).toBeTruthy();
+    expect(OPERATION_DOCS['get /cart']).toBeTruthy();
+    expect(OPERATION_DOCS['get /shipping-companies']).toBeTruthy();
+  });
+
   it('covers every documented operation key', () => {
     expect(Object.keys(OPERATION_DOCS).length).toBeGreaterThan(40);
   });

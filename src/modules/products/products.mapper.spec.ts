@@ -18,6 +18,7 @@ const baseProduct = (): Product => ({
   packaging: null,
   discount: null,
   offer: null,
+  saleRule: null,
   deletedAt: null,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -87,8 +88,43 @@ describe('toProductResponse', () => {
       category: 'قمصان',
       price: 5000,
       supplierBusinessId: null,
+      saleRule: null,
     });
     expect(result).not.toHaveProperty('businessId');
     expect(result).not.toHaveProperty('business');
+  });
+
+  it('exposes saleRule with locked color options for the frontend', () => {
+    const result = toProductResponse({
+      ...baseProduct(),
+      saleRule: { lockedAxis: 'color' },
+      variants: {
+        axes: [
+          { key: 'color', label: 'لون' },
+          { key: 'size', label: 'قياس' },
+        ],
+        options: [
+          {
+            name: 'أحمر',
+            children: [{ name: 'M' }, { name: 'L' }],
+          },
+          {
+            name: 'أزرق',
+            children: [{ name: 'M' }, { name: 'L' }],
+          },
+          {
+            name: 'أبيض',
+            children: [{ name: 'M' }, { name: 'L' }],
+          },
+        ],
+      },
+    });
+
+    expect(result.saleRule).toEqual({
+      lockedAxis: 'color',
+      label: 'لون',
+      options: ['أحمر', 'أزرق', 'أبيض'],
+      optionCount: 3,
+    });
   });
 });

@@ -81,6 +81,7 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 | `offer` | yes |
 | `colorImages[].hex` | yes |
 | `id`, `name`, `category`, `images[]`, `unit`, `price`, `inWarehouse`, `available`, `guarantee`, `variants`, `colorImages[]`, `packaging`, `discount`, `createdAt` | no |
+| **`saleRule`** | **yes** — `null` when the product is sold with normal per-option picking; otherwise `{ lockedAxis, label, options[], optionCount }` |
 
 ### PostResponse
 
@@ -298,13 +299,13 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 ### POST `/api/products`
 
 - **Response can be null:** `product` → ProductResponse nullables
-- **Request optional:** `description`, `variants`, `packaging`, `discount`, `offer`, `guarantee`, `supplierBusinessId`
+- **Request optional:** `description`, `variants`, `packaging`, `saleRule`, `discount`, `offer`, `guarantee`, `supplierBusinessId`
 
 ### PATCH `/api/products/:id`
 
 - **Response can be null:** `product` → ProductResponse nullables
 - **Request optional:** all product fields  
-- **Request nullable:** `supplierBusinessId` (`null` clears the workshop link)
+- **Request nullable:** `supplierBusinessId` (`null` clears the workshop link); `saleRule` (`null` clears the locked-axis rule)
 
 ### DELETE `/api/products/:id`
 

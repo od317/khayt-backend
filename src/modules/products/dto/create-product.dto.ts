@@ -155,6 +155,21 @@ export class ProductPackagingDto {
   label?: string;
 }
 
+/**
+ * When set, quantity 1 buys every option of this axis (e.g. all 3 colors).
+ * The buyer cannot pick that axis in the cart.
+ */
+export class ProductSaleRuleDto {
+  @ApiProperty({
+    enum: ['color', 'size'],
+    example: 'color',
+    description:
+      'Axis sold as a full set. `color` = all colors together; `size` = all sizes together. Must exist on `variants.axes`.',
+  })
+  @IsIn(['color', 'size'])
+  lockedAxis!: 'color' | 'size';
+}
+
 export class ProductDiscountDto {
   @ApiProperty({ example: 0 })
   @Type(() => Number)
@@ -211,6 +226,17 @@ export class CreateProductDto {
   @ValidateNested()
   @Type(() => ProductPackagingDto)
   packaging?: ProductPackagingDto;
+
+  @ApiPropertyOptional({
+    type: () => ProductSaleRuleDto,
+    description:
+      'Optional. Lock color or size so qty 1 includes every option of that axis; buyer cannot pick it.',
+  })
+  @IsOptional()
+  @Transform(nestedJson(ProductSaleRuleDto))
+  @ValidateNested()
+  @Type(() => ProductSaleRuleDto)
+  saleRule?: ProductSaleRuleDto;
 
   @ApiPropertyOptional({ type: () => ProductDiscountDto })
   @IsOptional()

@@ -1,4 +1,8 @@
 import { Product } from '@prisma/client';
+import {
+  SaleRuleResponse,
+  toSaleRuleResponse,
+} from './sale-rule';
 
 export type ColorImagesResponse = {
   name: string;
@@ -28,6 +32,11 @@ export type ProductResponse = {
   packaging: unknown;
   discount: unknown;
   offer: string | null;
+  /**
+   * When set, qty 1 buys every option of `lockedAxis` (e.g. all 3 colors).
+   * Frontend must not let the user pick that axis.
+   */
+  saleRule: SaleRuleResponse | null;
   createdAt: string;
 };
 
@@ -94,6 +103,7 @@ export function toProductResponse(product: Product): ProductResponse {
     packaging: product.packaging,
     discount: product.discount,
     offer: product.offer,
+    saleRule: toSaleRuleResponse(product.saleRule, product.variants),
     createdAt: product.createdAt.toISOString(),
   };
 }

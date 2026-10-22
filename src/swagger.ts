@@ -8,7 +8,7 @@ export function setupSwagger(app: INestApplication): void {
     .setDescription(
       'Warehouse and marketplace API for the Syrian clothing industry.',
     )
-    .setVersion('0.1.0')
+    .setVersion('0.2.0')
     .addBearerAuth(
       {
         type: 'http',

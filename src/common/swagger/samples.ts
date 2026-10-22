@@ -15,22 +15,40 @@ export const sampleProductNamesResponse = {
   ],
 };
 
+export const sampleDeliveryBorder = {
+  centerLat: 33.5138,
+  centerLng: 36.2765,
+  radiusKm: 18,
+};
+
 export const sampleUser = {
   id: '',
   role: 'employee',
   name: '',
   phone: '',
   email: null as string | null,
-  location: '',
+  location: 'دمشق',
+  locationId: 'loc-damascus',
+  deliveryBorder: sampleDeliveryBorder as typeof sampleDeliveryBorder | null,
   deliveryAddress: null as string | null,
   deliveryLat: null as number | null,
   deliveryLng: null as number | null,
   bio: null as string | null,
-  avatarUrl: null as string | null,
+  avatarUrl:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10',
   availableForWork: true,
   verified: false,
   onboardingCompleted: true,
   canOrder: false,
+};
+
+export const sampleRole = {
+  value: 'employee',
+  label: 'موظف',
+  description:
+    'ابحث عن فرص عمل، اعرض مهاراتك، وتواصل مع المعامل والمتاجر في قطاع النسيج.',
+  iconUrl:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10',
 };
 
 export const sampleBusiness = {
@@ -99,6 +117,19 @@ export const sampleProduct = {
   packaging: null as unknown,
   discount: null as unknown,
   offer: null as string | null,
+  saleRule: {
+    lockedAxis: 'color',
+    label: 'لون',
+    options: ['أحمر'],
+    optionCount: 1,
+  } as
+    | {
+        lockedAxis: 'color' | 'size';
+        label: string;
+        options: string[];
+        optionCount: number;
+      }
+    | null,
   createdAt: AT,
 };
 
@@ -295,31 +326,95 @@ export const sampleDelivery = {
 };
 
 export const sampleAdminRole = {
-  value: 'employee',
-  label: '',
-  description: '',
-  id: '',
+  ...sampleRole,
+  id: 'role-employee',
   visibleInApp: true,
   system: true,
   sortOrder: 10,
 };
 
+export const sampleCityLocation = {
+  id: 'loc-damascus',
+  name: 'دمشق',
+  deliveryBorder: sampleDeliveryBorder,
+  areas: [{ id: 'loc-damascus-mazzeh', name: 'المزة' }],
+};
+
 export const sampleAdminLocation = {
-  id: '',
+  id: 'loc-damascus',
   name: 'دمشق',
   parentId: null as string | null,
-  sortOrder: 0,
+  sortOrder: 1,
   active: true,
+  centerLat: 33.5138,
+  centerLng: 36.2765,
+  radiusKm: 18,
   areas: [
     {
-      id: '',
-      name: '',
-      parentId: '',
-      sortOrder: 0,
+      id: 'loc-damascus-mazzeh',
+      name: 'المزة',
+      parentId: 'loc-damascus',
+      sortOrder: 1,
       active: true,
       areas: [] as unknown[],
     },
   ],
+};
+
+export const sampleMarketer = {
+  id: '',
+  name: 'مسوق أقمشة',
+  bio: 'ترويج أقمشة وألبسة',
+  avatarUrl:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10',
+  verified: false,
+  availableForWork: true,
+  location: 'دمشق',
+};
+
+export const sampleShippingCompany = {
+  id: '',
+  name: 'شركة شحن',
+  location: 'دمشق',
+  verified: false,
+  coverage: ['دمشق', 'ريف دمشق'],
+  deliveryTime: '1-2 يوم',
+  pricing: 'حسب الوزن',
+  fleet: 'فان + دراجة',
+  phone: '',
+  imageUrl:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRKFSey5bgsBA3-2Z7f27pym50-ySDrxPZWoIJ1bOCQ9pQVdvEun88f-iPX&s=10',
+  createdAt: AT,
+};
+
+export const sampleCartItem = {
+  id: '',
+  quantity: 2,
+  variant: { color: 'أحمر', size: 'M' } as Record<string, string> | null,
+  variantKey: 'color=أحمر|size=M',
+  product: {
+    id: 'prod-qamis-abyad',
+    name: 'قميص أبيض رجالي',
+    price: 45000,
+    unit: 'قطعة',
+    images: ['/uploads/products/example.jpg'],
+    available: true,
+    inWarehouse: true,
+    guarantee: false,
+    variantImage: '/uploads/products/red.jpg' as string | null,
+  },
+  lineTotal: 90000,
+  available: true,
+  unavailableReason: null as string | null,
+};
+
+export const sampleCart = {
+  items: [sampleCartItem],
+  totals: {
+    distinctProducts: 1,
+    totalItems: 2,
+    subtotal: 90000,
+  },
 };
 
 export const sampleTokens = {

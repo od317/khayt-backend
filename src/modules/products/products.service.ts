@@ -14,6 +14,10 @@ import { QueryProductsDto } from './dto/query-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductResponse, toProductResponse } from './products.mapper';
 import { applyVariantImageFiles, galleryPaths } from './product-uploads';
+import {
+  assertSaleRuleMatchesVariants,
+  parseSaleRuleStored,
+} from './sale-rule';
 
 export type ProductDetailResponse = {
   product: ProductResponse;
@@ -230,6 +234,10 @@ export class ProductsService {
     const uploaded = galleryPaths(files ?? []);
     const variants = applyVariantImageFiles(dto.variants, files ?? []);
 
+    if (dto.saleRule) {
+      assertSaleRuleMatchesVariants(dto.saleRule, variants);
+    }
+
     const product = await this.prisma.product.create({
       data: {
         name: dto.name,
@@ -245,6 +253,7 @@ export class ProductsService {
         packaging: dto.packaging ? toJson(dto.packaging) : Prisma.JsonNull,
         discount: dto.discount ? toJson(dto.discount) : Prisma.JsonNull,
         offer: dto.offer ?? null,
+        saleRule: dto.saleRule ? toJson(dto.saleRule) : Prisma.JsonNull,
       },
     });
 
@@ -259,7 +268,7 @@ export class ProductsService {
   ): Promise<{ product: ProductResponse }> {
     const existing = await this.prisma.product.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true, variants: true },
+      select: { id: true, variants: true, saleRule: true },
     });
     if (!existing) {
       throw new NotFoundException({
@@ -279,6 +288,17 @@ export class ProductsService {
       await this.assertWorkshopSupplier(dto.supplierBusinessId);
     }
 
+    const effectiveVariants =
+      dto.variants !== undefined ? variants : existing.variants;
+    const effectiveSaleRule =
+      dto.saleRule !== undefined
+        ? dto.saleRule
+        : parseSaleRuleStored(existing.saleRule);
+
+    if (effectiveSaleRule) {
+      assertSaleRuleMatchesVariants(effectiveSaleRule, effectiveVariants);
+    }
+
     const data: Prisma.ProductUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.category !== undefined) data.category = dto.category;
@@ -291,6 +311,10 @@ export class ProductsService {
     if (dto.discount !== undefined) data.discount = toJson(dto.discount);
     if (dto.offer !== undefined) data.offer = dto.offer;
     if (dto.guarantee !== undefined) data.guarantee = dto.guarantee;
+    if (dto.saleRule !== undefined) {
+      data.saleRule =
+        dto.saleRule === null ? Prisma.JsonNull : toJson(dto.saleRule);
+    }
     if (dto.supplierBusinessId !== undefined) {
       data.supplier =
         dto.supplierBusinessId === null

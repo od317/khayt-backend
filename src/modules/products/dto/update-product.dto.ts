@@ -9,12 +9,14 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import {
   nestedJson,
   ProductDiscountDto,
   ProductPackagingDto,
+  ProductSaleRuleDto,
   ProductVariantsDto,
 } from './create-product.dto';
 
@@ -64,6 +66,22 @@ export class UpdateProductDto {
   @ValidateNested()
   @Type(() => ProductPackagingDto)
   packaging?: ProductPackagingDto;
+
+  @ApiPropertyOptional({
+    type: () => ProductSaleRuleDto,
+    nullable: true,
+    description:
+      'Lock color or size as a full set. Pass null to clear. Must match variants.axes.',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    if (value === null || value === 'null') return null;
+    return nestedJson(ProductSaleRuleDto)({ value });
+  })
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @ValidateNested()
+  @Type(() => ProductSaleRuleDto)
+  saleRule?: ProductSaleRuleDto | null;
 
   @ApiPropertyOptional({ type: () => ProductDiscountDto })
   @IsOptional()

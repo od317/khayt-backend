@@ -299,6 +299,9 @@ model Product {
   packaging Json?
   discount  Json?
   offer     String?
+  /// When set, qty 1 buys all options of this axis (buyer cannot pick that axis).
+  /// Shape: `{ "lockedAxis": "color" | "size" }`.
+  saleRule  Json?
 
   supplier       Business?       @relation(fields: [supplierBusinessId], references: [id])
   supply         Supply?

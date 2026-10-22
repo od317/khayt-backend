@@ -5,18 +5,25 @@ import {
   sampleAdminRole,
   sampleBill,
   sampleBusiness,
+  sampleCart,
+  sampleCartItem,
+  sampleCityLocation,
   sampleComment,
   sampleDelivery,
   inventoryListSample,
   sampleInventoryItem,
   supplyListSample,
+  sampleMarketer,
   sampleNotification,
   sampleOrderDetail,
   sampleOrderLine,
   sampleOrderListItem,
   samplePost,
   sampleProduct,
+  sampleProductNamesResponse,
   sampleReceiving,
+  sampleRole,
+  sampleShippingCompany,
   sampleTokens,
   sampleUser,
 } from './samples';
@@ -329,11 +336,17 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
 
   'post /auth/onboarding': {
-    '200': ok({ user: sampleUser }),
+    '200': ok({
+      user: { ...sampleUser, role: 'workshop', canOrder: true },
+      business: sampleBusiness,
+    }),
     '400': errors('Validation failed', {
       validation_failed: {
-        summary: 'Invalid role or fields',
-        value: validationFailed({ role: 'يجب أن يكون دوراً قابلاً للاختيار' }),
+        summary: 'Invalid role or missing business fields',
+        value: validationFailed({
+          role: 'يجب أن يكون دوراً قابلاً للاختيار',
+          businessName: 'مطلوب للورشة/المتجر/المعهد',
+        }),
       },
     }),
     '409': errors('Conflict', {
@@ -396,7 +409,27 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
 
   'get /roles': {
     '200': ok({
-      items: [{ value: 'employee', label: '', description: '' }],
+      items: [
+        sampleRole,
+        {
+          ...sampleRole,
+          value: 'workshop',
+          label: 'مشغل / معمل',
+          description:
+            'اعرض منتجاتك وخدماتك، وظّف عمالاً، واطلب من مستودع خيط أو استقبل طلبات المتاجر.',
+          iconUrl:
+            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNO36XKY6a7gCZq0CK5bQrqrMjc-VhMWm9QQVwp4TNoQ&s=10',
+        },
+        {
+          ...sampleRole,
+          value: 'institute',
+          label: 'معهد',
+          description:
+            'انشر الدورات التدريبية في الخياطة والتصميم واجذب الطلاب والمتدربين.',
+          iconUrl:
+            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRKFSey5bgsBA3-2Z7f27pym50-ySDrxPZWoIJ1bOCQ9pQVdvEun88f-iPX&s=10',
+        },
+      ],
     }),
   },
 
@@ -427,14 +460,24 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
 
   'get /locations': {
     '200': ok({
-      items: [{ id: '', name: 'دمشق', areas: [{ id: '', name: '' }] }],
+      items: [sampleCityLocation],
     }),
   },
   'get /locations/cities': {
-    '200': ok({ items: [{ id: '', name: 'دمشق' }] }),
+    '200': ok({
+      items: [
+        {
+          id: sampleCityLocation.id,
+          name: sampleCityLocation.name,
+          deliveryBorder: sampleCityLocation.deliveryBorder,
+        },
+      ],
+    }),
   },
   'get /locations/{id}/areas': {
-    '200': ok({ items: [{ id: '', name: 'المزة' }] }),
+    '200': ok({
+      items: [{ id: 'loc-damascus-mazzeh', name: 'المزة' }],
+    }),
     '404': errors('غير موجود', {
       not_found: {
         summary: 'City location missing',
@@ -806,6 +849,12 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
         value: errorBody(401, 'unauthorized', 'غير مصرح'),
       },
     }),
+  },
+  'get /posts/liked': {
+    '200': ok(paginated({ ...samplePost, likedByMe: true })),
+  },
+  'get /posts/saved': {
+    '200': ok(paginated({ ...samplePost, savedByMe: true })),
   },
   'get /posts/{id}': {
     '200': ok({ post: samplePost }),
@@ -1270,5 +1319,67 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
   },
   'patch /admin/users/{id}': {
     '200': ok({ user: sampleUser }),
+  },
+
+  'get /marketers': {
+    '200': ok(paginated(sampleMarketer)),
+  },
+
+  'get /shipping-companies': {
+    '200': ok(paginated(sampleShippingCompany)),
+  },
+  'get /shipping-companies/{id}': {
+    '200': ok({ company: sampleShippingCompany }),
+  },
+  'get /admin/shipping-companies': {
+    '200': ok(paginated(sampleShippingCompany)),
+  },
+  'get /admin/shipping-companies/{id}': {
+    '200': ok({ company: sampleShippingCompany }),
+  },
+  'post /admin/shipping-companies': {
+    '201': created({ company: sampleShippingCompany }),
+  },
+  'patch /admin/shipping-companies/{id}': {
+    '200': ok({ company: sampleShippingCompany }),
+  },
+  'delete /admin/shipping-companies/{id}': {
+    '200': ok({ success: true }),
+  },
+
+  'get /cart': {
+    '200': ok(sampleCart),
+  },
+  'post /cart/items': {
+    '201': created(sampleCartItem),
+  },
+  'patch /cart/items/{id}': {
+    '200': ok(sampleCartItem),
+  },
+  'delete /cart/items/{id}': {
+    '200': ok({ removed: true }),
+  },
+  'delete /cart': {
+    '200': ok({ cleared: true }),
+  },
+  'post /cart/checkout': {
+    '201': created({ order: sampleOrderDetail.order }),
+  },
+
+  'get /admin/posts': {
+    '200': ok(paginated(samplePost)),
+  },
+  'delete /admin/posts/{id}': {
+    '200': ok({ post: samplePost, deleted: true }),
+  },
+  'patch /admin/posts/{id}/deactivate': {
+    '200': ok({ post: { ...samplePost, active: false } }),
+  },
+  'patch /admin/posts/{id}/activate': {
+    '200': ok({ post: { ...samplePost, active: true } }),
+  },
+
+  'get /products/names': {
+    '200': ok(sampleProductNamesResponse),
   },
 };
