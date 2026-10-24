@@ -211,9 +211,9 @@ export function toCommentResponse(
     createdAt: comment.createdAt.toISOString(),
     parentId: comment.parentId,
     author: {
-      id: comment.author.id,
-      name: comment.author.name,
-      avatarUrl: comment.author.avatarUrl,
+      id: comment.author?.id ?? '',
+      name: comment.author?.name ?? null,
+      avatarUrl: comment.author?.avatarUrl ?? null,
     },
     replies,
   };

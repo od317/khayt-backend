@@ -25,6 +25,9 @@ const makeNotification = (overrides: Record<string, unknown> = {}) => ({
 });
 
 type PrismaMock = {
+  user: {
+    findUnique: ReturnType<typeof vi.fn>;
+  };
   notification: {
     create: ReturnType<typeof vi.fn>;
     findFirst: ReturnType<typeof vi.fn>;
@@ -44,6 +47,11 @@ describe('NotificationsService', () => {
 
   beforeEach(() => {
     prisma = {
+      user: {
+        findUnique: vi.fn().mockImplementation(async ({ where }: { where: { id: string } }) => ({
+          id: where.id,
+        })),
+      },
       notification: {
         create: vi.fn().mockResolvedValue(makeNotification()),
         findFirst: vi.fn().mockResolvedValue(null),
@@ -130,6 +138,34 @@ describe('NotificationsService', () => {
         }),
       ).resolves.toBeUndefined();
     });
+
+    it('skips write when recipient userId is missing', async () => {
+      await expect(
+        service.notify({
+          userId: '' as never,
+          type: NotificationType.order_status,
+          title: 't',
+          body: 'b',
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(prisma.notification.create).not.toHaveBeenCalled();
+    });
+
+    it('skips write when recipient user does not exist', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null);
+
+      await expect(
+        service.notify({
+          userId: 'missing-user',
+          type: NotificationType.order_status,
+          title: 't',
+          body: 'b',
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(prisma.notification.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('notifyLike', () => {
@@ -186,6 +222,22 @@ describe('NotificationsService', () => {
           postId: 'post-1',
         }),
       ).resolves.toBeUndefined();
+    });
+
+    it('skips write when post author does not exist', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null);
+
+      await expect(
+        service.notifyLike({
+          userId: 'post-author',
+          actorId: 'liker',
+          actorName: 'أحمد',
+          postId: 'post-1',
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(prisma.notification.create).not.toHaveBeenCalled();
+      expect(prisma.notification.update).not.toHaveBeenCalled();
     });
   });
 

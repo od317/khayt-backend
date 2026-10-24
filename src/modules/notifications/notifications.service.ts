@@ -25,6 +25,10 @@ export type NotifyInput = {
   actorId?: string;
 };
 
+function isNonEmptyId(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -41,23 +45,44 @@ export class NotificationsService {
    * After the DB write succeeds, publishes to the user's SSE channel.
    */
   async notify(input: NotifyInput): Promise<void> {
+    if (!isNonEmptyId(input?.userId)) {
+      this.logger.warn(
+        'Skipping notification write: recipient userId is missing',
+      );
+      return;
+    }
+
     try {
+      const recipient = await this.prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { id: true },
+      });
+      if (!recipient) {
+        this.logger.warn(
+          `Skipping notification write: recipient user ${input.userId} does not exist`,
+        );
+        return;
+      }
+
       const data: Prisma.NotificationCreateInput = {
-        user: { connect: { id: input.userId } },
+        user: { connect: { id: recipient.id } },
         type: input.type,
         title: input.title,
         body: input.body,
         linkTo: input.linkTo ?? null,
-        actorId: input.actorId ?? null,
+        actorId: isNonEmptyId(input.actorId) ? input.actorId : null,
       };
 
       const created = await this.prisma.notification.create({ data });
+      if (!created) {
+        this.logger.warn(
+          `Notification create returned empty result for user ${input.userId}`,
+        );
+        return;
+      }
       await this.publishNotification(created);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      this.logger.error(
-        `Failed to write notification for user ${input.userId}: ${message}`,
-      );
+      this.logWriteFailure('notification', input.userId, error);
     }
   }
 
@@ -71,13 +96,31 @@ export class NotificationsService {
     actorName: string;
     postId: string;
   }): Promise<void> {
+    if (!isNonEmptyId(input?.userId) || !isNonEmptyId(input?.postId)) {
+      this.logger.warn(
+        'Skipping like notification: post author or postId is missing',
+      );
+      return;
+    }
+
     try {
+      const recipient = await this.prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { id: true },
+      });
+      if (!recipient) {
+        this.logger.warn(
+          `Skipping like notification: post author ${input.userId} does not exist`,
+        );
+        return;
+      }
+
       const linkTo = `/posts/${input.postId}`;
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
       const existing = await this.prisma.notification.findFirst({
         where: {
-          userId: input.userId,
+          userId: recipient.id,
           type: NotificationType.new_like,
           linkTo,
           read: false,
@@ -86,31 +129,47 @@ export class NotificationsService {
         orderBy: { createdAt: 'desc' },
       });
 
-      if (existing) {
+      if (existing?.id) {
         const match = existing.body.match(/^(\d+)/);
         const count = match ? parseInt(match[1]!, 10) + 1 : 2;
         const updated = await this.prisma.notification.update({
           where: { id: existing.id },
           data: { body: `${count} أشخاص أعجبوا بمنشورك` },
         });
-        await this.publishNotification(updated);
+        if (updated) {
+          await this.publishNotification(updated);
+        }
         return;
       }
 
       await this.notify({
-        userId: input.userId,
+        userId: recipient.id,
         type: NotificationType.new_like,
         title: 'إعجاب جديد',
-        body: `${input.actorName} أعجب بمنشورك`,
+        body: `${input.actorName ?? 'مستخدم'} أعجب بمنشورك`,
         linkTo,
-        actorId: input.actorId,
+        actorId: isNonEmptyId(input.actorId) ? input.actorId : undefined,
       });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      this.logger.error(
-        `Failed to write like notification for user ${input.userId}: ${message}`,
-      );
+      this.logWriteFailure('like notification', input.userId, error);
     }
+  }
+
+  private logWriteFailure(
+    kind: string,
+    userId: string | undefined,
+    error: unknown,
+  ): void {
+    const message = error instanceof Error ? error.message : 'unknown error';
+    const isFk =
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2003';
+    const prefix = `Failed to write ${kind} for user ${userId ?? 'unknown'}: ${message}`;
+    if (isFk) {
+      this.logger.warn(prefix);
+      return;
+    }
+    this.logger.error(prefix);
   }
 
   async list(
@@ -210,6 +269,11 @@ export class NotificationsService {
   }
 
   private async publishNotification(notification: Notification): Promise<void> {
+    if (!notification?.id || !isNonEmptyId(notification.userId)) {
+      this.logger.warn('Skipping notification publish: notification is incomplete');
+      return;
+    }
+
     const payload: NotificationResponse = toNotificationResponse(notification);
     await this.redis.publish(
       NOTIFY_USER_CHANNEL(notification.userId),

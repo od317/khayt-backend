@@ -682,10 +682,11 @@ export class PostsService {
     });
     const likes = await this.prisma.like.count({ where: { postId } });
 
-    if (!existing && post && post.authorId !== actor.id) {
+    const postAuthorId = post?.authorId;
+    if (!existing && postAuthorId && postAuthorId !== actor.id) {
       const actorName = await this.getActorName(actor.id);
       await this.notifications.notifyLike({
-        userId: post.authorId,
+        userId: postAuthorId,
         actorId: actor.id,
         actorName,
         postId,
@@ -798,10 +799,11 @@ export class PostsService {
       include: { author: true },
     });
 
-    if (post && post.authorId !== actor.id) {
+    const postAuthorId = post?.authorId;
+    if (postAuthorId && postAuthorId !== actor.id) {
       const actorName = await this.getActorName(actor.id);
       await this.notifications.notify({
-        userId: post.authorId,
+        userId: postAuthorId,
         type: NotificationType.new_comment,
         title: 'تعليق جديد',
         body: `${actorName} علّق على منشورك`,
@@ -933,7 +935,7 @@ export class PostsService {
     }
 
     const isCommentAuthor = comment.authorId === actor.id;
-    const isPostAuthor = comment.post.authorId === actor.id;
+    const isPostAuthor = comment.post?.authorId === actor.id;
     if (!isCommentAuthor && !isPostAuthor) {
       throw new ForbiddenException({
         error: 'forbidden',
