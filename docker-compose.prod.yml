@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
 
   api:
-    build: .
+    image: ghcr.io/od317/khayt-backend:latest
     container_name: khayt-api-prod
     depends_on:
       postgres: { condition: service_healthy }

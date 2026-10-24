@@ -4,10 +4,13 @@ on:
   push:
     branches: [ main ]
 
+env:
+  IMAGE: ghcr.io/od317/khayt-backend:latest
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:16
@@ -32,7 +35,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -45,7 +48,7 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
-        
+
       - name: Generate Prisma Client
         run: npx prisma generate
         env:
@@ -80,7 +83,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME:latest
+          tags: ${{ env.IMAGE }}
 
       - name: Deploy to Hostinger via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -89,7 +92,10 @@ jobs:
           username: ${{ secrets.HOSTINGER_USER }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           script: |
+            set -e
             cd ~/khayt-backend
+            git pull origin main
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker compose up -d
+            docker compose -f docker-compose.prod.yml pull api
+            docker compose -f docker-compose.prod.yml run --rm --no-deps api npx prisma migrate deploy
+            docker compose -f docker-compose.prod.yml up -d
