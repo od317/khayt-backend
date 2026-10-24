@@ -1,10 +1,8 @@
-name: Khayt Backend CI
+name: Khayt CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 jobs:
   test:
@@ -59,3 +57,19 @@ jobs:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/khayt_test_db?schema=public
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Hostinger via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          script: |
+            cd ~/khayt-backend
+            git pull origin main
+            docker compose down
+            docker compose up -d --build
