@@ -92,10 +92,125 @@ jobs:
           username: ${{ secrets.HOSTINGER_USER }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           script: |
-            set -e
+            set -eu
             cd ~/khayt-backend
             git pull origin main
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            IMAGE="${{ env.IMAGE }}"
             docker compose -f docker-compose.prod.yml pull api
-            docker compose -f docker-compose.prod.yml run --rm --no-deps api npx prisma migrate deploy
+            docker compose -f docker-compose.prod.yml up -d postgres redis
+
+            cleanup() {
+              rm -rf /tmp/khayt-align /tmp/khayt_url_value /tmp/khayt_env /tmp/migrate.log /tmp/khayt-align.js /tmp/khayt-sync-env.js /tmp/psql.out
+              docker exec khayt-db-prod rm -f /tmp/align.sql >/dev/null 2>&1 || true
+            }
+            trap cleanup EXIT
+
+            ready=0
+            for _ in 1 2 3 4 5 6 7 8 9 10; do
+              if docker exec khayt-db-prod pg_isready -U khayt >/dev/null 2>&1; then
+                ready=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$ready" -ne 1 ]; then
+              echo "Postgres did not become ready"
+              exit 1
+            fi
+
+            # Prefer the running API's URL. .env.production can drift from the
+            # password stored in the Postgres volume (POSTGRES_PASSWORD applies
+            # only when the volume is first created).
+            if docker exec khayt-api-prod printenv DATABASE_URL > /tmp/khayt_url_value 2>/dev/null; then
+              echo "Using DATABASE_URL from the running API container"
+            else
+              echo "Using DATABASE_URL from .env.production"
+              sed -n 's/^DATABASE_URL=//p' .env.production | head -n 1 | tr -d '\r"' > /tmp/khayt_url_value
+            fi
+            if [ ! -s /tmp/khayt_url_value ]; then
+              echo "DATABASE_URL is empty"
+              exit 1
+            fi
+            chmod 600 /tmp/khayt_url_value
+            printf 'DATABASE_URL=' > /tmp/khayt_env
+            cat /tmp/khayt_url_value >> /tmp/khayt_env
+            printf '\n' >> /tmp/khayt_env
+            chmod 600 /tmp/khayt_env
+
+            NET=$(docker inspect khayt-db-prod --format '{{range $k, $v := .NetworkSettings.Networks}}{{println $k}}{{end}}' | head -n 1)
+
+            run_migrate() {
+              docker run --rm --network "$NET" --env-file /tmp/khayt_env "$IMAGE" npx prisma migrate deploy > /tmp/migrate.log 2>&1
+            }
+
+            align_db_password() {
+              echo "Database rejected DATABASE_URL; resetting the khayt role password to match it"
+              mkdir -p /tmp/khayt-align
+              cat > /tmp/khayt-align.js << 'ENDJS'
+            const fs = require('fs');
+            const u = new URL(fs.readFileSync('/url', 'utf8').trim());
+            const tag = '$pw' + Date.now().toString(16) + '$';
+            if (u.password.includes(tag)) process.exit(2);
+            const user = '"' + u.username.replace(/"/g, '""') + '"';
+            fs.writeFileSync('/work/align.sql', 'ALTER USER ' + user + ' WITH PASSWORD ' + tag + u.password + tag + ';\n');
+            ENDJS
+              docker run --rm \
+                -v /tmp/khayt_url_value:/url:ro \
+                -v /tmp/khayt-align:/work \
+                -v /tmp/khayt-align.js:/align.js:ro \
+                --entrypoint node \
+                "$IMAGE" /align.js
+              docker cp /tmp/khayt-align/align.sql khayt-db-prod:/tmp/align.sql
+              if ! docker exec khayt-db-prod psql -U khayt -d khayt -v ON_ERROR_STOP=1 -f /tmp/align.sql >/tmp/psql.out 2>&1; then
+                echo "Failed to reset the database password inside Postgres"
+                exit 1
+              fi
+              docker exec khayt-db-prod rm -f /tmp/align.sql
+              rm -rf /tmp/khayt-align /tmp/khayt-align.js /tmp/psql.out
+            }
+
+            set +e
+            run_migrate
+            code=$?
+            set -e
+            if [ "$code" -ne 0 ]; then
+              if grep -q P1000 /tmp/migrate.log; then
+                align_db_password
+                set +e
+                run_migrate
+                code=$?
+                set -e
+                if [ "$code" -ne 0 ]; then
+                  sed -E 's#postgresql://[^[:space:]]+#postgresql://***#g' /tmp/migrate.log
+                  exit "$code"
+                fi
+              else
+                sed -E 's#postgresql://[^[:space:]]+#postgresql://***#g' /tmp/migrate.log
+                exit "$code"
+              fi
+            fi
+            sed -E 's#postgresql://[^[:space:]]+#postgresql://***#g' /tmp/migrate.log
+
+            cat > /tmp/khayt-sync-env.js << 'ENDJS'
+            const fs = require('fs');
+            const url = fs.readFileSync('/url', 'utf8').trim();
+            const path = '/env';
+            let text = fs.readFileSync(path, 'utf8');
+            const line = 'DATABASE_URL=' + url;
+            if (/^DATABASE_URL=/m.test(text)) {
+              text = text.replace(/^DATABASE_URL=.*$/m, line);
+            } else {
+              if (!text.endsWith('\n')) text += '\n';
+              text += line + '\n';
+            }
+            fs.writeFileSync(path, text);
+            ENDJS
+            docker run --rm \
+              -v /tmp/khayt_url_value:/url:ro \
+              -v "$PWD/.env.production":/env \
+              -v /tmp/khayt-sync-env.js:/sync.js:ro \
+              --entrypoint node \
+              "$IMAGE" /sync.js
+
             docker compose -f docker-compose.prod.yml up -d
