@@ -64,7 +64,7 @@ type PostWithRelations = PostWithRelationsForMapper;
 type ResolvedCreatePostDto = CreatePostDto & { type: PostType };
 
 const POST_INCLUDE = {
-  author: { include: { location: true, phone: true } },
+  author: { include: { location: true } },
   business: true,
   product: {
     select: {

@@ -311,6 +311,7 @@ describe('PostsService', () => {
       });
 
       expect(result.post.id).toBe('post-1');
+      expect(result.post.author.phone).toBe(actor.phone);
       expect(prisma.post.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           authorId: actor.id,
@@ -603,6 +604,7 @@ describe('PostsService', () => {
 
       expect(result.post.id).toBe('post-1');
       expect(result.post.active).toBe(false);
+      expect(result.post.author.phone).toBe(actor.phone);
     });
   });
 

@@ -13,6 +13,8 @@ import {
 export type PostAuthorResponse = {
   id: string;
   name: string | null;
+  /** E.164 phone of the post creator (e.g. +963994000001). */
+  phone: string;
   role: UserRole;
   location: string | null;
   avatarUrl: string | null;
@@ -130,6 +132,7 @@ export function toPostAuthorResponse(
   return {
     id: user.id,
     name: user.name,
+    phone: user.phone,
     role: user.role as UserRole,
     location: user.location?.name ?? null,
     avatarUrl: user.avatarUrl,
