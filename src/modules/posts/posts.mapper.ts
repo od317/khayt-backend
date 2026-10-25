@@ -14,7 +14,7 @@ export type PostAuthorResponse = {
   id: string;
   name: string | null;
   /** E.164 phone of the post creator (e.g. +963994000001). */
-  phone: string;
+  phone: string | null;
   role: UserRole;
   location: string | null;
   avatarUrl: string | null;
