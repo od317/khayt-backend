@@ -32,6 +32,9 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
     env_file: .env.production
+    volumes:
+      # Keep uploaded videos/images across image redeploys
+      - uploads_prod:/app/uploads
     expose: ['3000']
     restart: unless-stopped
 
@@ -48,3 +51,4 @@ services:
 volumes:
   pgdata_prod:
   redisdata_prod:
+  uploads_prod:
