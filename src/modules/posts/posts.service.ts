@@ -326,7 +326,7 @@ export class PostsService {
     actor: AuthenticatedUser,
     dto: CreatePostDto,
     files: Express.Multer.File[] = [],
-  ): Promise<{ post: PostResponse }> {
+  ): Promise<{ post: PostResponse; message: string }> {
     await this.assertActorHasDisplayName(actor.id);
 
     // 1. Resolve the type first (defaults if client omitted it).
