@@ -30,7 +30,7 @@ Prefer **`product.saleCase`** over inferring from `saleRule` + `colorImages`.
 | `free` | `{ color, size }` | pieces | — (`colorImages[].price` for unit) |
 | `mixed` | free color → `{ color, size }`; pack color → `{ color }` | pieces or packs | `colorImages[].packPrice` when `sizeMode === "pack"` |
 | `color_size_pack` | `{ color }` | packs | `product.packPrice` / `saleRule.packPrice` |
-| `color_pair_pack` | `{ color, pairColor }` — **both required** | packs | `product.packPrice` / `saleRule.packPrice`; seconds from `saleRule.pairWith[color]` |
+| `color_pair_pack` | `{ color, pairColor }` **or** `{ color, pairColors: [...] }` — first + at least one second | packs | `product.packPrice` / `saleRule.packPrice`; seconds from `saleRule.pairWith[color]`; one cart line per second color |
 
 ### Size chips UX (important)
 
@@ -572,9 +572,9 @@ Three order lines: أحمر/M×2, أحمر/L×2, أحمر/XL×2.
 
 1. Pick first color.
 2. Second-color list from `saleRule.pairWith[first]` (e.g. أحمر → أزرق, أسود).
-3. Pick **`pairColor` — required**. Add to cart stays disabled until both are set.
+3. Pick **one or more** seconds — required (`pairColor` or `pairColors[]`). Add stays disabled until at least one second is set.
 4. Size chips visible but **disabled** (`saleRule.sizePack`: M/L/XL × 5).
-5. Show `packPrice` (45000 × 30 = 1_350_000).
+5. Show `packPrice` per pair (45000 × 30 = 1_350_000). Multi-select → one cart line (one pack price) per second color.
 
 `unitsPerPack` = 3 × 5 × 2 = 30.
 
@@ -703,7 +703,11 @@ GET /api/products/prod-sale-pair
 }
 ```
 
-### Add to cart (1 pack)
+### Add to cart — one second color
+
+```http
+POST /api/cart/items
+```
 
 ```json
 {
@@ -715,49 +719,94 @@ GET /api/products/prod-sale-pair
 
 ```json
 {
-  "id": "c3333333-3333-3333-3333-333333333333",
-  "quantity": 1,
-  "unitsPerPack": 30,
-  "totalPieces": 30,
-  "breakdown": [
-    { "color": "أحمر", "size": "M", "qty": 5 },
-    { "color": "أحمر", "size": "L", "qty": 5 },
-    { "color": "أحمر", "size": "XL", "qty": 5 },
-    { "color": "أزرق", "size": "M", "qty": 5 },
-    { "color": "أزرق", "size": "L", "qty": 5 },
-    { "color": "أزرق", "size": "XL", "qty": 5 }
-  ],
-  "originalUnitPrice": 45000,
-  "unitPrice": 45000,
-  "packPrice": 1350000,
-  "variant": { "color": "أحمر", "pairColor": "أزرق" },
-  "variantKey": "color:أحمر|pairColor:أزرق",
-  "product": {
-    "id": "prod-sale-pair",
-    "name": "طقم لونين",
-    "price": 45000,
-    "unit": "قطعة",
-    "images": ["IMG1", "IMG2"],
-    "available": true,
-    "inWarehouse": true,
-    "guarantee": true,
-    "variantImage": "IMG1"
-  },
-  "lineTotal": 1350000,
-  "available": true,
-  "unavailableReason": null
+  "items": [
+    {
+      "id": "c3333333-3333-3333-3333-333333333333",
+      "quantity": 1,
+      "unitsPerPack": 30,
+      "totalPieces": 30,
+      "breakdown": [
+        { "color": "أحمر", "size": "M", "qty": 5 },
+        { "color": "أحمر", "size": "L", "qty": 5 },
+        { "color": "أحمر", "size": "XL", "qty": 5 },
+        { "color": "أزرق", "size": "M", "qty": 5 },
+        { "color": "أزرق", "size": "L", "qty": 5 },
+        { "color": "أزرق", "size": "XL", "qty": 5 }
+      ],
+      "originalUnitPrice": 45000,
+      "unitPrice": 45000,
+      "packPrice": 1350000,
+      "variant": { "color": "أحمر", "pairColor": "أزرق" },
+      "variantKey": "color:أحمر|pairColor:أزرق",
+      "product": {
+        "id": "prod-sale-pair",
+        "name": "طقم لونين",
+        "price": 45000,
+        "unit": "قطعة",
+        "images": ["IMG1", "IMG2"],
+        "available": true,
+        "inWarehouse": true,
+        "guarantee": true,
+        "variantImage": "IMG1"
+      },
+      "lineTotal": 1350000,
+      "available": true,
+      "unavailableReason": null
+    }
+  ]
 }
 ```
 
+### Add to cart — multiple second colors (same request)
+
+```json
+{
+  "productId": "prod-sale-pair",
+  "quantity": 1,
+  "variant": { "color": "أحمر", "pairColors": ["أزرق", "أسود"] }
+}
+```
+
+```json
+{
+  "items": [
+    {
+      "id": "…",
+      "quantity": 1,
+      "unitsPerPack": 30,
+      "totalPieces": 30,
+      "packPrice": 1350000,
+      "variant": { "color": "أحمر", "pairColor": "أزرق" },
+      "variantKey": "color:أحمر|pairColor:أزرق",
+      "lineTotal": 1350000
+    },
+    {
+      "id": "…",
+      "quantity": 1,
+      "unitsPerPack": 30,
+      "totalPieces": 30,
+      "packPrice": 1350000,
+      "variant": { "color": "أحمر", "pairColor": "أسود" },
+      "variantKey": "color:أحمر|pairColor:أسود",
+      "lineTotal": 1350000
+    }
+  ]
+}
+```
+
+Singular `pairColor` still works. You may send both; values are merged and de-duplicated.
+
 Rejected (FE should disable Add until valid):
 
-- `{ "color": "أحمر" }` — **missing `pairColor`** (required)
+- `{ "color": "أحمر" }` — **missing second color** (`pairColor` / `pairColors`)
+- `{ "color": "أحمر", "pairColors": [] }` — empty list
 - `{ "color": "أحمر", "pairColor": "وردي" }` — not in `pairWith.أحمر`
 - sending `size` — validation error
 
 ### Checkout expand
 
-Six order lines (each color × each size × 5).
+Per cart line: six order lines (each of the two colors × each size × 5). Two seconds → two packs → twelve order lines.
+
 
 ---
 

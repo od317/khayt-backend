@@ -197,7 +197,7 @@ describe('sale-rule', () => {
     const rule = {
       mode: 'color_pair_pack',
       sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 5 },
-      pairWith: { أحمر: ['أسود'], أزرق: ['أسود'] },
+      pairWith: { أحمر: ['أسود', 'أزرق'], أزرق: ['أسود'] },
     };
     expect(() =>
       assertCartVariantForSaleMode(rule, colorSizeTree, {
@@ -209,6 +209,12 @@ describe('sale-rule', () => {
       assertCartVariantForSaleMode(rule, colorSizeTree, {
         color: 'أحمر',
         pairColor: 'أزرق',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertCartVariantForSaleMode(rule, colorSizeTree, {
+        color: 'أحمر',
+        pairColor: 'وردي',
       }),
     ).toThrow(HttpException);
     expect(() =>

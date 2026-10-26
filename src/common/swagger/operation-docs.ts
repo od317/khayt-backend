@@ -1354,7 +1354,7 @@ export const OPERATION_DOCS: Record<string, OperationDoc> = {
     '200': ok(sampleCart),
   },
   'post /cart/items': {
-    '201': created(sampleCartItem),
+    '201': created({ items: [sampleCartItem] }),
   },
   'patch /cart/items/{id}': {
     '200': ok(sampleCartItem),

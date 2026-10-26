@@ -414,36 +414,103 @@ Required: `kind`, `postTypes` (≥1), `label`. `parentId` required for skills.
 
 Auth: `admin` | `super_admin`
 
+### PostResponse
+
+Same shape as public post endpoints. Uploaded media paths are relative (e.g. `/uploads/posts/….mp4`); prefix the API host to open them.
+
+```json
+{
+  "id": "uuid-or-seed-id",
+  "type": "reel",
+  "title": "string|null",
+  "body": "string",
+  "media": "none|image|video",
+  "imageUrls": ["/uploads/posts/a.jpg"],
+  "videoUrl": "/uploads/posts/5a8aa068-….mp4",
+  "thumbnailUrl": "/uploads/posts/5a8aa068-….thumb.jpg",
+  "location": "string|null",
+  "active": true,
+  "approvalStatus": "pending",
+  "createdAt": "ISO-8601",
+  "updatedAt": "ISO-8601",
+  "specialty": "string|null",
+  "skills": [],
+  "workType": [],
+  "experience": "string|null",
+  "salary": "string|null",
+  "salaryType": "string|null",
+  "pricing": "string|null",
+  "servicePlace": "string|null",
+  "sellMethod": "string|null",
+  "priceMethod": "string|null",
+  "condition": "string|null",
+  "price": "string|null",
+  "currency": "string|null",
+  "categories": [{ "id": "…", "name": "…", "slug": "…" }],
+  "author": {
+    "id": "user-id",
+    "name": "أحمد الصالح",
+    "phone": "+963992966711",
+    "role": "employee",
+    "location": "دمشق",
+    "avatarUrl": null
+  },
+  "business": {
+    "id": "biz-id",
+    "name": "…",
+    "type": "workshop",
+    "location": "…",
+    "verified": true
+  },
+  "product": null,
+  "likes": 0,
+  "comments": 0,
+  "likedByMe": false,
+  "savedByMe": false
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `type` | `job_seeking` \| `job_offering` \| `service_offering` \| `service_requesting` \| `product_offering` \| `material_offering` \| `material_requesting` \| `reel` (nullable in DB but normally set) |
+| `approvalStatus` | `pending` \| `approved` \| `rejected` |
+| `author.phone` | E.164 string or `null` (e.g. email-only superadmin) |
+| `author.name` / `author.location` / `author.avatarUrl` | nullable |
+| `business` / `product` | nullable whole objects |
+| `videoUrl` / `thumbnailUrl` | nullable; may be absolute external URLs (seed) or `/uploads/…` paths |
+
+**Moderation:** create/update by authors sets `approvalStatus: pending`. Public feed is `active` + `approved` only. Use `GET /admin/posts?approvalStatus=pending` for the moderation queue.
+
 ### `GET /admin/posts`
 
-**Query:** `page`, `limit`, `type?`, `authorId?`, `businessId?`, `location?`, `q?`, `active?` (`true`|`false`), `approvalStatus?` (`pending`|`approved`|`rejected`), `includeDeleted?` (default `false`)
+**Query:** `page`, `limit`, `type?` (one or many / comma-separated), `authorId?`, `businessId?`, `location?`, `q?`, `active?` (`true`\|`false`), `approvalStatus?` (`pending`\|`approved`\|`rejected`), `includeDeleted?` (default `false`)
 
-**Response `200`:** `Paginated<PostResponse>`
-
-`PostResponse` (main fields): `id`, `type`, `title`, `body`, `media`, `imageUrls`, `videoUrl`, `thumbnailUrl`, `location`, `active`, `approvalStatus`, `createdAt`, `updatedAt`, option chips (`specialty`, `skills`, …), `categories`, `author`, `business`, `product`, `likes`, `comments`, `likedByMe`, `savedByMe`.
-
-**Moderation:** new posts and author edits start as `approvalStatus: pending` and stay off the public feed until approved. Use `GET /admin/posts?approvalStatus=pending` for the queue.
+**Response `200`:** `Paginated<PostResponse>` → `{ items, total, page, limit }`
 
 ### `PATCH /admin/posts/:id/approve`
 
-**Response `200`:** `{ "post": { /* approvalStatus: "approved" */ } }` — author notified; public when also `active`.
+**Response `200`:** `{ "post": { /* PostResponse, approvalStatus: "approved" */ } }`  
+Author notified. Appears on the public feed when also `active: true`.
 
 ### `PATCH /admin/posts/:id/reject`
 
-**Response `200`:** `{ "post": { /* approvalStatus: "rejected" */ } }` — author notified; edit by author resets to `pending`.
+**Response `200`:** `{ "post": { /* PostResponse, approvalStatus: "rejected" */ } }`  
+Author notified. Author edit resets status to `pending`.
 
 ### `DELETE /admin/posts/:id`
 
 **Response `200`:** `{ "post": { /* PostResponse */ }, "deleted": true }`  
-Soft-delete; author is notified.
+Soft-delete (`deletedAt`); author notified.
 
 ### `PATCH /admin/posts/:id/deactivate`
 
-**Response `200`:** `{ "post": { /* active: false */ } }`
+**Response `200`:** `{ "post": { /* PostResponse, active: false */ } }`  
+Author notified. Hidden from public listings.
 
 ### `PATCH /admin/posts/:id/activate`
 
-**Response `200`:** `{ "post": { /* active: true */ } }`
+**Response `200`:** `{ "post": { /* PostResponse, active: true */ } }`  
+Re-shows publicly only if `approvalStatus` is also `approved`.
 
 ---
 

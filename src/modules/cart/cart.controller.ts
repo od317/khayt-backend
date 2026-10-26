@@ -17,7 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { RequireUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/types/auth';
-import { CartService } from './cart.service';
+import { AddCartItemsResponse, CartService } from './cart.service';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CartItemResponse, CartResponse } from './cart.mapper';
@@ -46,13 +46,13 @@ export class CartController {
     @ApiOperation({
         summary: 'Add a product (with optional variant) to the cart',
         description:
-            'Store and workshop accounts only. If the same product + variant is already in the cart, quantities are summed.',
+            'Store and workshop accounts only. If the same product + variant is already in the cart, quantities are summed. For `color_pair_pack`, send `pairColor` or `pairColors` (one or more); each second color becomes its own cart line. Response is always `{ items: [...] }`.',
     })
-    @ApiOkResponse({ description: 'The created or updated cart item' })
+    @ApiOkResponse({ description: 'Created or updated cart item(s)' })
     addItem(
         @RequireUser() user: AuthenticatedUser,
         @Body() dto: AddCartItemDto,
-    ): Promise<CartItemResponse> {
+    ): Promise<AddCartItemsResponse> {
         return this.cart.addItem(user, dto);
     }
 

@@ -27,9 +27,14 @@ import {
     buildBreakdownFromResolved,
     resolveCartSale,
 } from '../products/sale-rule';
+import { expandCartVariants } from './cart-variant';
 
 const MAX_CART_ITEMS = 100;
 const MAX_QUANTITY_PER_ITEM = 10000;
+
+export type AddCartItemsResponse = {
+    items: CartItemResponse[];
+};
 
 const CART_INCLUDE = {
     product: true,
@@ -62,7 +67,7 @@ export class CartService {
     async addItem(
         actor: AuthenticatedUser,
         dto: AddCartItemDto,
-    ): Promise<CartItemResponse> {
+    ): Promise<AddCartItemsResponse> {
         assertStore(actor);
 
         const quantity = dto.quantity ?? 1;
@@ -96,31 +101,43 @@ export class CartService {
             });
         }
 
-        const variant = dto.variant ?? null;
-        assertCartVariantForSaleMode(
-            product.saleRule,
-            product.variants,
-            variant,
+        const variants = expandCartVariants(
+            dto.variant as Record<string, unknown> | null | undefined,
         );
-        const variantKey = buildVariantKey(variant);
 
-        // Enforce the max items per cart.
+        for (const variant of variants) {
+            assertCartVariantForSaleMode(
+                product.saleRule,
+                product.variants,
+                variant,
+            );
+        }
+
         const existingCount = await this.prisma.cartItem.count({
             where: { userId: actor.id },
         });
 
-        const existing = await this.prisma.cartItem.findUnique({
-            where: {
-                userId_productId_variantKey: {
-                    userId: actor.id,
-                    productId: dto.productId,
-                    variantKey,
-                },
-            },
-            include: CART_INCLUDE,
-        });
+        const keyed = variants.map((variant) => ({
+            variant,
+            variantKey: buildVariantKey(variant),
+        }));
 
-        if (!existing && existingCount >= MAX_CART_ITEMS) {
+        const existingRows = await this.prisma.cartItem.findMany({
+            where: {
+                userId: actor.id,
+                productId: dto.productId,
+                variantKey: { in: keyed.map((k) => k.variantKey) },
+            },
+            select: { id: true, variantKey: true, quantity: true },
+        });
+        const existingByKey = new Map(
+            existingRows.map((row) => [row.variantKey, row]),
+        );
+
+        const newLineCount = keyed.filter(
+            (k) => !existingByKey.has(k.variantKey),
+        ).length;
+        if (existingCount + newLineCount > MAX_CART_ITEMS) {
             throw new HttpException(
                 {
                     error: 'cart_full',
@@ -130,29 +147,44 @@ export class CartService {
             );
         }
 
-        const nextQuantity = Math.min(
-            (existing?.quantity ?? 0) + quantity,
-            MAX_QUANTITY_PER_ITEM,
-        );
+        const items: CartItemResponse[] = [];
+        for (const { variant, variantKey } of keyed) {
+            const existing = existingByKey.get(variantKey);
+            const nextQuantity = Math.min(
+                (existing?.quantity ?? 0) + quantity,
+                MAX_QUANTITY_PER_ITEM,
+            );
 
-        const item = existing
-            ? await this.prisma.cartItem.update({
-                where: { id: existing.id },
-                data: { quantity: nextQuantity },
-                include: CART_INCLUDE,
-            })
-            : await this.prisma.cartItem.create({
-                data: {
-                    userId: actor.id,
-                    productId: dto.productId,
-                    quantity: nextQuantity,
-                    variant: variant as Prisma.InputJsonValue | undefined,
-                    variantKey,
-                },
-                include: CART_INCLUDE,
+            const item = existing
+                ? await this.prisma.cartItem.update({
+                    where: { id: existing.id },
+                    data: { quantity: nextQuantity },
+                    include: CART_INCLUDE,
+                })
+                : await this.prisma.cartItem.create({
+                    data: {
+                        userId: actor.id,
+                        productId: dto.productId,
+                        quantity: nextQuantity,
+                        variant: (variant ?? undefined) as
+                            | Prisma.InputJsonValue
+                            | undefined,
+                        variantKey,
+                    },
+                    include: CART_INCLUDE,
+                });
+
+            // Track newly created keys so later duplicates in the same request merge.
+            existingByKey.set(variantKey, {
+                id: item.id,
+                variantKey,
+                quantity: item.quantity,
             });
 
-        return toCartItemResponse(item);
+            items.push(toCartItemResponse(item));
+        }
+
+        return { items };
     }
 
     async updateItemQuantity(
