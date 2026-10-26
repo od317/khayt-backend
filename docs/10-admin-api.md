@@ -7,6 +7,16 @@ Request/response reference for the dashboard and staff tools.
 - **No envelope:** bodies are returned as shown (Nest may wrap errors as `{ error, message, fields?, statusCode }`)
 - **Pagination:** `page` (default 1), `limit` (default 20, max 100) → `{ items, total, page, limit }`
 
+### Possible errors (any authenticated route)
+
+| Status | Body shape | When |
+| --- | --- | --- |
+| `401` | `{ "error": "unauthorized", "message": "…" }` | Missing/invalid token |
+| `403` | `{ "error": "forbidden", "message": "…" }` | Wrong role |
+| `404` | `{ "error": "not_found", "message": "…" }` | Unknown id |
+| `400` | `{ "error": "validation_failed", "message": "…", "fields": { … } }` | Bad body/query |
+| `409` | `{ "error": "…", "message": "…" }` | Conflict (e.g. duplicate role value) |
+
 ### Who can call what
 
 | Surface | Roles |
@@ -62,6 +72,8 @@ Request/response reference for the dashboard and staff tools.
 { "requiresTwoFactor": true, "challengeToken": "…" }
 ```
 
+**Possible:** `400`, `401` (bad credentials)
+
 ### `POST /auth/admin/verify-2fa` — Public
 
 Sets httpOnly `refreshToken` cookie (`path=/api/auth`).
@@ -83,6 +95,8 @@ Sets httpOnly `refreshToken` cookie (`path=/api/auth`).
 }
 ```
 
+**Possible:** `400`, `401` (invalid/expired challenge or code)
+
 ---
 
 ## 2. Users & employees — `/admin`
@@ -93,7 +107,18 @@ Auth: `admin` | `super_admin`
 
 **Query:** `page`, `limit`, `role?`, `verified?` (`true`|`false`), `suspended?`, `q?`
 
-**Response `200`:** `Paginated<UserResponse>` (app-facing roles)
+**Response `200`**
+
+```json
+{
+  "items": [{ /* UserResponse — app roles */ }],
+  "total": 120,
+  "page": 1,
+  "limit": 20
+}
+```
+
+**Possible:** `401`, `403`
 
 ### `PATCH /admin/users/:id`
 
@@ -109,13 +134,30 @@ Auth: `admin` | `super_admin`
 
 All fields optional. `role` must be an app-selectable role.
 
-**Response `200`:** `{ "user": { /* UserResponse */ } }`
+**Response `200`**
+
+```json
+{ "user": { /* UserResponse */ } }
+```
+
+**Possible:** `400`, `401`, `403`, `404`
 
 ### `GET /admin/employees`
 
 **Query:** same as users
 
-**Response `200`:** `Paginated<UserResponse>` (staff / non-app roles)
+**Response `200`**
+
+```json
+{
+  "items": [{ /* UserResponse — staff roles */ }],
+  "total": 8,
+  "page": 1,
+  "limit": 20
+}
+```
+
+**Possible:** `401`, `403`
 
 ### `POST /admin/employees`
 
@@ -134,7 +176,13 @@ All fields optional. `role` must be an app-selectable role.
 - `name`, `role` required  
 - Email+password required for most staff; `delivery` is phone-oriented
 
-**Response `201`:** `{ "user": { /* UserResponse */ } }`
+**Response `201`**
+
+```json
+{ "user": { /* UserResponse */ } }
+```
+
+**Possible:** `400`, `401`, `403`, `409`
 
 ### `PATCH /admin/employees/:id`
 
@@ -155,7 +203,13 @@ All fields optional. `role` must be an app-selectable role.
 }
 ```
 
-**Response `200`:** `{ "user": { /* UserResponse */ } }`
+**Response `200`**
+
+```json
+{ "user": { /* UserResponse */ } }
+```
+
+**Possible:** `400`, `401`, `403`, `404` (cannot demote/suspend `super_admin`)
 
 ---
 
@@ -485,32 +539,84 @@ Same shape as public post endpoints. Uploaded media paths are relative (e.g. `/u
 
 **Query:** `page`, `limit`, `type?` (one or many / comma-separated), `authorId?`, `businessId?`, `location?`, `q?`, `active?` (`true`\|`false`), `approvalStatus?` (`pending`\|`approved`\|`rejected`), `includeDeleted?` (default `false`)
 
-**Response `200`:** `Paginated<PostResponse>` → `{ items, total, page, limit }`
+**Response `200`**
+
+```json
+{
+  "items": [{ /* PostResponse */ }],
+  "total": 42,
+  "page": 1,
+  "limit": 20
+}
+```
+
+Pending queue: `GET /admin/posts?approvalStatus=pending`
+
+**Possible:** `401`, `403`
 
 ### `PATCH /admin/posts/:id/approve`
 
-**Response `200`:** `{ "post": { /* PostResponse, approvalStatus: "approved" */ } }`  
-Author notified. Appears on the public feed when also `active: true`.
+**Request:** none (empty body)
+
+**Response `200`**
+
+```json
+{ "post": { /* PostResponse */, "approvalStatus": "approved" } }
+```
+
+Author gets `post_moderated` notification. Public when also `active: true`.
+
+**Possible:** `401`, `403`, `404`
 
 ### `PATCH /admin/posts/:id/reject`
 
-**Response `200`:** `{ "post": { /* PostResponse, approvalStatus: "rejected" */ } }`  
+**Request:** none
+
+**Response `200`**
+
+```json
+{ "post": { /* PostResponse */, "approvalStatus": "rejected" } }
+```
+
 Author notified. Author edit resets status to `pending`.
+
+**Possible:** `401`, `403`, `404`
 
 ### `DELETE /admin/posts/:id`
 
-**Response `200`:** `{ "post": { /* PostResponse */ }, "deleted": true }`  
+**Response `200`**
+
+```json
+{ "post": { /* PostResponse */ }, "deleted": true }
+```
+
 Soft-delete (`deletedAt`); author notified.
+
+**Possible:** `401`, `403`, `404`
 
 ### `PATCH /admin/posts/:id/deactivate`
 
-**Response `200`:** `{ "post": { /* PostResponse, active: false */ } }`  
+**Response `200`**
+
+```json
+{ "post": { /* PostResponse */, "active": false } }
+```
+
 Author notified. Hidden from public listings.
+
+**Possible:** `401`, `403`, `404`
 
 ### `PATCH /admin/posts/:id/activate`
 
-**Response `200`:** `{ "post": { /* PostResponse, active: true */ } }`  
-Re-shows publicly only if `approvalStatus` is also `approved`.
+**Response `200`**
+
+```json
+{ "post": { /* PostResponse */, "active": true } }
+```
+
+Public only if `approvalStatus` is also `approved`.
+
+**Possible:** `401`, `403`, `404`
 
 ---
 
@@ -895,7 +1001,7 @@ Units: `قطعة` | `متر` | `طقم` | `دورة`
 | `free` | Every color: pick color + size |
 | `mixed` | Some colors free size, some colors admin `sizePack` |
 | `color_size_pack` | Size pack for all colors (product rule or every color has `sizePack`) |
-| `color_pair_pack` | Pick color + pairColor; sizes forced |
+| `color_pair_pack` | Pick color + one or more seconds (`pairColor` / `pairColors[]`); sizes forced |
 | `locked_axis` | Locked set on one axis; pick the other only |
 
 **Per-color size rules (same product):** on each `variants.options[]` color, optional `sizePack: { sizes, qtyPerSize }`.  
@@ -903,38 +1009,255 @@ Units: `قطعة` | `متر` | `طقم` | `دورة`
 - With `sizePack` → buyer sends `{ color }` only; qty = packs.  
 `colorImages[]` exposes `sizeMode` (`free`|`pack`), `sizePack`, `unitsPerPack`, `packPrice`, `originalPrice`, `price`.
 
-**`packPrice`:** product-level when `saleCase` is `color_size_pack` / `color_pair_pack` (`price × unitsPerPack`); null for free/mixed/locked. For `mixed`, use each color’s `colorImages[].packPrice`. Also on cart lines when the line is a pack.
+**`packPrice`:** product-level when `saleCase` is `color_size_pack` / `color_pair_pack` (`price × unitsPerPack`); null for free/mixed/locked. For `mixed`, use each color’s `colorImages[].packPrice`.
 
 **Product `saleRule`:** `null` for `free`/`mixed`. Product-wide modes:
 
-| mode | Admin sets | Buyer picks | Cart quantity |
-|------|------------|-------------|---------------|
-| `locked_axis` | `{ "mode":"locked_axis", "lockedAxis":"color"\|"size" }` or legacy `{ "lockedAxis":… }` | unlocked axis only | pieces |
-| `color_size_pack` | all colors forced to one pack | `color` only | packs |
-| `color_pair_pack` | + `pairWith` (first→seconds) or legacy `allowedPairColors` | `color` + `pairColor` | packs |
+| mode | Admin sets | Buyer cart variant | Cart quantity |
+|------|------------|--------------------|---------------|
+| `locked_axis` | `{ "mode":"locked_axis", "lockedAxis":"color"\|"size" }` | unlocked axis only | pieces |
+| `color_size_pack` | + `sizePack` | `{ color }` | packs |
+| `color_pair_pack` | + `sizePack` + `pairWith` (or legacy `allowedPairColors`) | `{ color, pairColor }` or `{ color, pairColors: [...] }` → one cart line per second | packs |
 
-Pack checkout expands into one order line per color+size. FE lists products via `GET /api/products` only (ids are normal product ids).
+There is **no** `/admin/products` — use `/products` with staff roles. `saleCase` is computed; do not send it.
 
 ### `GET /products/names`
 
-**Response `200`:** `{ "items": [{ "id", "name" }] }`
+**Response `200`**
+
+```json
+{ "items": [{ "id": "prod-sale-pair", "name": "طقم لونين" }] }
+```
+
+**Possible:** `401`, `403`
 
 ### `POST /products` — `multipart/form-data`
 
-**Fields:** `name`, `category`, `unit`, `price` (required); `description?`, `variants?` (JSON string), `packaging?`, `saleRule?` (JSON sale mode), `discount?`, `offer?`, `guarantee?`, `supplierBusinessId?`  
-**Files:** `images` (≤8), plus variant file fields (`variant_<i>`, …)
+**Common fields:** `name`, `category`, `unit`, `price` (required); `description?`, `variants?` (JSON **string**), `saleRule?` (JSON **string**), `packaging?`, `discount?`, `offer?`, `guarantee?`, `supplierBusinessId?`  
+**Files:** `images` (≤8), plus variant file fields
 
-**Response:** `{ "product": { /* ProductResponse */ } }`
+**Response `201` (all cases)**
+
+```json
+{ "product": { /* ProductResponse — includes saleCase, packPrice, colorImages, saleRule */ } }
+```
+
+**Possible:** `400` (validation / bad saleRule), `401`, `403`
+
+#### Case A — `free` (`saleRule` omitted)
+
+`variants` JSON:
+
+```json
+{
+  "axes": [
+    { "key": "color", "label": "لون" },
+    { "key": "size", "label": "قياس" }
+  ],
+  "options": [
+    {
+      "name": "أحمر",
+      "hex": "#DC2626",
+      "discountPercent": 10,
+      "children": [{ "name": "M" }, { "name": "L" }, { "name": "XL" }]
+    },
+    {
+      "name": "أزرق",
+      "hex": "#2563EB",
+      "children": [{ "name": "M" }, { "name": "L" }, { "name": "XL" }]
+    }
+  ]
+}
+```
+
+**Resulting product:** `"saleCase": "free"`, `"saleRule": null`, `"packPrice": null`
+
+#### Case B — `mixed` (no product `saleRule`; pack on some colors)
+
+```json
+{
+  "axes": [
+    { "key": "color", "label": "لون" },
+    { "key": "size", "label": "قياس" }
+  ],
+  "options": [
+    {
+      "name": "أحمر",
+      "discountPercent": 10,
+      "children": [{ "name": "M" }, { "name": "L" }, { "name": "XL" }]
+    },
+    {
+      "name": "أسود",
+      "sizePack": { "sizes": ["M", "L", "XL"], "qtyPerSize": 5 },
+      "children": [{ "name": "M" }, { "name": "L" }, { "name": "XL" }]
+    }
+  ]
+}
+```
+
+**Resulting product:** `"saleCase": "mixed"`; pack color has `colorImages[].sizeMode: "pack"`
+
+#### Case C — `color_size_pack`
+
+`saleRule`:
+
+```json
+{
+  "mode": "color_size_pack",
+  "sizePack": { "sizes": ["M", "L", "XL"], "qtyPerSize": 5 }
+}
+```
+
+Plus `variants` with color options (as in free).
+
+**Resulting product:** `"saleCase": "color_size_pack"`, product-level `packPrice`
+
+#### Case D — `color_pair_pack`
+
+`saleRule`:
+
+```json
+{
+  "mode": "color_pair_pack",
+  "sizePack": { "sizes": ["M", "L", "XL"], "qtyPerSize": 5 },
+  "pairWith": {
+    "أحمر": ["أزرق", "أسود"],
+    "أزرق": ["أحمر", "أسود"],
+    "أسود": ["أحمر", "أزرق"]
+  }
+}
+```
+
+**Resulting product:** `"saleCase": "color_pair_pack"`, `packPrice` for two-color pack  
+Buyer cart: `POST /cart/items` with `pairColor` or `pairColors[]` → `{ "items": [ … ] }` (see `docs/11-sale-cases-ui.md`)
+
+#### Case E — `locked_axis`
+
+`saleRule`: `{ "mode": "locked_axis", "lockedAxis": "color" }`
+
+**Resulting product:** `"saleCase": "locked_axis"`
 
 ### `PATCH /products/:id` — `multipart/form-data`
 
-Same fields as create, all optional. Pass `saleRule: null` to clear (free pick).
+Same fields as create, all optional. Pass `saleRule` empty/`null` to clear (back to free/mixed from variants).
 
-**Response:** `{ "product": { /* ProductResponse */ } }`
+**Response `200`**
+
+```json
+{ "product": { /* ProductResponse */ } }
+```
+
+**Possible:** `400`, `401`, `403`, `404`
 
 ### `DELETE /products/:id`
 
-**Response:** `{ "product": { /* … */ }, "softDeleted": true }`
+**Response `200`**
+
+```json
+{ "product": { /* ProductResponse */ }, "softDeleted": true }
+```
+
+**Possible:** `401`, `403`, `404`
+
+---
+
+## 15. Notifications — `/notifications`
+
+Auth: any logged-in user (including `admin` / `super_admin`). Inbox is **per authenticated user** — there is no separate admin-only notifications API. Moderating a post creates a `post_moderated` row for the **author**.
+
+### NotificationResponse
+
+```json
+{
+  "id": "notif-1",
+  "type": "post_moderated",
+  "title": "تمت الموافقة على منشورك",
+  "body": "…",
+  "linkTo": "/posts/post-1",
+  "read": false,
+  "createdAt": "ISO-8601"
+}
+```
+
+**`type` values:** `order_placed` | `order_status` | `order_delivered` | `order_cancelled` | `new_comment` | `new_like` | `receiving_confirmed` | `post_moderated`
+
+### `GET /notifications`
+
+**Query:** `page`, `limit`, `unreadOnly?` (`true`|`false`)
+
+**Response `200`**
+
+```json
+{
+  "items": [{ /* NotificationResponse */ }],
+  "total": 12,
+  "page": 1,
+  "limit": 20,
+  "unreadCount": 3
+}
+```
+
+**Possible:** `401`
+
+### `PATCH /notifications/:id/read`
+
+**Request:** none
+
+**Response `200`**
+
+```json
+{ "notification": { /* NotificationResponse */, "read": true } }
+```
+
+**Possible:** `401`, `404` (not owned / missing)
+
+### `PATCH /notifications/read-all`
+
+**Request:** none
+
+**Response `200`**
+
+```json
+{ "updated": true }
+```
+
+(`updated: false` if nothing was unread)
+
+**Possible:** `401`
+
+### `DELETE /notifications/:id`
+
+**Response `200`**
+
+```json
+{ "deleted": true }
+```
+
+**Possible:** `401`, `404`
+
+### `DELETE /notifications/all`
+
+**Response `200`**
+
+```json
+{ "deleted": true }
+```
+
+(`deleted: false` if inbox already empty)
+
+**Possible:** `401`
+
+### `GET /notifications/stream` — SSE
+
+**Auth:** Bearer token (same as other routes).  
+**Response:** `text/event-stream`
+
+- Event `type: "notification"` → `data` is a `NotificationResponse` object  
+- Event `type: "ping"` → heartbeat every ~30s (ignore)
+
+Nginx must disable buffering for this path (see stack notes).
+
+**Possible:** `401` (stream closes)
 
 ---
 
@@ -956,6 +1279,8 @@ Same fields as create, all optional. Pass `saleRule: null` to clear (free pick).
 | GET/POST | `/receiving` |
 | GET | `/inventory`, `/inventory/:id`, `/supply` |
 | CRUD-ish | `/deliveries`, `/drivers` |
-| GET/POST/PATCH/DELETE | `/products/names`, `/products` (staff) |
+| GET/POST/PATCH/DELETE | `/products/names`, `/products` (staff — all sale cases) |
+| GET/PATCH/DELETE | `/notifications`, `…/read`, `…/read-all`, `…/all` |
+| GET (SSE) | `/notifications/stream` |
 
 Live OpenAPI: `/api/docs` (when `SWAGGER_ENABLED=true`).
