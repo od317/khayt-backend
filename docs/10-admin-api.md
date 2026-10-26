@@ -25,6 +25,7 @@ Request/response reference for the dashboard and staff tools.
 | `/auth/admin/*` login | Public; accounts: `admin`, `super_admin`, `inventory` |
 | Bills / receiving / inventory | `inventory`, `admin`, `super_admin` |
 | Products (write + names) | `inventory`, `admin`, `super_admin` |
+| Orders (list / status / pick lines) | staff see all; `store`/`workshop` see own; create = `store`/`workshop` only |
 | Supply | `inventory`, `admin`, `super_admin`, `workshop` (own business only) |
 | Deliveries / drivers | `delivery`, `admin`, `super_admin` |
 
@@ -102,6 +103,18 @@ Sets httpOnly `refreshToken` cookie (`path=/api/auth`).
 ## 2. Users & employees — `/admin`
 
 Auth: `admin` | `super_admin`
+
+### App user creation (not under `/admin`)
+
+There is **no** `POST /admin/users`. End-user accounts are created via phone OTP (any role that registers through the app):
+
+| Step | Endpoint | Request | Response |
+| --- | --- | --- | --- |
+| 1. Send code | `POST /auth/request-code` — Public | `{ "phone": "+9639…" }` | `{ "sent": true }` |
+| 2. Verify | `POST /auth/verify` — Public | `{ "phone": "+9639…", "code": "000000", "fcmToken?" }` | `{ "accessToken", "refreshToken", "accessTokenExpiresAt", "user", "isNewUser" }` |
+| 3. Onboarding | `POST /auth/onboarding` — Bearer | role + profile fields (see app docs) | `{ "user", "business?" }` |
+
+Admin can then **list / verify / suspend / change role** of those users with the endpoints below. Staff dashboard accounts are created with `POST /admin/employees`.
 
 ### `GET /admin/users`
 
@@ -1161,9 +1174,191 @@ Same fields as create, all optional. Pass `saleRule` empty/`null` to clear (back
 
 ---
 
-## 15. Notifications — `/notifications`
+## 15. Orders — `/orders`
 
-Auth: any logged-in user (including `admin` / `super_admin`). Inbox is **per authenticated user** — there is no separate admin-only notifications API. Moderating a post creates a `post_moderated` row for the **author**.
+Orders are shared between the app and the dashboard (not under `/admin/orders`).
+
+| Who | What they can do |
+| --- | --- |
+| `admin`, `super_admin`, `inventory`, `delivery` | List **all** orders, open detail, change status (per transition rules), SSE feeds |
+| `inventory`, `admin`, `super_admin` | Mark lines `picked` while status is `preparing` |
+| `store`, `workshop` | List/detail **own** orders; **create** orders; cancel when allowed |
+
+Statuses: `review` → `preparing` → `ready` → `in_transit` → `delivered` (also `cancelled` / `failed`).
+
+### OrderListItemResponse
+
+```json
+{
+  "id": "uuid",
+  "number": "ORD-1001",
+  "status": "review",
+  "statusColor": "#F59E0B",
+  "total": 1350000,
+  "pieces": 30,
+  "address": "دمشق…",
+  "lat": 33.5138,
+  "lng": 36.2765,
+  "createdAt": "ISO-8601",
+  "updatedAt": "ISO-8601",
+  "store": { "id": "…", "name": "…" }
+}
+```
+
+### OrderDetailResponse
+
+```json
+{
+  "order": {
+    "id": "uuid",
+    "number": "ORD-1001",
+    "status": "review",
+    "statusColor": "#F59E0B",
+    "total": 1350000,
+    "pieces": 30,
+    "address": "…",
+    "lat": 33.5138,
+    "lng": 36.2765,
+    "createdAt": "ISO-8601",
+    "updatedAt": "ISO-8601",
+    "canCancel": true,
+    "canAdvance": true
+  },
+  "store": { "id": "…", "name": "…", "phone": "+9639…" },
+  "lines": [
+    {
+      "id": "uuid",
+      "productId": "prod-sale-pair",
+      "productName": "طقم لونين",
+      "productImage": "/uploads/products/…",
+      "quantity": 1,
+      "unitPrice": 45000,
+      "picked": false,
+      "variant": { "color": "أحمر", "pairColor": "أزرق" }
+    }
+  ],
+  "delivery": null,
+  "whatsapp": "…",
+  "phone": "…"
+}
+```
+
+### `GET /orders`
+
+**Query:** `page`, `limit`, `status?`, `active?` (default hides delivered/cancelled/failed; `false` = only those), `storeId?`, `q?`
+
+**Response `200`**
+
+```json
+{
+  "items": [{ /* OrderListItemResponse */ }],
+  "total": 40,
+  "page": 1,
+  "limit": 20
+}
+```
+
+**Possible:** `401`, `403`
+
+### `GET /orders/:id`
+
+**Response `200`:** OrderDetailResponse (as above)
+
+**Possible:** `401`, `403`, `404`
+
+### `POST /orders` — `store` | `workshop` only
+
+Creates an order directly (cart checkout is `POST /cart/checkout` — preferred for sale-mode packs).
+
+**Request**
+
+```json
+{
+  "lines": [
+    {
+      "productId": "prod-sale-pair",
+      "quantity": 1,
+      "variant": { "color": "أحمر", "pairColor": "أزرق" }
+    }
+  ],
+  "address": "شارع بغداد، بناء 12",
+  "lat": 33.5138,
+  "lng": 36.2765
+}
+```
+
+`address` / `lat` / `lng` required on first order (or when changing pin). Outside city `deliveryBorder` → `400` on `lat`/`lng`.
+
+**Response `201`:** OrderDetailResponse  
+Staff (`admin` / `inventory` / …) are notified (`order_placed`).
+
+**Possible:** `400`, `401`, `403`
+
+### `PATCH /orders/:id/status`
+
+**Request**
+
+```json
+{ "status": "preparing" }
+```
+
+**Response `200`**
+
+```json
+{ "order": { /* OrderListItemResponse */ } }
+```
+
+Store is notified (`order_status` / `order_cancelled`), except `in_transit` (no status push).
+
+**Possible:** `400` (`invalid_transition`), `401`, `403`, `404`
+
+### `PATCH /orders/:id/lines/:lineId` — pick line
+
+Auth: `inventory` | `admin` | `super_admin`. Order must be `preparing`.
+
+**Request**
+
+```json
+{ "picked": true }
+```
+
+**Response `200`**
+
+```json
+{
+  "line": {
+    "id": "…",
+    "productId": "…",
+    "productName": "…",
+    "productImage": null,
+    "quantity": 1,
+    "unitPrice": 45000,
+    "picked": true,
+    "variant": { "color": "أحمر", "pairColor": "أزرق" }
+  }
+}
+```
+
+**Possible:** `400` (`invalid_state`), `401`, `403`, `404`
+
+### `GET /orders/stream` — SSE (staff feed)
+
+Live status events for the dashboard feed.  
+Events: `type: "status"` (payload) · `type: "ping"` heartbeat.
+
+**Possible:** `401`
+
+### `GET /orders/:id/stream` — SSE (one order)
+
+Same event types; requires read access to that order.
+
+**Possible:** `401`, `403`, `404`
+
+---
+
+## 16. Notifications — `/notifications`
+
+Auth: any logged-in user (including `admin` / `super_admin`). Inbox is **per authenticated user** — there is no separate admin-only notifications API. Moderating a post creates a `post_moderated` row for the **author**. New orders notify staff; status changes notify the store.
 
 ### NotificationResponse
 
@@ -1280,6 +1475,9 @@ Nginx must disable buffering for this path (see stack notes).
 | GET | `/inventory`, `/inventory/:id`, `/supply` |
 | CRUD-ish | `/deliveries`, `/drivers` |
 | GET/POST/PATCH/DELETE | `/products/names`, `/products` (staff — all sale cases) |
+| GET/POST/PATCH | `/orders`, `/orders/:id`, `/orders/:id/status`, `/orders/:id/lines/:lineId` |
+| GET (SSE) | `/orders/stream`, `/orders/:id/stream` |
+| POST (app users) | `/auth/request-code`, `/auth/verify`, `/auth/onboarding` |
 | GET/PATCH/DELETE | `/notifications`, `…/read`, `…/read-all`, `…/all` |
 | GET (SSE) | `/notifications/stream` |
 
