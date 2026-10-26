@@ -59,21 +59,27 @@ export class UpdateMeDto {
   availableForWork?: boolean;
 
   @ApiPropertyOptional({
-    example: '',
+    example: 'https://cdn.example.com/photos/me.jpg',
     description:
-      'Optional remote URL. Prefer uploading a file as multipart field `image`.',
+      'Either a remote URL (string) or a multipart file under the same field name `avatarUrl`. File wins over URL. Also accepted as multipart field `image`.',
   })
   @IsOptional()
-  @Transform(emptyToUndefined)
+  @Transform(({ value }) => {
+    // Multipart file for `avatarUrl` is handled by multer; ignore non-strings here.
+    if (value === null || value === undefined) return undefined;
+    if (typeof value !== 'string') return undefined;
+    if (value.trim() === '') return undefined;
+    return value;
+  })
   @IsString()
-  @MaxLength(500)
+  @MaxLength(2000)
   avatarUrl?: string;
 
   @ApiPropertyOptional({
     type: 'string',
     format: 'binary',
     description:
-      'Profile photo (multipart field name: `image`). JPG/PNG/WebP, max 8MB. Stored under /uploads/avatars/.',
+      'Profile photo file (multipart). Field name: `image` or `avatarUrl`. JPG/PNG/WebP, max 8MB → /uploads/avatars/.',
   })
   @IsOptional()
   image?: never;

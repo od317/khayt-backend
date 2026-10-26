@@ -208,8 +208,14 @@ export class PostsController {
     examples: createPostSwaggerExamples,
   })
   @ApiOkResponse({
-    description: 'The created post',
-    schema: { example: { post: samplePost } },
+    description:
+      'Created post (approvalStatus=pending). Show `message` to the user — not live until approved.',
+    schema: {
+      example: {
+        post: { ...samplePost, approvalStatus: 'pending' },
+        message: 'الإعلان في حالة المراجعة',
+      },
+    },
   })
   @UseInterceptors(PostFilesInterceptor)
   create(
@@ -221,7 +227,7 @@ export class PostsController {
       video?: Express.Multer.File[];
       thumbnail?: Express.Multer.File[];   // 👈 new
     },
-  ): Promise<{ post: PostResponse }> {
+  ): Promise<{ post: PostResponse; message: string }> {
     return this.posts.create(user, dto, flattenPostFiles(files));
   }
 

@@ -429,7 +429,10 @@ export class PostsService {
         message: 'المنشور غير موجود',
       });
     }
-    return { post: response };
+    return {
+      post: response,
+      message: 'الإعلان في حالة المراجعة',
+    };
   }
 
   async update(

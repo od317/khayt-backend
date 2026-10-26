@@ -49,9 +49,11 @@ text
 
 ### PATCH /auth/me
 
-Update own profile.
-body: { name?, location?, bio?, avatarUrl?, availableForWork? }
-→ 200 { user: User }
+Update own profile (JSON or multipart).
+- File field `image` **or** `avatarUrl` → `/uploads/avatars/…` (file wins over string URL)
+- String `avatarUrl` → used when no file is sent
+- Result written to `user.avatarUrl` and, for workshop/store/institute, `business.imageUrl`
+→ 200 { user: User, business?: Business }
 
 text
 
@@ -216,7 +218,8 @@ media, imageUrls?, videoUrl?,
 categoryIds,
 ...type-specific fields
 }
-→ 201 { post: Post }
+→ 201 { post: Post, message: "الإعلان في حالة المراجعة" }
+  (`approvalStatus` starts as `pending`; not in public feed until approved)
 
 text
 

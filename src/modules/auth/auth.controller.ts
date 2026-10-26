@@ -10,10 +10,14 @@ import {
   Req,
   Res,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiOkResponse } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
@@ -122,18 +126,35 @@ export class AuthController {
   @ApiConsumes('multipart/form-data', 'application/json')
   @ApiBody({ type: UpdateMeDto })
   @UseInterceptors(
-    FileInterceptor('image', {
-      storage: avatarImageStorage,
-      limits: { fileSize: 8 * 1024 * 1024 },
-      fileFilter: imageFileFilter,
-    }),
+    FileFieldsInterceptor(
+      [
+        { name: 'image', maxCount: 1 },
+        // Flutter often sends the photo under the same name as the DTO field.
+        { name: 'avatarUrl', maxCount: 1 },
+      ],
+      {
+        storage: avatarImageStorage,
+        limits: { fileSize: 8 * 1024 * 1024 },
+        fileFilter: imageFileFilter,
+      },
+    ),
   )
   updateMe(
     @RequireUser() user: AuthenticatedUser,
     @Body() dto: UpdateMeDto,
-    @UploadedFile() image?: Express.Multer.File,
+    @UploadedFiles()
+    files?: {
+      image?: Express.Multer.File[];
+      avatarUrl?: Express.Multer.File[];
+    },
   ): Promise<{ user: UserResponse; business: BusinessResponse | null }> {
-    return this.auth.updateMe(user, dto, image);
+    const image = files?.image?.[0] ?? files?.avatarUrl?.[0];
+    // If avatarUrl arrived as a file, don't treat a leftover string URL as the source.
+    const body: UpdateMeDto =
+      files?.avatarUrl?.[0] !== undefined
+        ? { ...dto, avatarUrl: undefined }
+        : dto;
+    return this.auth.updateMe(user, body, image);
   }
 
   @Patch('me/available-for-work')

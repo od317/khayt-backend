@@ -462,13 +462,15 @@ export class AuthService {
       include: userLocationInclude,
     });
 
+    // Photo (uploaded file or JSON avatarUrl) → user.avatarUrl.
+    // For workshop/store/institute, the same URL also updates business.imageUrl.
     if (
       isBusinessOwner &&
       (dto.description !== undefined ||
         dto.services !== undefined ||
         dto.name !== undefined ||
-        effectiveAvatarUrl !== undefined ||
-        dto.bio !== undefined)
+        dto.bio !== undefined ||
+        effectiveAvatarUrl !== undefined)
     ) {
       const updated = await this.prisma.business.updateMany({
         where: { ownerId: actor.id },
@@ -486,7 +488,6 @@ export class AuthService {
                   .filter((s) => s.length > 0),
               }
             : {}),
-          // Workshop/store UI shows business.imageUrl.
           ...(effectiveAvatarUrl !== undefined
             ? { imageUrl: effectiveAvatarUrl }
             : {}),

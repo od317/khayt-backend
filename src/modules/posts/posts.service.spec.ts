@@ -312,6 +312,7 @@ describe('PostsService', () => {
 
       expect(result.post.id).toBe('post-1');
       expect(result.post.author.phone).toBe(actor.phone);
+      expect(result.message).toBe('الإعلان في حالة المراجعة');
       expect(prisma.post.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           authorId: actor.id,

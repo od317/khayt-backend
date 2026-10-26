@@ -938,7 +938,7 @@ describe('AuthService', () => {
         location: 'دمشق',
         description: 'معمل متخصص',
         phone: null,
-        imageUrl: 'https://example.com/avatar.jpg',
+        imageUrl: '/uploads/businesses/workshop.jpg',
         verified: true,
         capacity: null,
         equipment: null,
@@ -967,6 +967,13 @@ describe('AuthService', () => {
           }),
         }),
       );
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            avatarUrl: 'https://example.com/avatar.jpg',
+          }),
+        }),
+      );
       expect(prisma.business.updateMany).toHaveBeenCalledWith({
         where: { ownerId: workshopActor.id },
         data: {
@@ -976,10 +983,62 @@ describe('AuthService', () => {
           imageUrl: 'https://example.com/avatar.jpg',
         },
       });
-      expect(result.business?.imageUrl).toBe('https://example.com/avatar.jpg');
     });
 
-    it('stores an uploaded profile image and syncs business.imageUrl', async () => {
+    it('applies JSON avatarUrl to user and business image', async () => {
+      const workshopActor: AuthenticatedUser = {
+        id: 'user-workshop',
+        role: UserRole.workshop,
+        phone: '+963994037669',
+      };
+      const photo =
+        'https://cdn.example.com/user-photos/workshop-owner.jpg';
+      prisma.user.update.mockResolvedValue(
+        makeUser({
+          id: workshopActor.id,
+          role: UserRole.workshop,
+          avatarUrl: photo,
+        }),
+      );
+      prisma.business.findUnique.mockResolvedValue({
+        id: 'biz-workshop',
+        ownerId: workshopActor.id,
+        type: 'workshop',
+        name: 'معمل',
+        location: 'دمشق',
+        description: null,
+        phone: null,
+        imageUrl: photo,
+        verified: true,
+        capacity: null,
+        equipment: null,
+        minOrder: null,
+        experience: null,
+        services: [],
+        duration: null,
+        topics: [],
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+
+      const result = await service.updateMe(workshopActor, {
+        avatarUrl: photo,
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { avatarUrl: photo },
+        }),
+      );
+      expect(prisma.business.updateMany).toHaveBeenCalledWith({
+        where: { ownerId: workshopActor.id },
+        data: { imageUrl: photo },
+      });
+      expect(result.user.avatarUrl).toBe(photo);
+      expect(result.business?.imageUrl).toBe(photo);
+    });
+
+    it('stores an uploaded profile image on user and business', async () => {
       const workshopActor: AuthenticatedUser = {
         id: 'user-workshop',
         role: UserRole.workshop,
@@ -1035,6 +1094,65 @@ describe('AuthService', () => {
       });
       expect(result.user.avatarUrl).toBe('/uploads/avatars/a.jpg');
       expect(result.business?.imageUrl).toBe('/uploads/avatars/a.jpg');
+    });
+
+    it('prefers uploaded file over string avatarUrl', async () => {
+      const workshopActor: AuthenticatedUser = {
+        id: 'user-workshop',
+        role: UserRole.workshop,
+        phone: '+963994037669',
+      };
+      prisma.user.update.mockResolvedValue(
+        makeUser({
+          id: workshopActor.id,
+          role: UserRole.workshop,
+          avatarUrl: '/uploads/avatars/picked.jpg',
+        }),
+      );
+      prisma.business.findUnique.mockResolvedValue({
+        id: 'biz-workshop',
+        ownerId: workshopActor.id,
+        type: 'workshop',
+        name: 'معمل',
+        location: 'دمشق',
+        description: null,
+        phone: null,
+        imageUrl: '/uploads/avatars/picked.jpg',
+        verified: true,
+        capacity: null,
+        equipment: null,
+        minOrder: null,
+        experience: null,
+        services: [],
+        duration: null,
+        topics: [],
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+
+      await service.updateMe(
+        workshopActor,
+        {
+          avatarUrl:
+            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10',
+        },
+        {
+          filename: 'picked.jpg',
+          mimetype: 'image/jpeg',
+        } as Express.Multer.File,
+      );
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            avatarUrl: '/uploads/avatars/picked.jpg',
+          }),
+        }),
+      );
+      expect(prisma.business.updateMany).toHaveBeenCalledWith({
+        where: { ownerId: workshopActor.id },
+        data: { imageUrl: '/uploads/avatars/picked.jpg' },
+      });
     });
 
     it('rejects description for non-business roles', async () => {

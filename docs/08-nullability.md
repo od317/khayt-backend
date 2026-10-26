@@ -259,7 +259,8 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 - **Response can be null:** `user` → UserResponse nullables; `business` (null if user has no business)
 - **Request optional:** `name`, `bio`, `availableForWork`, `avatarUrl`, `image` (multipart file), `locationId`, `deliveryAddress`, `deliveryLat`, `deliveryLng`, `description`, `services`
   Empty `deliveryAddress` / null coords are treated as omitted.
-  Uploaded `image` sets `user.avatarUrl` and syncs `business.imageUrl` for workshop/store/institute.
+  JSON `avatarUrl` → `user.avatarUrl` (+ `business.imageUrl` for workshop/store/institute).
+  Multipart `image` → `user.avatarUrl` only (`/uploads/avatars/`).
 
 ### PATCH `/api/auth/me/available-for-work`
 
