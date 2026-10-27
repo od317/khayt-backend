@@ -3629,6 +3629,99 @@ async function main(): Promise<void> {
     `  notifications: ${notificationCount} (${notificationTemplates.length} each for ${notificationUserIds.length} users)`,
   );
 
+  // ------------------------------------------------------------
+  // Backfill missing images (demo: treat as if the user set them)
+  // API defaults still apply when null — this fills the DB so FE
+  // does not fall back to placeholders for existing rows.
+  // ------------------------------------------------------------
+  {
+    const missingUsers = await prisma.user.findMany({
+      where: {
+        OR: [{ avatarUrl: null }, { avatarUrl: '' }],
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    for (const [i, u] of missingUsers.entries()) {
+      await prisma.user.update({
+        where: { id: u.id },
+        data: {
+          avatarUrl: SEED_POST_IMAGES[i % SEED_POST_IMAGES.length]!,
+        },
+      });
+    }
+
+    const missingBusinesses = await prisma.business.findMany({
+      where: {
+        OR: [{ imageUrl: null }, { imageUrl: '' }],
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    for (const [i, b] of missingBusinesses.entries()) {
+      await prisma.business.update({
+        where: { id: b.id },
+        data: { imageUrl: directoryImage(i + 1) },
+      });
+    }
+
+    const missingShipping = await prisma.shippingCompany.findMany({
+      where: {
+        OR: [{ imageUrl: null }, { imageUrl: '' }],
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    for (const [i, s] of missingShipping.entries()) {
+      await prisma.shippingCompany.update({
+        where: { id: s.id },
+        data: { imageUrl: directoryImage(i + 5) },
+      });
+    }
+
+    const postsNeedingImages = await prisma.post.findMany({
+      where: {
+        deletedAt: null,
+        type: { not: PostType.reel },
+        imageUrls: { isEmpty: true },
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    for (const [i, p] of postsNeedingImages.entries()) {
+      const urls = seedPostImages((i % 4) + 2, i);
+      await prisma.post.update({
+        where: { id: p.id },
+        data: {
+          media: MediaType.image,
+          imageUrls: urls,
+        },
+      });
+    }
+
+    const reelsNeedingThumb = await prisma.post.findMany({
+      where: {
+        deletedAt: null,
+        type: PostType.reel,
+        OR: [{ thumbnailUrl: null }, { thumbnailUrl: '' }],
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    for (const [i, p] of reelsNeedingThumb.entries()) {
+      await prisma.post.update({
+        where: { id: p.id },
+        data: {
+          thumbnailUrl: `https://picsum.photos/id/${(i % 80) + 10}/600/800`,
+        },
+      });
+    }
+
+    console.log(
+      `  image backfill: users=${missingUsers.length}, businesses=${missingBusinesses.length}, shipping=${missingShipping.length}, posts=${postsNeedingImages.length}, reelThumbs=${reelsNeedingThumb.length}`,
+    );
+  }
+
   console.log('Done.');
 }
 
