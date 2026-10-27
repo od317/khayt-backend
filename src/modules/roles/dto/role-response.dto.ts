@@ -15,9 +15,9 @@ export class RoleResponseDto {
   description!: string;
 
   @ApiProperty({
-    example:
-      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10',
-    description: 'Always a URL (placeholder if empty in DB).',
+    example: '/icons/employee.png',
+    description:
+      'Icon URL (e.g. /icons/employee.png). Prefix with API host. Placeholder if empty in DB.',
   })
   iconUrl!: string;
 }

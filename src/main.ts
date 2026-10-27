@@ -36,6 +36,10 @@ async function bootstrap(): Promise<void> {
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
+  // Role picker icons (seeded as /icons/<role>.png)
+  app.useStaticAssets(join(process.cwd(), 'icons'), {
+    prefix: '/icons/',
+  });
 
   app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost)));
 

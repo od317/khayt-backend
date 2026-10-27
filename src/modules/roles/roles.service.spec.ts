@@ -21,8 +21,7 @@ describe('RolesService', () => {
     value: 'employee',
     label: 'موظف',
     description: 'ابحث عن فرص عمل',
-    iconUrl:
-      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10',
+    iconUrl: '/icons/employee.png',
     selectable: true,
     system: true,
     sortOrder: 10,

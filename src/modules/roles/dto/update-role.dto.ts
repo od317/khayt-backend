@@ -26,7 +26,7 @@ export class UpdateRoleDto {
 
   @ApiPropertyOptional({
     example:
-      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRKFSey5bgsBA3-2Z7f27pym50-ySDrxPZWoIJ1bOCQ9pQVdvEun88f-iPX&s=10',
+      '/icons/store.png',
     description: 'Public icon URL for the role picker.',
   })
   @IsOptional()

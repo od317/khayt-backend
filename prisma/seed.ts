@@ -30,16 +30,8 @@ async function main(): Promise<void> {
   console.log('Seeding…');
 
   // ------------------------------------------------------------
-  // Roles
+  // Roles — icons served from /icons/*.png (see icons/ + main.ts)
   // ------------------------------------------------------------
-  /** Same placeholders used for avatars / business images elsewhere in seed. */
-  const ROLE_ICON_PERSON =
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbksj9NS4J0zAJN5LEwzN6i0tV5dtgZmR89UzhDAK7CYCIsFvpajnCeHvl&s=10';
-  const ROLE_ICON_BUILDING =
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRKFSey5bgsBA3-2Z7f27pym50-ySDrxPZWoIJ1bOCQ9pQVdvEun88f-iPX&s=10';
-  const ROLE_ICON_FABRIC =
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNO36XKY6a7gCZq0CK5bQrqrMjc-VhMWm9QQVwp4TNoQ&s=10';
-
   const roles = [
     {
       id: 'role-employee',
@@ -47,7 +39,7 @@ async function main(): Promise<void> {
       label: 'موظف',
       description:
         'ابحث عن فرص عمل، اعرض مهاراتك، وتواصل مع المعامل والمتاجر في قطاع النسيج.',
-      iconUrl: ROLE_ICON_PERSON,
+      iconUrl: '/icons/employee.png',
       selectable: true,
       system: true,
       sortOrder: 10,
@@ -58,7 +50,7 @@ async function main(): Promise<void> {
       label: 'مشغل / معمل',
       description:
         'اعرض منتجاتك وخدماتك، وظّف عمالاً، واطلب من مستودع خيط أو استقبل طلبات المتاجر.',
-      iconUrl: ROLE_ICON_FABRIC,
+      iconUrl: '/icons/workshop.png',
       selectable: true,
       system: true,
       sortOrder: 20,
@@ -69,7 +61,7 @@ async function main(): Promise<void> {
       label: 'متجر',
       description:
         'اطلب بالجملة من المستودع، ابحث عن موردين ومعامل، وتابع طلباتك وتوصيلك.',
-      iconUrl: ROLE_ICON_BUILDING,
+      iconUrl: '/icons/store.png',
       selectable: true,
       system: true,
       sortOrder: 30,
@@ -80,7 +72,7 @@ async function main(): Promise<void> {
       label: 'مسوق',
       description:
         'روّج للمنتجات والخدمات في سوق النسيج وتواصل مع المعامل والمتاجر.',
-      iconUrl: ROLE_ICON_PERSON,
+      iconUrl: '/icons/marketer.png',
       selectable: true,
       system: true,
       sortOrder: 35,
@@ -91,7 +83,7 @@ async function main(): Promise<void> {
       label: 'شركة شحن',
       description:
         'اعرض خدمات الشحن والأسعار والأسطول ليجدك التجار والمعامل بسهولة.',
-      iconUrl: ROLE_ICON_BUILDING,
+      iconUrl: '/icons/shipping.png',
       selectable: true,
       system: true,
       sortOrder: 36,
@@ -102,7 +94,7 @@ async function main(): Promise<void> {
       label: 'معهد',
       description:
         'انشر الدورات التدريبية في الخياطة والتصميم واجذب الطلاب والمتدربين.',
-      iconUrl: ROLE_ICON_BUILDING,
+      iconUrl: '/icons/institute.png',
       selectable: true,
       system: true,
       sortOrder: 40,
@@ -112,7 +104,7 @@ async function main(): Promise<void> {
       value: 'super_admin',
       label: 'مدير عام',
       description: 'صلاحيات كاملة على المنصة بما فيها إدارة المدراء والمدفوعات.',
-      iconUrl: ROLE_ICON_PERSON,
+      iconUrl: '/icons/employee.png',
       selectable: false,
       system: true,
       sortOrder: 100,
@@ -123,7 +115,7 @@ async function main(): Promise<void> {
       label: 'مدير',
       description:
         'إدارة المحتوى والمستخدمين والكتالوج من لوحة التحكم (بدون إدارة المدراء).',
-      iconUrl: ROLE_ICON_PERSON,
+      iconUrl: '/icons/employee.png',
       selectable: false,
       system: true,
       sortOrder: 110,
@@ -133,7 +125,7 @@ async function main(): Promise<void> {
       value: 'inventory',
       label: 'مستودع',
       description: 'إدارة المخزون والاستلام والفواتير داخل مستودع خيط.',
-      iconUrl: ROLE_ICON_BUILDING,
+      iconUrl: '/icons/store.png',
       selectable: false,
       system: true,
       sortOrder: 120,
@@ -143,7 +135,7 @@ async function main(): Promise<void> {
       value: 'delivery',
       label: 'توصيل',
       description: 'تحديث حالات الطلبات والتوصيل وإتمام التسليمات.',
-      iconUrl: ROLE_ICON_PERSON,
+      iconUrl: '/icons/shipping.png',
       selectable: false,
       system: true,
       sortOrder: 130,
@@ -1391,7 +1383,8 @@ async function main(): Promise<void> {
     );
   }
 
-  const SHARED_IMAGE_URL = SHARED_AVATAR_URL;
+  /** Default business/shipping image when a specific sample is not assigned. */
+  const SHARED_IMAGE_URL = SHARED_BUSINESS_IMAGE_URL;
 
   const businesses = [
     // ═════════════════════════════════════════
@@ -2981,19 +2974,11 @@ async function main(): Promise<void> {
     },
   ];
 
-  // Attach 1–8 fashion images to non-reel / non-job-seeking posts (URLs may repeat).
+  // Attach 1–8 fashion images to every non-reel post (several get 2+ for FE gallery tests).
   let imagePostIndex = 0;
   const postsWithImages = posts.map((p) => {
     if (p.type === PostType.reel) return p;
-    // Job seekers: text-only — no gallery photos
-    if (p.type === PostType.job_seeking) {
-      return {
-        ...p,
-        media: MediaType.none,
-        imageUrls: [],
-      };
-    }
-    const count = (imagePostIndex % 8) + 1;
+    const count = (imagePostIndex % 8) + 1; // 1..8 photos
     const offset = imagePostIndex;
     imagePostIndex += 1;
     return {
@@ -3028,11 +3013,6 @@ async function main(): Promise<void> {
       'https://res.cloudinary.com/demo/video/upload/elephants.mp4',
       'https://res.cloudinary.com/demo/video/upload/snow_horses.mp4',
     ] as const;
-    const BULK_IMAGES = [
-      'https://placehold.co/600x400?text=Textile+1',
-      'https://placehold.co/600x400?text=Textile+2',
-      'https://placehold.co/600x400?text=Textile+3',
-    ] as const;
     const postTypeForRole = (role: UserRole): PostType => {
       switch (role) {
         case UserRole.store:
@@ -3064,6 +3044,7 @@ async function main(): Promise<void> {
           locationId: 'loc-damascus',
           onboardingCompleted: true,
           verified: true,
+          avatarUrl: SHARED_AVATAR_URL,
         },
         select: { id: true },
       });
@@ -3098,14 +3079,9 @@ async function main(): Promise<void> {
           title: `منشور ${i} — ${display}`,
           body: `منشور تجريبي رقم ${i} للمستخدم ${display}.`,
           location,
-          media:
-            postType === PostType.job_seeking
-              ? MediaType.none
-              : MediaType.image,
-          imageUrls:
-            postType === PostType.job_seeking
-              ? ([] as string[])
-              : [BULK_IMAGES[(i - 1) % BULK_IMAGES.length]!],
+          media: MediaType.image,
+          // 2–5 photos so the app can test multi-image posts
+          imageUrls: seedPostImages((i % 4) + 2, i + user.id.length),
           videoUrl: null as string | null,
           thumbnailUrl: null as string | null,
           active: true,
