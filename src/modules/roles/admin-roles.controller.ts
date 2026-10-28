@@ -43,7 +43,14 @@ function roleIconFileFilter(
   callback: (error: Error | null, acceptFile: boolean) => void,
 ): void {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  callback(null, allowedTypes.includes(file.mimetype));
+  if (!allowedTypes.includes(file.mimetype)) {
+    callback(
+      new BadRequestException('صيغة الصورة يجب أن تكون PNG أو JPEG أو WebP'),
+      false,
+    );
+    return;
+  }
+  callback(null, true);
 }
 
 @ApiTags('admin-roles')
@@ -66,14 +73,39 @@ export class AdminRolesController {
   }
 
   @Patch(':id')
+  @UseInterceptors(
+    FileInterceptor('icon', {
+      storage: roleIconStorage,
+      limits: { fileSize: 8 * 1024 * 1024 },
+      fileFilter: roleIconFileFilter,
+    }),
+  )
+  @ApiConsumes('application/json', 'multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        label: { type: 'string' },
+        description: { type: 'string' },
+        iconUrl: { type: 'string' },
+        icon: { type: 'string', format: 'binary' },
+        visibleInApp: { type: 'boolean' },
+        sortOrder: { type: 'integer' },
+      },
+    },
+  })
   @ApiOperation({
-    summary: 'Update role label, description, iconUrl, visibility',
+    summary: 'Update role details and optionally upload its icon',
   })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateRoleDto,
+    @UploadedFile() icon?: Express.Multer.File,
   ): Promise<{ role: AdminRoleResponse }> {
-    return this.roles.update(id, dto);
+    return this.roles.update(
+      id,
+      icon ? { ...dto, iconUrl: `/uploads/role-icons/${icon.filename}` } : dto,
+    );
   }
 
   @Patch(':id/icon')
@@ -93,7 +125,8 @@ export class AdminRolesController {
     },
   })
   @ApiOperation({
-    summary: 'Upload a role icon (PNG, JPEG, or WebP; max 8 MB)',
+    summary:
+      'Upload a role icon (use PATCH /admin/roles/:id to update role and icon together)',
   })
   uploadIcon(
     @Param('id') id: string,

@@ -286,7 +286,10 @@ Auth: `admin` | `super_admin`
 
 ### `PATCH /admin/roles/:id`
 
-**Request** (all optional): `label`, `description`, `iconUrl`, `visibleInApp`, `sortOrder`
+Accepts `application/json` or `multipart/form-data`. All fields are optional:
+`label`, `description`, `iconUrl`, `visibleInApp`, `sortOrder`. To upload an icon,
+include an `icon` file field (PNG, JPEG, or WebP; max 8 MB). A file upload
+updates `iconUrl` to the stored file under `/uploads/role-icons/`.
 
 **Response `200`:** `{ "role": { /* AdminRoleResponse */ } }`
 

@@ -17,12 +17,23 @@ describe('AdminRolesController', () => {
     roles.update.mockResolvedValue(result);
 
     await expect(
-      controller.uploadIcon('role-employee', {
+      controller.update('role-employee', { label: 'عامل' }, {
         filename: 'icon.png',
       } as Express.Multer.File),
     ).resolves.toBe(result);
     expect(roles.update).toHaveBeenCalledWith('role-employee', {
+      label: 'عامل',
       iconUrl: '/uploads/role-icons/icon.png',
+    });
+  });
+
+  it('updates role fields without changing the icon when no file is sent', async () => {
+    roles.update.mockResolvedValue({ role: { id: 'role-employee' } });
+
+    await controller.update('role-employee', { label: 'عامل' });
+
+    expect(roles.update).toHaveBeenCalledWith('role-employee', {
+      label: 'عامل',
     });
   });
 
