@@ -961,6 +961,11 @@ async function main(): Promise<void> {
   }
   console.log(`  locations: ${cities.length} cities, ${areas.length} areas`);
 
+  if (process.argv.includes('--catalog-only')) {
+    console.log('Catalog seed complete.');
+    return;
+  }
+
   // ------------------------------------------------------------
   // Users
   // ------------------------------------------------------------
@@ -3733,4 +3738,3 @@ main()
   .finally(() => {
     void prisma.$disconnect();
   });
-

@@ -2,7 +2,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "types": ["node"],
-    "module": "commonjs"
+    "module": "NodeNext",
+    "rootDir": "."
   },
   "include": ["prisma/**/*.ts"]
 }

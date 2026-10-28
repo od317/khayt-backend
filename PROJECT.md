@@ -280,6 +280,12 @@ docker compose -f ~/khayt-backend/docker-compose.prod.yml up -d --build
 docker compose -f ~/khayt-backend/docker-compose.prod.yml exec api npx prisma migrate deploy
 ```
 
+Seed only roles, categories, and locations (safe to re-run):
+
+```bash
+docker compose -f ~/khayt-backend/docker-compose.prod.yml exec api npm run db:seed:catalog
+```
+
 Seed post-option chips only:
 
 ```bash

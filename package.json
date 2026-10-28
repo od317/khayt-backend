@@ -12,6 +12,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "prisma db seed",
+    "db:seed:catalog": "ts-node --transpile-only --project tsconfig.seed.json prisma/seed.ts --catalog-only",
     "admin:create": "node dist/scripts/create-admin.js",
     "db:reset": "prisma migrate reset --force",
     "db:up": "docker compose up -d",
