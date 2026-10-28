@@ -80,6 +80,7 @@ async function main(): Promise<void> {
     where: { email: superEmail },
     create: {
       email: superEmail,
+      phone: '+963990000000',
       passwordHash,
       name: 'Super Admin',
       role: UserRole.super_admin,
@@ -88,6 +89,7 @@ async function main(): Promise<void> {
     },
     update: {
       passwordHash,
+      phone: '+963990000000',
       role: UserRole.super_admin,
       onboardingCompleted: true,
       verified: true,
