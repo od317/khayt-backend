@@ -21,6 +21,7 @@ async function bootstrap(): Promise<void> {
   mkdirSync('./uploads/posts', { recursive: true });
   mkdirSync('./uploads/businesses', { recursive: true });
   mkdirSync('./uploads/avatars', { recursive: true });
+  mkdirSync('./uploads/role-icons', { recursive: true });
 
   app.enableCors({
     origin: config.get('corsOrigins', { infer: true }),

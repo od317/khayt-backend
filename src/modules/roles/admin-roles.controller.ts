@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,13 +9,42 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import { diskStorage } from 'multer';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AdminRoleResponse, RolesService } from './roles.service';
+
+const roleIconStorage = diskStorage({
+  destination: './uploads/role-icons',
+  filename: (_req, file, callback) => {
+    const extensionByMimeType: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+    };
+    callback(
+      null,
+      `${randomUUID()}${extensionByMimeType[file.mimetype] ?? '.bin'}`,
+    );
+  },
+});
+
+function roleIconFileFilter(
+  _req: Express.Request,
+  file: Express.Multer.File,
+  callback: (error: Error | null, acceptFile: boolean) => void,
+): void {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  callback(null, allowedTypes.includes(file.mimetype));
+}
 
 @ApiTags('admin-roles')
 @Controller('admin/roles')
@@ -36,12 +66,48 @@ export class AdminRolesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update role label, description, iconUrl, visibility' })
+  @ApiOperation({
+    summary: 'Update role label, description, iconUrl, visibility',
+  })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateRoleDto,
   ): Promise<{ role: AdminRoleResponse }> {
     return this.roles.update(id, dto);
+  }
+
+  @Patch(':id/icon')
+  @UseInterceptors(
+    FileInterceptor('icon', {
+      storage: roleIconStorage,
+      limits: { fileSize: 8 * 1024 * 1024 },
+      fileFilter: roleIconFileFilter,
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['icon'],
+      properties: { icon: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiOperation({
+    summary: 'Upload a role icon (PNG, JPEG, or WebP; max 8 MB)',
+  })
+  uploadIcon(
+    @Param('id') id: string,
+    @UploadedFile() icon?: Express.Multer.File,
+  ): Promise<{ role: AdminRoleResponse }> {
+    if (!icon) {
+      throw new BadRequestException(
+        'ارفع أيقونة بصيغة PNG أو JPEG أو WebP (الحد الأقصى 8 ميغابايت)',
+      );
+    }
+
+    return this.roles.update(id, {
+      iconUrl: `/uploads/role-icons/${icon.filename}`,
+    });
   }
 
   @Delete(':id')

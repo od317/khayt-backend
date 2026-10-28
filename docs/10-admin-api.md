@@ -290,6 +290,13 @@ Auth: `admin` | `super_admin`
 
 **Response `200`:** `{ "role": { /* AdminRoleResponse */ } }`
 
+### `PATCH /admin/roles/:id/icon`
+
+Upload an icon with `multipart/form-data` using the `icon` file field. PNG,
+JPEG, and WebP files up to 8 MB are accepted. The file is stored under
+`/uploads/role-icons/`, and the role's `iconUrl` is updated to the uploaded
+file's public path.
+
 ### `DELETE /admin/roles/:id`
 
 **Response `200`:** `{ "success": true }`  
