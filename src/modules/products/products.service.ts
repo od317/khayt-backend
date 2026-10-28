@@ -253,7 +253,7 @@ export class ProductsService {
         unit: dto.unit,
         price: dto.price,
         images: uploaded,
-        inWarehouse: false,
+        inWarehouse: true,
         guarantee: dto.guarantee ?? false,
         supplierBusinessId: dto.supplierBusinessId ?? null,
         variants: variants ? toJson(variants) : Prisma.JsonNull,

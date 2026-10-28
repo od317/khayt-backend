@@ -72,8 +72,8 @@ describe('ProductsService', () => {
     service = new ProductsService(prisma as unknown as PrismaService);
   });
 
-  it('creates a product with inWarehouse false', async () => {
-    prisma.product.create.mockResolvedValue(makeProduct());
+  it('creates a product with inWarehouse true', async () => {
+    prisma.product.create.mockResolvedValue(makeProduct({ inWarehouse: true }));
 
     const result = await service.create(actor, {
       name: 'قميص',
@@ -85,11 +85,11 @@ describe('ProductsService', () => {
     expect(prisma.product.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         name: 'قميص',
-        inWarehouse: false,
+        inWarehouse: true,
         supplierBusinessId: null,
       }),
     });
-    expect(result.product.inWarehouse).toBe(false);
+    expect(result.product.inWarehouse).toBe(true);
   });
 
   it('rejects a non-workshop supplierBusinessId', async () => {

@@ -293,7 +293,7 @@ model Product {
   unit               String
   price              Int
   posts              Post[]
-  inWarehouse        Boolean   @default(false)
+  inWarehouse        Boolean   @default(true)
   available          Boolean   @default(true)
   guarantee          Boolean   @default(false)
   /** Workshop the goods came from (platform still owns the product). */

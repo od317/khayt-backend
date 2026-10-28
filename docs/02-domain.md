@@ -486,9 +486,10 @@ Everything else is a straightforward one-to-many.
 Numbered so they can be referenced in code review.
 
 **R1 — Warehouse gating.**
-A product is orderable in the app if and only if `Product.inWarehouse`
-is true. A product with `inWarehouse = false` can only be contacted about.
-This is the single most important rule in the system.
+`Product.inWarehouse` marks whether a product is offered for warehouse
+ordering. New products default to `true`; placing an order also requires
+available stock in `Supply`. Products with `inWarehouse = false` can only be
+contacted about.
 
 **R2 — Order total.**
 `Order.total` equals the sum of `OrderLine.quantity × unitPrice` for its
