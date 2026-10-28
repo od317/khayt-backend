@@ -98,6 +98,19 @@ Sets httpOnly `refreshToken` cookie (`path=/api/auth`).
 
 **Possible:** `400`, `401` (invalid/expired challenge or code)
 
+### Creating a dashboard admin
+
+On the production VPS, run the command in the API container:
+
+```sh
+docker compose -f docker-compose.prod.yml exec api npm run admin:create
+```
+
+Enter the admin email and password when prompted. The password is not echoed
+or passed in the shell command. This creates an account with the `admin` role
+only; it refuses to modify an account that already uses that email. Login also
+requires working SMTP configuration so the 2FA code can be delivered.
+
 ---
 
 ## 2. Users & employees — `/admin`
