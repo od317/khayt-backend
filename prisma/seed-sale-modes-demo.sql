@@ -3,10 +3,9 @@
 -- KEEP ONLY:
 --   prod-sale-free  — free
 --   prod-sale-mixed — mixed (per-color free vs sizePack)
---   prod-sale-pack  — color_size_pack (pick color only; sizes admin)
 --   prod-sale-pair  — color_pair_pack (first color → list of seconds; pairColor required)
 --
--- Soft-delete every other demo sample (old sale demos + prod-vps-*).
+-- Soft-delete every other demo sample (old sale demos + prod-vps-* + prod-sale-pack).
 
 UPDATE "Product"
 SET
@@ -16,12 +15,12 @@ SET
 WHERE "deletedAt" IS NULL
   AND (
     id LIKE 'prod-vps-%'
+    OR id = 'prod-sale-pack'
     OR (
       id LIKE 'prod-sale-%'
       AND id NOT IN (
         'prod-sale-free',
         'prod-sale-mixed',
-        'prod-sale-pack',
         'prod-sale-pair'
       )
     )
@@ -144,53 +143,6 @@ CROSS JOIN LATERAL (
       )
     ),
     NULL::jsonb
-  ),
-  (
-    'prod-sale-pack',
-    'طقم قياسات بلون',
-    'اختر اللون فقط — القياسات إدارية (طقم)',
-    jsonb_build_object(
-      'axes', jsonb_build_array(
-        jsonb_build_object('key', 'color', 'label', 'لون'),
-        jsonb_build_object('key', 'size', 'label', 'قياس')
-      ),
-      'options', jsonb_build_array(
-        jsonb_build_object(
-          'name', 'أحمر', 'hex', '#DC2626',
-          'image', b.u1, 'images', jsonb_build_array(b.u1),
-          'children', jsonb_build_array(
-            jsonb_build_object('name', 'M', 'image', b.u1),
-            jsonb_build_object('name', 'L', 'image', b.u1),
-            jsonb_build_object('name', 'XL', 'image', b.u1)
-          )
-        ),
-        jsonb_build_object(
-          'name', 'أزرق', 'hex', '#2563EB',
-          'image', b.u2, 'images', jsonb_build_array(b.u2),
-          'children', jsonb_build_array(
-            jsonb_build_object('name', 'M', 'image', b.u2),
-            jsonb_build_object('name', 'L', 'image', b.u2),
-            jsonb_build_object('name', 'XL', 'image', b.u2)
-          )
-        ),
-        jsonb_build_object(
-          'name', 'أسود', 'hex', '#111827',
-          'image', b.u3, 'images', jsonb_build_array(b.u3),
-          'children', jsonb_build_array(
-            jsonb_build_object('name', 'M', 'image', b.u3),
-            jsonb_build_object('name', 'L', 'image', b.u3),
-            jsonb_build_object('name', 'XL', 'image', b.u3)
-          )
-        )
-      )
-    ),
-    jsonb_build_object(
-      'mode', 'color_size_pack',
-      'sizePack', jsonb_build_object(
-        'sizes', jsonb_build_array('M', 'L', 'XL'),
-        'qtyPerSize', 1
-      )
-    )
   ),
   (
     'prod-sale-pair',
@@ -372,7 +324,6 @@ SET
 WHERE p.id IN (
   'prod-sale-free',
   'prod-sale-mixed',
-  'prod-sale-pack',
   'prod-sale-pair'
 );
 
@@ -381,7 +332,6 @@ SELECT 'supply-' || id, id, 200, 120, 37000, NOW()
 FROM (VALUES
   ('prod-sale-free'),
   ('prod-sale-mixed'),
-  ('prod-sale-pack'),
   ('prod-sale-pair')
 ) AS t(id)
 WHERE EXISTS (SELECT 1 FROM "Product" p WHERE p.id = t.id)
@@ -392,7 +342,6 @@ FROM "Product"
 WHERE id IN (
   'prod-sale-free',
   'prod-sale-mixed',
-  'prod-sale-pack',
   'prod-sale-pair'
 )
 ORDER BY id;

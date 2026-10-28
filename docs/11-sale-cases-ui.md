@@ -6,7 +6,7 @@ Demo product ids (after `prisma/seed-sale-modes-demo.sql`):
 |----|------------|-----|
 | `prod-sale-free` | `free` | Pick color + size; optional color discount |
 | `prod-sale-mixed` | `mixed` | Some colors free size, some admin pack |
-| `prod-sale-pack` | `color_size_pack` | Pick color only; sizes shown disabled (admin pack) |
+| ~~`prod-sale-pack`~~ | ~~`color_size_pack`~~ | Removed from demo seed (case still supported by API) |
 | `prod-sale-pair` | `color_pair_pack` | First color → **list** of seconds; **pairColor required** |
 
 Auth for cart: **store or workshop** bearer token. Base path: `/api`.
