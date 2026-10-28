@@ -10,7 +10,6 @@ import {
 import {
   Business,
   Location,
-  CategoryApplies,
   MediaType,
   NotificationType,
   Post,
@@ -47,15 +46,6 @@ import {
 import { POST_TYPES_BY_ROLE } from './post-role-map';
 import { POST_TYPE_REQUIRED_FIELDS } from './post-type-rules';
 import { postImagePaths, postVideoPath } from './post-uploads';
-
-const POST_DISALLOWED_SCOPES: CategoryApplies[] = [
-  CategoryApplies.product,
-  CategoryApplies.business,
-  CategoryApplies.workshop,
-  CategoryApplies.institute,
-  CategoryApplies.store,
-  CategoryApplies.workshop_institute,
-];
 
 type PostWithRelations = PostWithRelationsForMapper;
 
@@ -1001,7 +991,7 @@ export class PostsService {
 
     const rows = await this.prisma.category.findMany({
       where: { id: { in: unique } },
-      select: { id: true, appliesTo: true },
+      select: { id: true },
     });
 
     if (rows.length !== unique.length) {
@@ -1010,20 +1000,6 @@ export class PostsService {
           error: 'validation_failed',
           message: 'فئة أو أكثر غير موجودة',
           fields: { categoryIds: 'يحتوي معرفاً غير معروف' },
-        },
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const disallowed = rows.filter((row) =>
-      POST_DISALLOWED_SCOPES.includes(row.appliesTo),
-    );
-    if (disallowed.length > 0) {
-      throw new HttpException(
-        {
-          error: 'validation_failed',
-          message: 'فئة أو أكثر لا تصلح للمنشورات',
-          fields: { categoryIds: 'يجب أن تنطبق على المنشورات' },
         },
         HttpStatus.BAD_REQUEST,
       );

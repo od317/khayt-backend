@@ -490,7 +490,7 @@ describe('PostsService', () => {
       expect(result.post.id).toBe('post-1');
     });
 
-    it('allows creating posts without type-specific optional fields', async () => {
+    it('allows product-scoped categories on posts', async () => {
       const created = makePost({
         type: PostType.job_offering,
         workType: [],
@@ -498,17 +498,29 @@ describe('PostsService', () => {
         salaryType: null,
       });
       prisma.post.create.mockResolvedValue(created);
+      prisma.category.findMany.mockResolvedValueOnce([
+        { id: 'cat-qutn', appliesTo: 'product' },
+      ]);
 
       const result = await service.create(actor, {
         type: PostType.job_offering,
         title: 'مطلوب خياط',
         body: 'نبحث عن خياط ماهر',
         location: 'دمشق',
-        categoryIds: ['cat-1'],
+        categoryIds: ['cat-qutn'],
       });
 
       expect(result.post.id).toBe('post-1');
-      expect(prisma.post.create).toHaveBeenCalled();
+      expect(prisma.category.findMany).toHaveBeenCalledWith({
+        where: { id: { in: ['cat-qutn'] } },
+        select: { id: true },
+      });
+      expect(prisma.post.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          categories: { create: [{ categoryId: 'cat-qutn' }] },
+        }),
+        include: expect.any(Object),
+      });
     });
 
     it('rejects an image post without imageUrls', async () => {

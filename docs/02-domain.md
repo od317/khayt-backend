@@ -249,7 +249,9 @@ within a week.
 | postId | uuid | → Post |
 | categoryId | uuid | → Category |
 
-A post can have several categories. A category applies to many posts.
+A post can have several categories. Any existing category can be attached to a
+post; `appliesTo` guides category selection in clients but is not enforced when
+assigning categories to posts.
 
 ---
 

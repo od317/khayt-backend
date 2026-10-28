@@ -34,7 +34,7 @@ Phone-only. Arabic RTL. Four external roles.
 **Route:** shown before anything else, when no session exists
 **Reached from:** first launch
 **Reads:** —
-**Writes:** `PATCH /auth/me` (role, location)
+**Writes:** `POST /auth/onboarding` (role, location, and required business details)
 **Steps:** welcome → role → location → confirm
 
 ---
