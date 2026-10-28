@@ -1,5 +1,7 @@
 import { Product } from '@prisma/client';
 import {
+  isPackSaleMode,
+  parseSaleRuleStored,
   parseSizePack,
   productPackPrice,
   resolveProductSaleCase,
@@ -98,6 +100,8 @@ function colorDiscountPercent(option: VariantOptionLike): number | null {
 export function toColorImages(
   variants: unknown,
   basePrice = 0,
+  /** Product-wide pack (color_size_pack / color_pair_pack) — forces sizeMode=pack on every color. */
+  productSizePack: SizePack | null = null,
 ): ColorImagesResponse[] {
   if (!variants || typeof variants !== 'object') return [];
   const tree = variants as VariantTreeLike;
@@ -119,7 +123,7 @@ export function toColorImages(
     if (!primary) return [];
 
     const images = fromImages.length > 0 ? fromImages : [primary];
-    const sizePack = parseSizePack(option.sizePack);
+    const sizePack = productSizePack ?? parseSizePack(option.sizePack);
     const sizeMode = sizePack ? ('pack' as const) : ('free' as const);
     // Color discount only meaningful when the buyer picks size freely.
     const discountPercent =
@@ -151,6 +155,11 @@ export function toColorImages(
 }
 
 export function toProductResponse(product: Product): ProductResponse {
+  const saleCase = resolveProductSaleCase(product.saleRule, product.variants);
+  const packRule = parseSaleRuleStored(product.saleRule);
+  const productSizePack =
+    isPackSaleMode(packRule) ? packRule.sizePack : null;
+
   return {
     id: product.id,
     name: product.name,
@@ -164,11 +173,15 @@ export function toProductResponse(product: Product): ProductResponse {
     guarantee: product.guarantee,
     supplierBusinessId: product.supplierBusinessId ?? null,
     variants: product.variants,
-    colorImages: toColorImages(product.variants, product.price),
+    colorImages: toColorImages(
+      product.variants,
+      product.price,
+      productSizePack,
+    ),
     packaging: product.packaging,
     discount: product.discount,
     offer: product.offer,
-    saleCase: resolveProductSaleCase(product.saleRule, product.variants),
+    saleCase,
     packPrice: productPackPrice(
       product.saleRule,
       product.variants,

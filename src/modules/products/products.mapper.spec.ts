@@ -213,14 +213,17 @@ describe('toProductResponse', () => {
         options: [
           {
             name: 'أحمر',
+            image: '/red.jpg',
             children: [{ name: 'M' }, { name: 'L' }, { name: 'XL' }],
           },
           {
             name: 'أزرق',
+            image: '/blue.jpg',
             children: [{ name: 'M' }, { name: 'L' }, { name: 'XL' }],
           },
           {
             name: 'أسود',
+            image: '/black.jpg',
             children: [{ name: 'M' }, { name: 'L' }, { name: 'XL' }],
           },
         ],
@@ -237,5 +240,56 @@ describe('toProductResponse', () => {
       unitsPerPack: 30,
       packPrice: 1350000,
     });
+    // FE reads sizeMode on each color — must be pack, not free.
+    expect(result.colorImages).toHaveLength(3);
+    expect(result.colorImages.every((c) => c.sizeMode === 'pack')).toBe(true);
+    expect(result.colorImages[0]?.sizePack).toEqual({
+      sizes: ['M', 'L', 'XL'],
+      qtyPerSize: 5,
+    });
+  });
+
+  it('marks every color sizeMode=pack for color_size_pack (طقم قياسات بلون)', () => {
+    const result = toProductResponse({
+      ...baseProduct(),
+      price: 45000,
+      saleRule: {
+        mode: 'color_size_pack',
+        sizePack: { sizes: ['M', 'L', 'XL'], qtyPerSize: 1 },
+      },
+      variants: {
+        axes: [
+          { key: 'color', label: 'لون' },
+          { key: 'size', label: 'قياس' },
+        ],
+        options: [
+          {
+            name: 'أحمر',
+            hex: '#DC2626',
+            image: '/red.jpg',
+            children: [{ name: 'M' }, { name: 'L' }, { name: 'XL' }],
+          },
+          {
+            name: 'أزرق',
+            hex: '#2563EB',
+            image: '/blue.jpg',
+            children: [{ name: 'M' }, { name: 'L' }, { name: 'XL' }],
+          },
+        ],
+      },
+    });
+
+    expect(result.saleCase).toBe('color_size_pack');
+    expect(result.packPrice).toBe(135000);
+    expect(result.colorImages).toHaveLength(2);
+    for (const color of result.colorImages) {
+      expect(color.sizeMode).toBe('pack');
+      expect(color.sizePack).toEqual({
+        sizes: ['M', 'L', 'XL'],
+        qtyPerSize: 1,
+      });
+      expect(color.unitsPerPack).toBe(3);
+      expect(color.packPrice).toBe(135000);
+    }
   });
 });

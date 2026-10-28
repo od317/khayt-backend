@@ -513,7 +513,9 @@ GET /api/products/prod-sale-pack
 }
 ```
 
-Drive UI from **`saleCase`**. `colorImages[].sizeMode` may stay `"free"`; sizes come from `saleRule.sizePack`.
+Drive UI from **`saleCase`** *or* `colorImages[].sizeMode`.
+For `color_size_pack` / `color_pair_pack`, every color has `sizeMode: "pack"` and
+`sizePack` copied from `saleRule.sizePack` — size chips must be **disabled**.
 
 ### Add to cart
 
