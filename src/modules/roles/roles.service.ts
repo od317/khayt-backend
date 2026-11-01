@@ -7,6 +7,8 @@ import {
 import { Prisma, Role } from '@prisma/client';
 import { withDefaultAvatar } from '../../common/defaults/images';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { RedisService } from '../../common/redis/redis.service';
+import { refreshKeysPattern } from '../auth/auth.constants';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
@@ -46,7 +48,10 @@ export function toAdminRole(role: Role): AdminRoleResponse {
 
 @Injectable()
 export class RolesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
 
   async list(): Promise<{ items: RoleResponse[] }> {
     const rows = await this.prisma.role.findMany({
@@ -114,6 +119,26 @@ export class RolesService {
     return { role: toAdminRole(role) };
   }
 
+  /**
+   * Hard-deletes the Role row and soft-deletes every User that held it.
+   *
+   * Guards (in order):
+   *   1. Role must exist.
+   *   2. System roles cannot be deleted.
+   *   3. Users with financial history (orders, bills, payments,
+   *      deliveries, or products supplied by their business that appear
+   *      on order lines) block the delete — this preserves the audit
+   *      trail.
+   *
+   * After soft-delete:
+   *   - `role` value on each user is preserved so the account can be
+   *     restored if the same role is recreated later (it will not
+   *     auto-reactivate; `suspended` stays true).
+   *   - `deliveryAddress/Lat/Lng` are preserved because in-flight
+   *     deliveries still need them.
+   *   - Redis refresh sessions are revoked so no session survives the
+   *     suspension.
+   */
   async remove(id: string): Promise<{ success: true }> {
     const existing = await this.prisma.role.findUnique({ where: { id } });
     if (!existing) {
@@ -123,24 +148,124 @@ export class RolesService {
       });
     }
 
-    // if (existing.system) {
-    //   throw new ForbiddenException({
-    //     error: 'forbidden',
-    //     message: 'لا يمكن حذف أدوار النظام',
-    //   });
-    // }
-
-    const inUse = await this.prisma.user.count({
-      where: { role: existing.value },
-    });
-    if (inUse > 0) {
-      throw new ConflictException({
-        error: 'conflict',
-        message: 'الدور مرتبط بمستخدمين',
+    if (existing.system) {
+      throw new ForbiddenException({
+        error: 'forbidden',
+        message: 'لا يمكن حذف أدوار النظام',
       });
     }
 
-    await this.prisma.role.delete({ where: { id } });
+    const users = await this.prisma.user.findMany({
+      where: { role: existing.value },
+      select: { id: true },
+    });
+    const userIds = users.map((u) => u.id);
+
+    // ---- Financial-history guard ----
+    if (userIds.length > 0) {
+      const [
+        orderCount,
+        billCount,
+        paymentCount,
+        deliveryCount,
+        suppliedOrderLineCount,
+        bizBillCount,
+        receivingCount,
+      ] = await this.prisma.$transaction([
+        this.prisma.order.count({ where: { storeId: { in: userIds } } }),
+        this.prisma.bill.count({
+          where: { receiving: { createdBy: { in: userIds } } },
+        }),
+        this.prisma.payment.count({ where: { recordedBy: { in: userIds } } }),
+        this.prisma.delivery.count({ where: { driverId: { in: userIds } } }),
+        // "Business has order lines" ≈ a product this business supplied
+        // appears on an order. Relation on Product is `supplier`.
+        this.prisma.orderLine.count({
+          where: {
+            product: { supplier: { ownerId: { in: userIds } } },
+          },
+        }),
+        this.prisma.bill.count({
+          where: { business: { ownerId: { in: userIds } } },
+        }),
+        this.prisma.receiving.count({
+          where: { business: { ownerId: { in: userIds } } },
+        }),
+      ]);
+
+      if (
+        orderCount +
+          billCount +
+          paymentCount +
+          deliveryCount +
+          suppliedOrderLineCount +
+          bizBillCount +
+          receivingCount >
+        0
+      ) {
+        throw new ConflictException({
+          error: 'conflict',
+          message:
+            'الدور مرتبط بمستخدمين لديهم سجلات مالية أو توصيل. لا يمكن حذفه.',
+        });
+      }
+    }
+
+    // ---- Soft-delete users (batched) + hard-delete role ----
+    await this.prisma.$transaction(async (tx) => {
+      if (userIds.length > 0) {
+        await tx.post.updateMany({
+          where: { authorId: { in: userIds }, deletedAt: null },
+          data: { deletedAt: new Date(), active: false },
+        });
+
+        await tx.cartItem.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.like.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.savedPost.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.savedBusiness.deleteMany({
+          where: { userId: { in: userIds } },
+        });
+        await tx.savedMarketer.deleteMany({
+          where: { userId: { in: userIds } },
+        });
+        await tx.deviceToken.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.notification.deleteMany({
+          where: { userId: { in: userIds } },
+        });
+
+        // NOTE: `role` is intentionally preserved so a recreated role can
+        // later be associated back to these users. `suspended: true`
+        // means they stay logged out regardless.
+        // NOTE: deliveryAddress/Lat/Lng preserved — in-flight deliveries
+        // still need them.
+        await tx.user.updateMany({
+          where: { id: { in: userIds } },
+          data: {
+            suspended: true,
+            phone: null,
+            email: null,
+            passwordHash: null,
+            name: 'حساب محذوف',
+            bio: null,
+            avatarUrl: null,
+            availableForWork: false,
+          },
+        });
+      }
+
+      await tx.role.delete({ where: { id } });
+    });
+
+    // ---- Revoke refresh sessions (post-commit; failures are non-fatal) ----
+    for (const userId of userIds) {
+      try {
+        await this.redis.deleteByPattern(refreshKeysPattern(userId));
+      } catch {
+        // Suspended users are blocked at verify()/refresh() anyway, so a
+        // Redis failure here does not compromise the suspension.
+      }
+    }
+
     return { success: true };
   }
 }

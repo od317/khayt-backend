@@ -13,12 +13,19 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { diskStorage } from 'multer';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateRoleDto } from './dto/create-role.dto';
+import { DeleteRoleResponseDto } from './dto/delete-role-response.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AdminRoleResponse, RolesService } from './roles.service';
 
@@ -145,8 +152,9 @@ export class AdminRolesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: DeleteRoleResponseDto })
   @ApiOperation({ summary: 'Delete a non-system role' })
-  remove(@Param('id') id: string): Promise<{ success: true }> {
+  remove(@Param('id') id: string): Promise<DeleteRoleResponseDto> {
     return this.roles.remove(id);
   }
 }
