@@ -16,7 +16,7 @@ export type RoleResponse = {
   label: string;
   description: string;
   iconUrl: string;
-  needsOnboarding: boolean;
+  needsBusinessSetup: boolean;
 };
 
 export type AdminRoleResponse = RoleResponse & {
@@ -32,7 +32,7 @@ export function toPublicRole(role: Role): RoleResponse {
     label: role.label,
     description: role.description ?? '',
     iconUrl: withDefaultAvatar(role.iconUrl),
-    needsOnboarding: role.value === 'store' || role.value === 'workshop',
+    needsBusinessSetup: role.value === 'store' || role.value === 'workshop',
   };
 }
 

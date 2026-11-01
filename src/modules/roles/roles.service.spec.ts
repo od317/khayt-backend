@@ -85,12 +85,12 @@ describe('RolesService', () => {
         label: 'موظف',
         description: 'ابحث عن فرص عمل',
         iconUrl: employeeRole.iconUrl,
-        needsOnboarding: false,
+        needsBusinessSetup: false,
       },
     ]);
   });
 
-  it('sets needsOnboarding only for store and workshop roles', async () => {
+  it('sets needsBusinessSetup only for store and workshop roles', async () => {
     prisma.role.findMany.mockResolvedValue([
       { ...employeeRole, value: 'store' },
       { ...employeeRole, value: 'workshop' },
@@ -101,9 +101,9 @@ describe('RolesService', () => {
     const result = await service.list();
 
     expect(
-      result.items.map(({ value, needsOnboarding }) => [
+      result.items.map(({ value, needsBusinessSetup }) => [
         value,
-        needsOnboarding,
+        needsBusinessSetup,
       ]),
     ).toEqual([
       ['store', true],

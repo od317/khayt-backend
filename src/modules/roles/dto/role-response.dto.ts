@@ -24,7 +24,7 @@ export class RoleResponseDto {
   @ApiProperty({
     example: false,
     description:
-      'Whether this role requires business onboarding after role selection. True for store and workshop; false for all other roles.',
+      'Whether this role requires the user to enter business details after role selection. True for store and workshop; false for all other roles.',
   })
-  needsOnboarding!: boolean;
+  needsBusinessSetup!: boolean;
 }
