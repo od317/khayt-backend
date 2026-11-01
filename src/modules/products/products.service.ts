@@ -14,6 +14,7 @@ import { QueryProductsDto } from './dto/query-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductResponse, toProductResponse } from './products.mapper';
 import { applyVariantImageFiles, galleryPaths } from './product-uploads';
+import { productAudienceWhere } from './product-audience';
 import {
   assertSaleRuleMatchesVariants,
   assertVariantColorSizePacks,
@@ -58,8 +59,14 @@ export class ProductsService {
     }
   }
 
-  async list(query: QueryProductsDto): Promise<Paginated<ProductResponse>> {
-    const where: Prisma.ProductWhereInput = { deletedAt: null };
+  async list(
+    query: QueryProductsDto,
+    actor?: AuthenticatedUser,
+  ): Promise<Paginated<ProductResponse>> {
+    const where: Prisma.ProductWhereInput = {
+      deletedAt: null,
+      ...productAudienceWhere(actor?.role),
+    };
 
     if (query.category) where.category = query.category;
     if (query.q) {
@@ -104,9 +111,12 @@ export class ProductsService {
     return { items: rows };
   }
 
-  async detail(id: string): Promise<ProductDetailResponse> {
+  async detail(
+    id: string,
+    actor?: AuthenticatedUser,
+  ): Promise<ProductDetailResponse> {
     const product = await this.prisma.product.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, ...productAudienceWhere(actor?.role) },
     });
 
     if (!product) {
@@ -138,9 +148,10 @@ export class ProductsService {
   async listSimilar(
     id: string,
     query: PaginationDto,
+    actor?: AuthenticatedUser,
   ): Promise<Paginated<ProductResponse>> {
     const product = await this.prisma.product.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, ...productAudienceWhere(actor?.role) },
       select: { id: true, category: true },
     });
     if (!product) {
@@ -156,6 +167,7 @@ export class ProductsService {
       deletedAt: null,
       available: true,
       id: { not: product.id },
+      ...productAudienceWhere(actor?.role),
     };
 
     const preferredWhere: Prisma.ProductWhereInput = {
@@ -254,6 +266,7 @@ export class ProductsService {
         price: dto.price,
         images: uploaded,
         inWarehouse: true,
+        audience: dto.audience,
         guarantee: dto.guarantee ?? false,
         supplierBusinessId: dto.supplierBusinessId ?? null,
         variants: variants ? toJson(variants) : Prisma.JsonNull,
@@ -315,6 +328,7 @@ export class ProductsService {
 
     const data: Prisma.ProductUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
+    if (dto.audience !== undefined) data.audience = dto.audience;
     if (dto.category !== undefined) data.category = dto.category;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.unit !== undefined) data.unit = dto.unit;

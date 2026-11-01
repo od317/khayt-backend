@@ -26,7 +26,10 @@ import { UserRole } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { diskStorage } from 'multer';
-import { RequireUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  RequireUser,
+} from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -100,8 +103,11 @@ export class ProductsController {
   @ApiSecurity({}) // clears the global bearer requirement on this public route
   @ApiOperation({ summary: 'List products' })
   @ApiOkResponse({ description: 'Paginated list of products' })
-  list(@Query() query: QueryProductsDto): Promise<Paginated<ProductResponse>> {
-    return this.products.list(query);
+  list(
+    @Query() query: QueryProductsDto,
+    @CurrentUser() user?: AuthenticatedUser,
+  ): Promise<Paginated<ProductResponse>> {
+    return this.products.list(query, user);
   }
 
   @Public()
@@ -119,8 +125,9 @@ export class ProductsController {
   similar(
     @Param('id') id: string,
     @Query() query: PaginationDto,
+    @CurrentUser() user?: AuthenticatedUser,
   ): Promise<Paginated<ProductResponse>> {
-    return this.products.listSimilar(id, query);
+    return this.products.listSimilar(id, query, user);
   }
 
   @Public()
@@ -128,8 +135,11 @@ export class ProductsController {
   @ApiSecurity({})
   @ApiOperation({ summary: 'Product detail' })
   @ApiOkResponse({ description: 'Product with optional available quantity' })
-  detail(@Param('id') id: string): Promise<ProductDetailResponse> {
-    return this.products.detail(id);
+  detail(
+    @Param('id') id: string,
+    @CurrentUser() user?: AuthenticatedUser,
+  ): Promise<ProductDetailResponse> {
+    return this.products.detail(id, user);
   }
 
   @Post()

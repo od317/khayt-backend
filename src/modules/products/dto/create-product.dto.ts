@@ -1,10 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform, plainToInstance } from 'class-transformer';
+import { ProductAudience } from '@prisma/client';
 import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsEnum,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -268,6 +270,13 @@ export class ProductDiscountDto {
 }
 
 export class CreateProductDto {
+  @ApiProperty({
+    enum: ProductAudience,
+    description: 'Which business users can see this product.',
+  })
+  @IsEnum(ProductAudience)
+  audience!: ProductAudience;
+
   @ApiProperty({ example: '' })
   @IsString()
   @IsNotEmpty()

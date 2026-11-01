@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Product } from '@prisma/client';
+import { Product, ProductAudience } from '@prisma/client';
 import { toColorImages, toProductResponse } from './products.mapper';
 
 const baseProduct = (): Product => ({
@@ -13,6 +13,7 @@ const baseProduct = (): Product => ({
   inWarehouse: false,
   available: true,
   guarantee: false,
+  audience: ProductAudience.both,
   supplierBusinessId: null,
   variants: null,
   packaging: null,

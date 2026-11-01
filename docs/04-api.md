@@ -114,11 +114,16 @@ Browse. Used by the app's discover and by store search.
 
 Browse. Used by the app's discover and by store search.
 query: {
-businessId?, category?, q?, location?,
+category?, q?,
 inWarehouse?, // true = orderable only
 page?, limit?
 }
 → 200 { items: Product[], total }
+
+When a store or workshop bearer token is supplied, listing and similar-product
+results are filtered to products assigned to that audience plus products
+assigned to `both`.
+Unauthenticated browsing retains the full public catalog.
 
 text
 
@@ -127,6 +132,7 @@ text
 **Public.** No token required.
 One product. Includes the business and, if warehouse-stocked, the
 available quantity.
+With a store/workshop token, products outside that audience return 404.
 Soft-deleted products return 404.
 → 200 {
 product: Product,

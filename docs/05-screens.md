@@ -297,7 +297,7 @@ Sections per role are ordered differently. No content is hidden.
 **Route:** `/products/new`
 **Reached from:** account, or the business profile
 **Writes:** `POST /products`
-**Fields:** name, category, images, description, colors with per-color sizes, price, unit, min order, order method, packaging, discount
+**Fields:** name, category, audience (store, workshop, or both), images, description, colors with per-color sizes, price, unit, min order, order method, packaging, discount
 
 ---
 

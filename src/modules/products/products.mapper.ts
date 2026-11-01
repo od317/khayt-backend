@@ -49,6 +49,7 @@ export type ProductResponse = {
   inWarehouse: boolean;
   available: boolean;
   guarantee: boolean;
+  audience: Product['audience'];
   /** Workshop the goods came from; null until set / received. */
   supplierBusinessId: string | null;
   variants: unknown;
@@ -171,6 +172,7 @@ export function toProductResponse(product: Product): ProductResponse {
     inWarehouse: product.inWarehouse,
     available: product.available,
     guarantee: product.guarantee,
+    audience: product.audience,
     supplierBusinessId: product.supplierBusinessId ?? null,
     variants: product.variants,
     colorImages: toColorImages(

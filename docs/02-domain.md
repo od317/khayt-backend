@@ -143,6 +143,7 @@ A thing a business offers. Can be a garment, a fabric, a machine, a course.
 | images      | string[]  |                                    |
 | unit        | string    | قطعة / متر / طقم / دورة            |
 | price       | integer   | display price                      |
+| audience    | enum      | store / workshop / both; defaults to both |
 | inWarehouse | boolean   | **see rule R1**                    |
 | available   | boolean   | business-controlled visibility     |
 | deletedAt   | timestamp | soft delete marker, null when live |
@@ -157,6 +158,9 @@ exists, it can be shown again, and it may still be referenced by orders.
 listing, and it cannot be restored through the API.
 
 Do not use one for the other.
+
+`audience` is selected by staff when creating a product. Store and workshop
+accounts see products assigned to them and products assigned to `both`.
 
 **Variants** (only for garments):
 

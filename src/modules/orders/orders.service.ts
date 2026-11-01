@@ -29,6 +29,7 @@ import {
   resolveDeliveryBorder,
 } from '../locations/location-border';
 import { resolveOrderDropoff } from './order-location';
+import { productAudiencesForRole } from '../products/product-audience';
 import {
   canActorAdvance,
   canActorCancel,
@@ -241,7 +242,11 @@ export class OrdersService {
       }
 
       const products = await tx.product.findMany({
-        where: { id: { in: productIds }, deletedAt: null },
+        where: {
+          id: { in: productIds },
+          deletedAt: null,
+          audience: { in: productAudiencesForRole(actor.role) ?? [] },
+        },
       });
 
       const productById = new Map(products.map((p) => [p.id, p]));

@@ -35,6 +35,12 @@ enum BusinessType {
   store
 }
 
+enum ProductAudience {
+  store
+  workshop
+  both
+}
+
 enum PostType {
   job_seeking
   job_offering
@@ -296,6 +302,7 @@ model Product {
   inWarehouse        Boolean   @default(true)
   available          Boolean   @default(true)
   guarantee          Boolean   @default(false)
+  audience           ProductAudience @default(both)
   /** Workshop the goods came from (platform still owns the product). */
   supplierBusinessId String?
   deletedAt          DateTime?

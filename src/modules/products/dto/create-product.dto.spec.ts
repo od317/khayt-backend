@@ -1,4 +1,5 @@
 import { plainToInstance } from 'class-transformer';
+import { ProductAudience } from '@prisma/client';
 import { validate, ValidationError } from 'class-validator';
 import { describe, expect, it } from 'vitest';
 import { CreateProductDto } from './create-product.dto';
@@ -6,6 +7,7 @@ import { CreateProductDto } from './create-product.dto';
 const valid = (overrides: Record<string, unknown> = {}) => ({
   name: 'قميص',
   category: 'قمصان',
+  audience: ProductAudience.both,
   unit: 'قطعة',
   price: 5000,
   ...overrides,
@@ -49,6 +51,15 @@ describe('CreateProductDto', () => {
   it('rejects an invalid unit', async () => {
     const messages = await run(valid({ unit: 'كيلو' }));
     expect(messages.length).toBeGreaterThan(0);
+  });
+
+  it('requires a valid audience', async () => {
+    expect(await run(valid({ audience: undefined }))).toContain(
+      'audience must be one of the following values: store, workshop, both',
+    );
+    expect(await run(valid({ audience: 'employee' }))).toContain(
+      'audience must be one of the following values: store, workshop, both',
+    );
   });
 
   it('rejects image URLs in the body', async () => {

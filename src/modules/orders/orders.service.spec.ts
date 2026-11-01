@@ -5,7 +5,7 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
-import { OrderStatus, UserRole } from '@prisma/client';
+import { OrderStatus, ProductAudience, UserRole } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -317,6 +317,13 @@ describe('OrdersService', () => {
 
       const result = await service.create(store, dto);
 
+      expect(prisma.product.findMany).toHaveBeenCalledWith({
+        where: {
+          id: { in: ['prod-1'] },
+          deletedAt: null,
+          audience: { in: [ProductAudience.store, ProductAudience.both] },
+        },
+      });
       expect(prisma.order.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({

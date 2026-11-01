@@ -1011,6 +1011,7 @@ Public browse endpoints (`GET /products`, `GET /products/:id`, similar) are **no
   "inWarehouse": true,
   "available": true,
   "guarantee": false,
+  "audience": "both",
   "supplierBusinessId": null,
   "variants": { "axes": [], "options": [] },
   "colorImages": [],
@@ -1029,6 +1030,8 @@ Public browse endpoints (`GET /products`, `GET /products/:id`, similar) are **no
 ```
 
 Units: `قطعة` | `متر` | `طقم` | `دورة`
+
+**`audience` (required on create; optional on update):** select `store`, `workshop`, or `both`. Authenticated store/workshop users only see products assigned to them or `both`. Existing products default to `both`.
 
 **`saleCase` (always on product list/detail):** FE should switch UI on this enum:
 
@@ -1069,7 +1072,7 @@ There is **no** `/admin/products` — use `/products` with staff roles. `saleCas
 
 ### `POST /products` — `multipart/form-data`
 
-**Common fields:** `name`, `category`, `unit`, `price` (required); `description?`, `variants?` (JSON **string**), `saleRule?` (JSON **string**), `packaging?`, `discount?`, `offer?`, `guarantee?`, `supplierBusinessId?`  
+**Common fields:** `name`, `category`, `unit`, `price`, `audience` (`store` | `workshop` | `both`) (required); `description?`, `variants?` (JSON **string**), `saleRule?` (JSON **string**), `packaging?`, `discount?`, `offer?`, `guarantee?`, `supplierBusinessId?`
 **Files:** `images` (≤8), plus variant file fields
 
 **Response `201` (all cases)**

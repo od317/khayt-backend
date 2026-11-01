@@ -81,6 +81,7 @@ export const sampleProduct = {
   inWarehouse: false,
   available: true,
   guarantee: false,
+  audience: 'both',
   supplierBusinessId: null as string | null,
   variants: {
     axes: [

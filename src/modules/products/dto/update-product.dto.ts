@@ -1,7 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
+import { ProductAudience } from '@prisma/client';
 import {
   IsBoolean,
+  IsEnum,
   IsIn,
   IsInt,
   IsOptional,
@@ -23,6 +25,14 @@ import {
 const ALLOWED_UNITS = ['قطعة', 'متر', 'طقم', 'دورة'] as const;
 
 export class UpdateProductDto {
+  @ApiPropertyOptional({
+    enum: ProductAudience,
+    description: 'Which business users can see this product.',
+  })
+  @IsOptional()
+  @IsEnum(ProductAudience)
+  audience?: ProductAudience;
+
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()

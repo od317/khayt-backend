@@ -28,6 +28,7 @@ import {
     resolveCartSale,
 } from '../products/sale-rule';
 import { expandCartVariants } from './cart-variant';
+import { productAudiencesForRole } from '../products/product-audience';
 
 const MAX_CART_ITEMS = 100;
 const MAX_QUANTITY_PER_ITEM = 10000;
@@ -84,7 +85,11 @@ export class CartService {
         }
 
         const product = await this.prisma.product.findFirst({
-            where: { id: dto.productId, deletedAt: null },
+            where: {
+                id: dto.productId,
+                deletedAt: null,
+                audience: { in: productAudiencesForRole(actor.role) ?? [] },
+            },
         });
 
         if (!product) {

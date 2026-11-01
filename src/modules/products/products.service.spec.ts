@@ -3,7 +3,12 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { BusinessType, Product, UserRole } from '@prisma/client';
+import {
+  BusinessType,
+  Product,
+  ProductAudience,
+  UserRole,
+} from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../../common/types/auth';
@@ -26,6 +31,7 @@ const makeProduct = (overrides: Partial<Product> = {}): Product => ({
   inWarehouse: false,
   available: true,
   guarantee: false,
+  audience: ProductAudience.both,
   supplierBusinessId: null,
   variants: null,
   packaging: null,
@@ -49,6 +55,7 @@ type PrismaMock = {
   business: { findUnique: ReturnType<typeof vi.fn> };
   supply: { findUnique: ReturnType<typeof vi.fn> };
   orderLine: { count: ReturnType<typeof vi.fn> };
+  $transaction: ReturnType<typeof vi.fn>;
 };
 
 describe('ProductsService', () => {
@@ -67,17 +74,28 @@ describe('ProductsService', () => {
       business: { findUnique: vi.fn() },
       supply: { findUnique: vi.fn() },
       orderLine: { count: vi.fn() },
+      $transaction: vi
+        .fn()
+        .mockImplementation((operations: Promise<unknown>[]) =>
+          Promise.all(operations),
+        ),
     };
 
     service = new ProductsService(prisma as unknown as PrismaService);
   });
 
   it('creates a product with inWarehouse true', async () => {
-    prisma.product.create.mockResolvedValue(makeProduct({ inWarehouse: true }));
+    prisma.product.create.mockResolvedValue(
+      makeProduct({
+        inWarehouse: true,
+        audience: ProductAudience.store,
+      }),
+    );
 
     const result = await service.create(actor, {
       name: 'قميص',
       category: 'قمصان',
+      audience: ProductAudience.store,
       unit: 'قطعة',
       price: 5000,
     });
@@ -86,10 +104,52 @@ describe('ProductsService', () => {
       data: expect.objectContaining({
         name: 'قميص',
         inWarehouse: true,
+        audience: ProductAudience.store,
         supplierBusinessId: null,
       }),
     });
+    expect(result.product.audience).toBe(ProductAudience.store);
     expect(result.product.inWarehouse).toBe(true);
+  });
+
+  it('filters product lists for the authenticated business audience', async () => {
+    prisma.product.findMany.mockResolvedValue([]);
+
+    await service.list(
+      { page: 1, limit: 10 },
+      { ...actor, role: UserRole.store },
+    );
+
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          deletedAt: null,
+          audience: { in: [ProductAudience.store, ProductAudience.both] },
+        },
+      }),
+    );
+    expect(prisma.product.count).toHaveBeenCalledWith({
+      where: {
+        deletedAt: null,
+        audience: { in: [ProductAudience.store, ProductAudience.both] },
+      },
+    });
+  });
+
+  it('hides products assigned to another audience on detail', async () => {
+    prisma.product.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.detail('prod-workshop', { ...actor, role: UserRole.store }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(prisma.product.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'prod-workshop',
+        deletedAt: null,
+        audience: { in: [ProductAudience.store, ProductAudience.both] },
+      },
+    });
   });
 
   it('rejects a non-workshop supplierBusinessId', async () => {
@@ -102,6 +162,7 @@ describe('ProductsService', () => {
       .create(actor, {
         name: 'قميص',
         category: 'قمصان',
+        audience: ProductAudience.both,
         unit: 'قطعة',
         price: 5000,
         supplierBusinessId: 'biz-store',
@@ -124,6 +185,7 @@ describe('ProductsService', () => {
     const result = await service.create(actor, {
       name: 'قميص',
       category: 'قمصان',
+      audience: ProductAudience.both,
       unit: 'قطعة',
       price: 5000,
       supplierBusinessId: 'biz-workshop',
@@ -145,6 +207,7 @@ describe('ProductsService', () => {
       {
         name: 'قميص',
         category: 'قمصان',
+        audience: ProductAudience.both,
         unit: 'قطعة',
         price: 5000,
         variants: {
