@@ -1,66 +1,59 @@
--- Seed sample posts for demo users created on VPS.
--- Phones: +963992966711 … +963992966716
--- Uses the same image URLs as prisma/seed.ts (SEED_POST_IMAGES / fabric set).
--- Safe to re-run: fixed post ids, ON CONFLICT DO NOTHING.
+-- Create 15 public demo posts for every active public-role user.
+-- Public roles: employee, workshop, institute, store, marketer, shipping_company.
+-- Internal roles and suspended users are excluded.
+-- All 8 PostType values are cycled through; seeded posts are approved and public.
+-- Safe to re-run: deterministic IDs and ON CONFLICT DO NOTHING.
 
--- Verify users exist first (optional check):
--- SELECT id, phone, role, "onboardingCompleted" FROM "User"
--- WHERE phone LIKE '+96399296671%';
+-- Remove records created by the previous version of this seed.
+DELETE FROM "Post"
+WHERE id IN (
+  'post-demo-711-a', 'post-demo-711-b',
+  'post-demo-712-a', 'post-demo-712-b',
+  'post-demo-713-a', 'post-demo-713-b',
+  'post-demo-714-a', 'post-demo-714-b',
+  'post-demo-715-a', 'post-demo-715-b',
+  'post-demo-716-a', 'post-demo-716-b'
+);
 
-WITH imgs AS (
-  SELECT ARRAY[
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRCaEiyENTwM0691yc2BOs5rXyrT5HLnIbfO8Q_S6K5X-y2DbB8kOEnX_I&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuBuFVV6vcWrTmYjB0080oLAW0fYaGlu44gB-lymQktFde_5V6RcUQEzZZ&s=10',
-    'https://cdnimg.co/ece03e48-a716-411d-bb8e-498840fa15ce/35ed3f6f-0165-4f22-9024-79f323071ed5/how-to-look-good-men-s-fashion-mens-outfit.jpg',
-    'https://nousa.nl/cdn/shop/collections/kleding_heren.jpg?v=1764013659',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNJQLxKPnMO13eOchsA-IrHakV-FwsAxmHvSj6qCZVecUbzOkyCQ_JIgQE&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_0xs03FEbqL3bGRMJyAkKIDvgjPWJo27djmhI9u88BA&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNO36XKY6a7gCZq0CK5bQrqrMjc-VhMWm9QQVwp4TNoQ&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa1QmlzxwBlPlhmh6w8BM8dXFL2S3ZP4bguvtm95gAPA&s=10',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQhR3LHcBAtCvq4XSONggJ4YkLOAKw__X9FhcNn2Ub_vw&s=10'
-  ]::text[] AS urls
-),
-authors AS (
+WITH public_users AS (
   SELECT
     u.id AS "authorId",
-    u.phone,
     COALESCE(l.name, 'دمشق') AS location,
-    b.id AS "businessId",
-    RIGHT(u.phone, 3) AS suffix
+    b.id AS "businessId"
   FROM "User" u
   LEFT JOIN "Location" l ON l.id = u."locationId"
   LEFT JOIN "Business" b ON b."ownerId" = u.id
-  WHERE u.phone IN (
-    '+963992966711',
-    '+963992966712',
-    '+963992966713',
-    '+963992966714',
-    '+963992966715',
-    '+963992966716'
+  WHERE u.role IN (
+    'employee',
+    'workshop',
+    'institute',
+    'store',
+    'marketer',
+    'shipping_company'
   )
+    AND u.suspended = false
 ),
-defs AS (
-  -- Two posts per user (image posts)
-  SELECT * FROM (VALUES
-    -- 711
-    ('post-demo-711-a', '711', 'product_offering'::"PostType", 'قمصان قطن للبيع', 'قمصان قطن بجودة عالية — عرض تجريبي', 'ألبسة رجالية', 'جملة', 'سعر ثابت', '45000', ARRAY[0,2]::int[]),
-    ('post-demo-711-b', '711', 'service_offering'::"PostType", 'خدمة تطريز', 'تطريز يدوي بجودة عالية — عرض تجريبي', 'تصميم', NULL, NULL, NULL, ARRAY[1,3]::int[]),
-    -- 712
-    ('post-demo-712-a', '712', 'job_offering'::"PostType", 'مطلوب خياط ماهر', 'نبحث عن خياط للعمل — عرض تجريبي', 'إنتاج/صناعة', NULL, NULL, NULL, ARRAY[2,4]::int[]),
-    ('post-demo-712-b', '712', 'material_offering'::"PostType", 'قماش قطن للبيع', 'قماش قطن مصري — عرض تجريبي', 'أقمشة', NULL, NULL, NULL, ARRAY[3,5]::int[]),
-    -- 713
-    ('post-demo-713-a', '713', 'product_offering'::"PostType", 'بنطال جينز جملة', 'بنطال جينز بمقاسات متعددة — عرض تجريبي', 'ألبسة رجالية', 'جملة', 'سعر ثابت', '65000', ARRAY[4,6]::int[]),
-    ('post-demo-713-b', '713', 'job_seeking'::"PostType", 'خياط يبحث عن عمل', 'خبرة في خياطة القمصان — عرض تجريبي', 'إنتاج/صناعة', NULL, NULL, NULL, ARRAY[5,0]::int[]),
-    -- 714
-    ('post-demo-714-a', '714', 'service_requesting'::"PostType", 'أحتاج خياط', 'أبحث عن خياط لإنهاء طلب — عرض تجريبي', 'خياطة', NULL, NULL, NULL, ARRAY[6,1]::int[]),
-    ('post-demo-714-b', '714', 'product_offering'::"PostType", 'ألبسة صيفية', 'تشكيلة صيفية جاهزة — عرض تجريبي', 'ألبسة رجالية', 'مفرق', 'سعر ثابت', '35000', ARRAY[7,2]::int[]),
-    -- 715
-    ('post-demo-715-a', '715', 'material_requesting'::"PostType", 'أبحث عن قماش كتان', 'أحتاج قماش كتان — عرض تجريبي', 'أقمشة', NULL, NULL, NULL, ARRAY[8,3]::int[]),
-    ('post-demo-715-b', '715', 'service_offering'::"PostType", 'قص وتفصيل', 'خدمة قص وتفصيل — عرض تجريبي', 'إنتاج/صناعة', NULL, NULL, NULL, ARRAY[0,4]::int[]),
-    -- 716
-    ('post-demo-716-a', '716', 'product_offering'::"PostType", 'جاكيت شتوي', 'جاكيتات شتوية للجملة — عرض تجريبي', 'ألبسة رجالية', 'جملة', 'سعر ثابت', '120000', ARRAY[1,5]::int[]),
-    ('post-demo-716-b', '716', 'job_offering'::"PostType", 'مطلوب عامل مستودع', 'فرصة عمل في المستودع — عرض تجريبي', 'إدارة', NULL, NULL, NULL, ARRAY[2,6]::int[])
-  ) AS t(id, suffix, type, title, body, specialty, "sellMethod", "priceMethod", price, img_idx)
+post_numbers AS (
+  SELECT generate_series(1, 15) AS number
+),
+posts AS (
+  SELECT
+    u."authorId",
+    u."businessId",
+    u.location,
+    n.number,
+    CASE ((n.number - 1) % 8)
+      WHEN 0 THEN 'job_seeking'::"PostType"
+      WHEN 1 THEN 'job_offering'::"PostType"
+      WHEN 2 THEN 'service_offering'::"PostType"
+      WHEN 3 THEN 'service_requesting'::"PostType"
+      WHEN 4 THEN 'product_offering'::"PostType"
+      WHEN 5 THEN 'material_offering'::"PostType"
+      WHEN 6 THEN 'material_requesting'::"PostType"
+      ELSE 'reel'::"PostType"
+    END AS type
+  FROM public_users u
+  CROSS JOIN post_numbers n
 )
 INSERT INTO "Post" (
   id,
@@ -71,8 +64,11 @@ INSERT INTO "Post" (
   body,
   media,
   "imageUrls",
+  "videoUrl",
+  "thumbnailUrl",
   location,
   active,
+  "approvalStatus",
   specialty,
   "sellMethod",
   "priceMethod",
@@ -83,50 +79,101 @@ INSERT INTO "Post" (
   "updatedAt"
 )
 SELECT
-  d.id,
-  a."authorId",
-  a."businessId",
-  d.type,
-  d.title,
-  d.body,
-  'image'::"MediaType",
-  ARRAY[
-    (SELECT urls[d.img_idx[1] + 1] FROM imgs),
-    (SELECT urls[d.img_idx[2] + 1] FROM imgs)
-  ],
-  a.location,
+  'demo-post-' || md5(p."authorId") || '-' || lpad(p.number::text, 2, '0'),
+  p."authorId",
+  p."businessId",
+  p.type,
+  CASE p.type
+    WHEN 'job_seeking' THEN 'خياط يبحث عن فرصة عمل'
+    WHEN 'job_offering' THEN 'مطلوب عامل في مجال الألبسة'
+    WHEN 'service_offering' THEN 'خدمات خياطة وتفصيل'
+    WHEN 'service_requesting' THEN 'أبحث عن خدمة خياطة'
+    WHEN 'product_offering' THEN 'منتجات ألبسة للبيع'
+    WHEN 'material_offering' THEN 'أقمشة ومواد للبيع'
+    WHEN 'material_requesting' THEN 'مطلوب أقمشة ومواد'
+    WHEN 'reel' THEN 'فيديو من أعمالنا'
+  END || ' - ' || p.number::text,
+  CASE p.type
+    WHEN 'job_seeking' THEN 'أبحث عن فرصة عمل في مجال الخياطة والألبسة.'
+    WHEN 'job_offering' THEN 'تتوفر فرصة عمل، يرجى التواصل لمعرفة التفاصيل.'
+    WHEN 'service_offering' THEN 'نقدم خدمات مهنية بجودة عالية وفي الوقت المحدد.'
+    WHEN 'service_requesting' THEN 'أبحث عن مزود خدمة مناسب في هذا المجال.'
+    WHEN 'product_offering' THEN 'تشكيلة متنوعة متوفرة للطلب.'
+    WHEN 'material_offering' THEN 'مواد وأقمشة متنوعة متوفرة.'
+    WHEN 'material_requesting' THEN 'أبحث عن مواد مناسبة للإنتاج.'
+    WHEN 'reel' THEN 'لقطات من أعمالنا ومنتجاتنا.'
+  END,
+  CASE WHEN p.type = 'reel' THEN 'video'::"MediaType"
+       ELSE 'image'::"MediaType"
+  END,
+  CASE WHEN p.type = 'reel' THEN ARRAY[]::text[]
+       ELSE ARRAY[
+         'https://picsum.photos/id/' || (10 + ((p.number - 1) % 70))::text || '/600/800'
+       ]::text[]
+  END,
+  CASE WHEN p.type = 'reel' THEN
+    CASE ((p.number - 1) % 5)
+      WHEN 0 THEN 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
+      WHEN 1 THEN 'https://www.w3schools.com/html/mov_bbb.mp4'
+      WHEN 2 THEN 'https://res.cloudinary.com/demo/video/upload/dog.mp4'
+      WHEN 3 THEN 'https://res.cloudinary.com/demo/video/upload/elephants.mp4'
+      ELSE 'https://res.cloudinary.com/demo/video/upload/snow_horses.mp4'
+    END
+    ELSE NULL
+  END,
+  CASE WHEN p.type = 'reel' THEN
+    'https://picsum.photos/id/' || (10 + ((p.number - 1) % 70))::text || '/600/800'
+    ELSE NULL
+  END,
+  p.location,
   true,
-  d.specialty,
-  d."sellMethod",
-  d."priceMethod",
-  d.price,
-  CASE
-    WHEN d.type IN ('job_offering'::"PostType", 'job_seeking'::"PostType")
-      THEN ARRAY['كامل']::text[]
-    ELSE ARRAY[]::text[]
+  'approved'::"PostApprovalStatus",
+  CASE p.type
+    WHEN 'job_seeking' THEN 'إنتاج/صناعة'
+    WHEN 'job_offering' THEN 'إنتاج/صناعة'
+    WHEN 'service_offering' THEN 'خياطة'
+    WHEN 'service_requesting' THEN 'خياطة'
+    WHEN 'product_offering' THEN 'ألبسة'
+    WHEN 'material_offering' THEN 'أقمشة'
+    WHEN 'material_requesting' THEN 'أقمشة'
+    ELSE NULL
   END,
-  CASE
-    WHEN d.type IN ('job_offering'::"PostType", 'job_seeking'::"PostType")
-      THEN ARRAY['خياطة']::text[]
-    ELSE ARRAY[]::text[]
+  CASE WHEN p.type = 'product_offering' THEN 'جملة' ELSE NULL END,
+  CASE WHEN p.type IN ('product_offering', 'material_offering')
+       THEN 'سعر ثابت' ELSE NULL
   END,
-  NOW() - ((ROW_NUMBER() OVER (ORDER BY d.id))::int || ' hours')::interval,
+  CASE WHEN p.type = 'product_offering' THEN (35000 + p.number * 1000)::text
+       WHEN p.type = 'material_offering' THEN (20000 + p.number * 500)::text
+       ELSE NULL
+  END,
+  CASE WHEN p.type IN ('job_seeking', 'job_offering')
+       THEN ARRAY['كامل']::text[] ELSE ARRAY[]::text[]
+  END,
+  CASE WHEN p.type IN ('job_seeking', 'job_offering')
+       THEN ARRAY['خياطة']::text[] ELSE ARRAY[]::text[]
+  END,
+  NOW() - (p.number::text || ' hours')::interval,
   NOW()
-FROM defs d
-JOIN authors a ON a.suffix = d.suffix
+FROM posts p
 ON CONFLICT (id) DO NOTHING;
 
--- Summary
-SELECT u.phone, u.role, COUNT(p.id) AS posts
+-- Summary: each listed public user should have 15 posts from this seed.
+SELECT
+  u.phone,
+  u.role,
+  COUNT(p.id) AS seeded_posts
 FROM "User" u
-LEFT JOIN "Post" p ON p."authorId" = u.id AND p.id LIKE 'post-demo-%'
-WHERE u.phone IN (
-  '+963992966711',
-  '+963992966712',
-  '+963992966713',
-  '+963992966714',
-  '+963992966715',
-  '+963992966716'
+LEFT JOIN "Post" p
+  ON p."authorId" = u.id
+  AND p.id LIKE 'demo-post-' || md5(u.id) || '-%'
+WHERE u.role IN (
+  'employee',
+  'workshop',
+  'institute',
+  'store',
+  'marketer',
+  'shipping_company'
 )
-GROUP BY u.phone, u.role
-ORDER BY u.phone;
+  AND u.suspended = false
+GROUP BY u.id, u.phone, u.role
+ORDER BY u.role, u.phone;
