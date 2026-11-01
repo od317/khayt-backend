@@ -222,6 +222,16 @@ likedByMe: boolean
 
 text
 
+### GET /posts/liked/reels
+
+Authenticated. Reels the current user liked, newest like first.
+Accepts `page` and `limit`; returns `{ items: Post[], total }`.
+
+### GET /posts/saved/reels
+
+Authenticated. Reels the current user saved, newest save first.
+Accepts `page` and `limit`; returns `{ items: Post[], total }`.
+
 ### POST /posts
 
 Publish.

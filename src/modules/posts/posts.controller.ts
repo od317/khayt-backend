@@ -160,6 +160,24 @@ export class PostsController {
     return this.posts.listLiked(user, query);
   }
 
+  @Get('liked/reels')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'List reels I liked',
+    description:
+      'Authenticated. Reels the current user liked, newest like first. Paginated via page & limit.',
+  })
+  @ApiOkResponse({
+    description: 'Paginated liked reels',
+    schema: { example: paginated(samplePost) },
+  })
+  listLikedReels(
+    @RequireUser() user: AuthenticatedUser,
+    @Query() query: PaginationDto,
+  ): Promise<Paginated<PostResponse>> {
+    return this.posts.listLiked(user, query, true);
+  }
+
   @Get('saved')
   @ApiBearerAuth('access-token')
   @ApiOperation({
@@ -176,6 +194,24 @@ export class PostsController {
     @Query() query: PaginationDto,
   ): Promise<Paginated<PostResponse>> {
     return this.posts.listSaved(user, query);
+  }
+
+  @Get('saved/reels')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'List reels I saved',
+    description:
+      'Authenticated. Reels the current user saved, newest save first. Paginated via page & limit.',
+  })
+  @ApiOkResponse({
+    description: 'Paginated saved reels',
+    schema: { example: paginated(samplePost) },
+  })
+  listSavedReels(
+    @RequireUser() user: AuthenticatedUser,
+    @Query() query: PaginationDto,
+  ): Promise<Paginated<PostResponse>> {
+    return this.posts.listSaved(user, query, true);
   }
 
   @Public()

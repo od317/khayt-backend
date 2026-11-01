@@ -292,6 +292,48 @@ describe('PostsService', () => {
       expect(result.items[0]?.id).toBe('post-saved');
       expect(result.total).toBe(1);
     });
+
+    it('filters liked posts to reels when requested', async () => {
+      prisma.like.findMany.mockResolvedValue([]);
+      prisma.like.count.mockResolvedValue(0);
+
+      await service.listLiked(actor, { page: 1, limit: 20 }, true);
+
+      expect(prisma.like.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: actor.id,
+            post: {
+              deletedAt: null,
+              active: true,
+              approvalStatus: 'approved',
+              type: PostType.reel,
+            },
+          },
+        }),
+      );
+    });
+
+    it('filters saved posts to reels when requested', async () => {
+      prisma.savedPost.findMany.mockResolvedValue([]);
+      prisma.savedPost.count.mockResolvedValue(0);
+
+      await service.listSaved(actor, { page: 1, limit: 20 }, true);
+
+      expect(prisma.savedPost.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: actor.id,
+            post: {
+              deletedAt: null,
+              active: true,
+              approvalStatus: 'approved',
+              type: PostType.reel,
+            },
+          },
+        }),
+      );
+    });
   });
 
   describe('create', () => {

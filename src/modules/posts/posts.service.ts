@@ -215,6 +215,7 @@ export class PostsService {
   async listLiked(
     actor: AuthenticatedUser,
     query: { page: number; limit: number },
+    reelsOnly = false,
   ): Promise<Paginated<PostResponse>> {
     const where: Prisma.LikeWhereInput = {
       userId: actor.id,
@@ -222,6 +223,7 @@ export class PostsService {
         deletedAt: null,
         active: true,
         approvalStatus: PostApprovalStatus.approved,
+        ...(reelsOnly ? { type: PostType.reel } : {}),
       },
     };
     const { skip, take } = skipTake(query.page, query.limit);
@@ -246,6 +248,7 @@ export class PostsService {
   async listSaved(
     actor: AuthenticatedUser,
     query: { page: number; limit: number },
+    reelsOnly = false,
   ): Promise<Paginated<PostResponse>> {
     const where: Prisma.SavedPostWhereInput = {
       userId: actor.id,
@@ -253,6 +256,7 @@ export class PostsService {
         deletedAt: null,
         active: true,
         approvalStatus: PostApprovalStatus.approved,
+        ...(reelsOnly ? { type: PostType.reel } : {}),
       },
     };
     const { skip, take } = skipTake(query.page, query.limit);
