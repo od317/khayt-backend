@@ -94,6 +94,7 @@ describe('RolesService', () => {
     prisma.role.findMany.mockResolvedValue([
       { ...employeeRole, value: 'store' },
       { ...employeeRole, value: 'workshop' },
+      { ...employeeRole, value: 'institute' },
       employeeRole,
       customRole,
     ]);
@@ -108,6 +109,7 @@ describe('RolesService', () => {
     ).toEqual([
       ['store', true],
       ['workshop', true],
+      ['institute', true],
       ['employee', false],
       ['partner', false],
     ]);

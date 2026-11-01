@@ -32,7 +32,7 @@ export function toPublicRole(role: Role): RoleResponse {
     label: role.label,
     description: role.description ?? '',
     iconUrl: withDefaultAvatar(role.iconUrl),
-    needsBusinessSetup: role.value === 'store' || role.value === 'workshop',
+    needsBusinessSetup: ['store', 'workshop', 'institute'].includes(role.value),
   };
 }
 

@@ -716,7 +716,7 @@ When the whole `deliveryBorder` is `null`, there is no geo circle (e.g. خارج
 
 ### GET `/api/roles`
 
-- **Response can be null:** (none) — `description` is always a string (`''` if missing in DB); `iconUrl` is always a URL (placeholder if empty in DB); `needsBusinessSetup` is always a boolean (true for `store` and `workshop`, false otherwise)
+- **Response can be null:** (none) — `description` is always a string (`''` if missing in DB); `iconUrl` is always a URL (placeholder if empty in DB); `needsBusinessSetup` is always a boolean (true for `store`, `workshop`, and `institute`, false otherwise)
 - **Request optional:** (none)
 
 ---
