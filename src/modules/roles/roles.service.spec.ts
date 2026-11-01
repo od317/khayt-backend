@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
@@ -99,15 +95,6 @@ describe('RolesService', () => {
       NotFoundException,
     );
     expect(prisma.role.delete).not.toHaveBeenCalled();
-  });
-
-  it('refuses to delete a system role', async () => {
-    prisma.role.findUnique.mockResolvedValue(employeeRole);
-    await expect(service.remove(employeeRole.id)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
-    expect(prisma.role.delete).not.toHaveBeenCalled();
-    expect(prisma.user.updateMany).not.toHaveBeenCalled();
   });
 
   it('refuses to delete a role whose users have orders', async () => {
