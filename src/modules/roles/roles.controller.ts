@@ -23,7 +23,7 @@ export class RolesController {
   @ApiOperation({
     summary: 'List selectable onboarding roles',
     description:
-      'Public. Returns roles with label, Arabic description, and iconUrl for the app role picker.',
+      'Public. Returns role details for the app role picker. needsOnboarding is true for store and workshop, and false for all other roles.',
   })
   @ApiOkResponse({
     description: 'Selectable roles (`items` of RoleResponseDto)',

@@ -20,4 +20,11 @@ export class RoleResponseDto {
       'Icon URL (e.g. /icons/employee.png). Prefix with API host. Placeholder if empty in DB.',
   })
   iconUrl!: string;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'Whether this role requires business onboarding after role selection. True for store and workshop; false for all other roles.',
+  })
+  needsOnboarding!: boolean;
 }
