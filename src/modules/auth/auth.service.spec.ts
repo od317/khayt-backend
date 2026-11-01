@@ -1096,6 +1096,57 @@ describe('AuthService', () => {
       expect(result.business?.imageUrl).toBe('/uploads/avatars/a.jpg');
     });
 
+    it('updates profile image when address is sent without map coordinates', async () => {
+      const workshopActor: AuthenticatedUser = {
+        id: 'user-workshop',
+        role: UserRole.workshop,
+        phone: '+963994037669',
+      };
+      prisma.user.update.mockResolvedValue(
+        makeUser({
+          id: workshopActor.id,
+          role: UserRole.workshop,
+          avatarUrl: '/uploads/avatars/profile.jpg',
+          deliveryAddress: 'شارع بغداد، بناء 12',
+        }),
+      );
+
+      await service.updateMe(
+        workshopActor,
+        { deliveryAddress: 'شارع بغداد، بناء 12' },
+        {
+          filename: 'profile.jpg',
+          mimetype: 'image/jpeg',
+        } as Express.Multer.File,
+      );
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            avatarUrl: '/uploads/avatars/profile.jpg',
+            deliveryAddress: 'شارع بغداد، بناء 12',
+          },
+        }),
+      );
+      expect(prisma.business.updateMany).toHaveBeenCalledWith({
+        where: { ownerId: workshopActor.id },
+        data: { imageUrl: '/uploads/avatars/profile.jpg' },
+      });
+    });
+
+    it('requires latitude and longitude together only when coordinates are sent', async () => {
+      await expect(
+        service.updateMe(actor, { deliveryLat: 33.5138 }),
+      ).rejects.toMatchObject({
+        response: {
+          error: 'validation_failed',
+          fields: { deliveryLng: 'required' },
+        },
+      });
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
     it('prefers uploaded file over string avatarUrl', async () => {
       const workshopActor: AuthenticatedUser = {
         id: 'user-workshop',

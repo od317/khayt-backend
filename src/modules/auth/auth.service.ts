@@ -407,50 +407,26 @@ export class AuthService {
       dto.deliveryLat !== undefined ||
       dto.deliveryLng !== undefined
     ) {
-      if (actor.role === UserRole.delivery) {
-        if (dto.deliveryLat === undefined || dto.deliveryLng === undefined) {
-          throw new HttpException(
-            {
-              error: 'validation_failed',
-              message: 'موظف التوصيل يجب أن يرسل خط العرض وخط الطول',
-              fields: {
-                deliveryLat:
-                  dto.deliveryLat === undefined ? 'required' : undefined,
-                deliveryLng:
-                  dto.deliveryLng === undefined ? 'required' : undefined,
-              },
+      if (dto.deliveryAddress !== undefined) {
+        data.deliveryAddress = dto.deliveryAddress.trim();
+      }
+
+      const hasLatitude = dto.deliveryLat !== undefined;
+      const hasLongitude = dto.deliveryLng !== undefined;
+      if (hasLatitude !== hasLongitude) {
+        throw new HttpException(
+          {
+            error: 'validation_failed',
+            message: 'يجب إرسال خط العرض وخط الطول معاً',
+            fields: {
+              deliveryLat: hasLatitude ? undefined : 'required',
+              deliveryLng: hasLongitude ? undefined : 'required',
             },
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-        data.deliveryLat = dto.deliveryLat;
-        data.deliveryLng = dto.deliveryLng;
-        if (dto.deliveryAddress !== undefined) {
-          data.deliveryAddress = dto.deliveryAddress;
-        }
-      } else {
-        const address = dto.deliveryAddress?.trim() ?? '';
-        if (
-          address.length < 3 ||
-          dto.deliveryLat === undefined ||
-          dto.deliveryLng === undefined
-        ) {
-          throw new HttpException(
-            {
-              error: 'validation_failed',
-              message: 'موقع الخريطة والعنوان مطلوبان معاً',
-              fields: {
-                deliveryAddress: address.length < 3 ? 'required' : undefined,
-                deliveryLat:
-                  dto.deliveryLat === undefined ? 'required' : undefined,
-                deliveryLng:
-                  dto.deliveryLng === undefined ? 'required' : undefined,
-              },
-            },
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-        data.deliveryAddress = address;
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (dto.deliveryLat !== undefined && dto.deliveryLng !== undefined) {
         data.deliveryLat = dto.deliveryLat;
         data.deliveryLng = dto.deliveryLng;
       }

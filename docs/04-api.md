@@ -52,6 +52,7 @@ text
 Update own profile (JSON or multipart).
 - File field `image` **or** `avatarUrl` → `/uploads/avatars/…` (file wins over string URL)
 - String `avatarUrl` → used when no file is sent
+- Profile edits do not require a delivery address or map coordinates. Address can be updated by itself; if coordinates are sent, both `deliveryLat` and `deliveryLng` must be included.
 - Result written to `user.avatarUrl` and, for workshop/store/institute, `business.imageUrl`
 → 200 { user: User, business?: Business }
 
