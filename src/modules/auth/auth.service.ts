@@ -533,7 +533,7 @@ export class AuthService {
 
     const limitKey = availabilityLimitKey(actor.id);
     const attempts = await this.redis.increment(limitKey);
-    if (attempts === 4) {
+    if (attempts === 1) {
       await this.redis.expire(limitKey, AVAILABILITY_RATE_WINDOW_SECONDS);
     }
     if (attempts > AVAILABILITY_RATE_LIMIT_MAX) {
