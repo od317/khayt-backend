@@ -123,12 +123,12 @@ export class RolesService {
       });
     }
 
-    if (existing.system) {
-      throw new ForbiddenException({
-        error: 'forbidden',
-        message: 'لا يمكن حذف أدوار النظام',
-      });
-    }
+    // if (existing.system) {
+    //   throw new ForbiddenException({
+    //     error: 'forbidden',
+    //     message: 'لا يمكن حذف أدوار النظام',
+    //   });
+    // }
 
     const inUse = await this.prisma.user.count({
       where: { role: existing.value },
