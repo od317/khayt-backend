@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -16,7 +15,6 @@ export type RoleResponse = {
   value: string;
   label: string;
   description: string;
-  /** Always a URL (placeholder if empty in DB). */
   iconUrl: string;
 };
 
@@ -122,22 +120,23 @@ export class RolesService {
   /**
    * Hard-deletes the Role row and soft-deletes every User that held it.
    *
-   * Guards (in order):
-   *   1. Role must exist.
-   *   2. System roles cannot be deleted.
-   *   3. Users with financial history (orders, bills, payments,
-   *      deliveries, or products supplied by their business that appear
-   *      on order lines) block the delete — this preserves the audit
-   *      trail.
+   * System roles CAN be deleted, but:
+   *   - Only super_admin may call this for system roles (enforced in
+   *     the controller via `@Roles(UserRole.super_admin)`).
+   *   - A system role cannot be the *last* selectable role in the DB —
+   *     that would brick onboarding, since `findOrCreateUser` creates
+   *     users with `role: UserRole.employee` and the app picker reads
+   *     selectable roles.
+   *   - Users with financial history block deletion (audit trail).
    *
-   * After soft-delete:
-   *   - `role` value on each user is preserved so the account can be
-   *     restored if the same role is recreated later (it will not
-   *     auto-reactivate; `suspended` stays true).
-   *   - `deliveryAddress/Lat/Lng` are preserved because in-flight
-   *     deliveries still need them.
-   *   - Redis refresh sessions are revoked so no session survives the
-   *     suspension.
+   * WARNING: deleting a system role whose `value` matches a
+   * `UserRole` enum member (employee, workshop, store, institute,
+   * marketer, shipping_company, delivery) will break:
+   *   - `AuthService.onboarding` (role lookup returns null)
+   *   - `AuthService.deleteAccount` for those users
+   *   - the app's role picker (no selectable option for that role)
+   * This is accepted as intentional operator action; do not delete
+   * a system role without a migration/regeneration plan.
    */
   async remove(id: string): Promise<{ success: true }> {
     const existing = await this.prisma.role.findUnique({ where: { id } });
@@ -148,11 +147,19 @@ export class RolesService {
       });
     }
 
+    // If deleting a *system* role, protect onboarding: there must be
+    // at least one other selectable role left.
     if (existing.system) {
-      throw new ForbiddenException({
-        error: 'forbidden',
-        message: 'لا يمكن حذف أدوار النظام',
+      const otherSelectable = await this.prisma.role.count({
+        where: { selectable: true, id: { not: id } },
       });
+      if (otherSelectable === 0) {
+        throw new ConflictException({
+          error: 'conflict',
+          message:
+            'لا يمكن حذف آخر دور نظام متاح — سيؤدي ذلك إلى تعطيل التسجيل الأول.',
+        });
+      }
     }
 
     const users = await this.prisma.user.findMany({
@@ -178,8 +185,7 @@ export class RolesService {
         }),
         this.prisma.payment.count({ where: { recordedBy: { in: userIds } } }),
         this.prisma.delivery.count({ where: { driverId: { in: userIds } } }),
-        // "Business has order lines" ≈ a product this business supplied
-        // appears on an order. Relation on Product is `supplier`.
+        // Relation on Product is `supplier`, not `supplierBusiness`.
         this.prisma.orderLine.count({
           where: {
             product: { supplier: { ownerId: { in: userIds } } },
@@ -233,11 +239,6 @@ export class RolesService {
           where: { userId: { in: userIds } },
         });
 
-        // NOTE: `role` is intentionally preserved so a recreated role can
-        // later be associated back to these users. `suspended: true`
-        // means they stay logged out regardless.
-        // NOTE: deliveryAddress/Lat/Lng preserved — in-flight deliveries
-        // still need them.
         await tx.user.updateMany({
           where: { id: { in: userIds } },
           data: {
@@ -261,8 +262,7 @@ export class RolesService {
       try {
         await this.redis.deleteByPattern(refreshKeysPattern(userId));
       } catch {
-        // Suspended users are blocked at verify()/refresh() anyway, so a
-        // Redis failure here does not compromise the suspension.
+        // Suspended users are blocked at verify()/refresh() anyway.
       }
     }
 
