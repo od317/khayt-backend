@@ -41,6 +41,8 @@ body: { phone, code }
 Each successful login replaces the user's active session. Access and refresh
 tokens from previous logins are rejected; only the newest login remains active.
 After deploying this behavior, users with existing sessions must log in again.
+Sending a revoked token to a public endpoint also returns `401`; public access
+without a token remains available.
 
 text
 

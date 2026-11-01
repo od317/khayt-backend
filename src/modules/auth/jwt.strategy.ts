@@ -47,17 +47,24 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
-    if (!payload.sub || !payload.role || !payload.tokenId) {
+    if (!payload.sub || !payload.role) {
       throw new UnauthorizedException({
         error: 'unauthorized',
         message: 'رمز الوصول غير صالح',
       });
     }
 
+    if (!payload.tokenId) {
+      throw new UnauthorizedException({
+        error: 'session_revoked',
+        message: 'تم إلغاء جلسة تسجيل الدخول',
+      });
+    }
+
     const activeSession = await this.redis.get(activeSessionKey(payload.sub));
     if (activeSession !== payload.tokenId) {
       throw new UnauthorizedException({
-        error: 'unauthorized',
+        error: 'session_revoked',
         message: 'تم إلغاء جلسة تسجيل الدخول',
       });
     }

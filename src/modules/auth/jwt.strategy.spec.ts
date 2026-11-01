@@ -1,4 +1,3 @@
-import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
@@ -49,7 +48,9 @@ describe('JwtStrategy active session', () => {
         role: UserRole.store,
         tokenId: 'old-session',
       }),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    ).rejects.toMatchObject({
+      response: { error: 'session_revoked' },
+    });
     expect(redis.get).toHaveBeenCalledWith(activeSessionKey('user-1'));
   });
 
@@ -62,7 +63,9 @@ describe('JwtStrategy active session', () => {
         role: UserRole.store,
         tokenId: '',
       }),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    ).rejects.toMatchObject({
+      response: { error: 'session_revoked' },
+    });
   });
 
   it('accepts an access token from the active session', async () => {
