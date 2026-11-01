@@ -38,6 +38,10 @@ body: { phone, code }
 → 200 { token, user: User }
 → 401 { error: "invalid_code" }
 
+Each successful login replaces the user's active session. Access and refresh
+tokens from previous logins are rejected; only the newest login remains active.
+After deploying this behavior, users with existing sessions must log in again.
+
 text
 
 ### GET /auth/me

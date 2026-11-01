@@ -9,11 +9,12 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { AuthenticatedUser } from '../../common/types/auth';
 import { AppConfig } from '../../config/configuration';
-import { accessDenyKey } from './auth.constants';
+import { accessDenyKey, activeSessionKey } from './auth.constants';
 
 type AccessTokenPayload = {
   sub: string;
   role: UserRole;
+  tokenId: string;
 };
 
 @Injectable()
@@ -46,10 +47,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
-    if (!payload.sub || !payload.role) {
+    if (!payload.sub || !payload.role || !payload.tokenId) {
       throw new UnauthorizedException({
         error: 'unauthorized',
         message: 'رمز الوصول غير صالح',
+      });
+    }
+
+    const activeSession = await this.redis.get(activeSessionKey(payload.sub));
+    if (activeSession !== payload.tokenId) {
+      throw new UnauthorizedException({
+        error: 'unauthorized',
+        message: 'تم إلغاء جلسة تسجيل الدخول',
       });
     }
 

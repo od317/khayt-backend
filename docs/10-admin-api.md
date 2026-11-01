@@ -59,6 +59,10 @@ Request/response reference for the dashboard and staff tools.
 
 ## 1. Auth (dashboard)
 
+Only the latest successful login for an account remains active. Completing a
+new login invalidates that account's previous access and refresh tokens,
+including sessions created by the other login method.
+
 ### `POST /auth/admin/login` — Public
 
 **Request**

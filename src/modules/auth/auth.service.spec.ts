@@ -16,9 +16,12 @@ import { AppConfig } from '../../config/configuration';
 import {
   AVAILABILITY_RATE_LIMIT_MAX,
   AVAILABILITY_RATE_WINDOW_SECONDS,
+  activeSessionKey,
   OTP_RATE_WINDOW_SECONDS,
   OTP_TTL_SECONDS,
   availabilityLimitKey,
+  refreshKey,
+  refreshKeysPattern,
   otpAttemptsKey,
   otpKey,
   otpLimitKey,
@@ -149,9 +152,12 @@ describe('AuthService', () => {
     jwt = {
       signAsync: vi
         .fn()
-        .mockImplementation(async (payload: { tokenId?: string }) => {
-          return payload.tokenId ? 'refresh-token' : 'access-token';
-        }),
+        .mockImplementation(
+          async (payload: { tokenId?: string; role?: string }) => {
+            if (payload.role) return 'access-token';
+            return payload.tokenId ? 'refresh-token' : 'access-token';
+          },
+        ),
       verifyAsync: vi.fn(),
       decode: vi.fn().mockReturnValue({
         exp: Math.floor(Date.now() / 1000) + 900,
@@ -328,6 +334,64 @@ describe('AuthService', () => {
     expect(result.refreshToken).toBe('refresh-token');
     expect(result.accessTokenExpiresAt).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+    );
+    const accessPayload = jwt.signAsync.mock.calls.find(
+      (call) => call[0].role === UserRole.employee,
+    )?.[0];
+    expect(accessPayload).toMatchObject({
+      sub: created.id,
+      role: UserRole.employee,
+      tokenId: expect.any(String),
+    });
+    const tokenId = accessPayload?.tokenId as string;
+    expect(redis.deleteByPattern).toHaveBeenCalledWith(
+      refreshKeysPattern(created.id),
+    );
+    expect(redis.set).toHaveBeenCalledWith(
+      activeSessionKey(created.id),
+      tokenId,
+      service.refreshTtlSeconds,
+    );
+    expect(redis.set).toHaveBeenCalledWith(
+      refreshKey(created.id, tokenId),
+      '1',
+      service.refreshTtlSeconds,
+    );
+  });
+
+  it('rejects refresh tokens from a previous login session', async () => {
+    jwt.verifyAsync.mockResolvedValue({
+      sub: 'user-1',
+      tokenId: 'old-session',
+    });
+    redis.get.mockResolvedValue('new-session');
+
+    await expect(service.refresh('old-refresh-token')).rejects.toMatchObject({
+      response: { error: 'invalid_token' },
+    });
+    expect(redis.exists).not.toHaveBeenCalled();
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('issues refreshed access tokens for the active session', async () => {
+    jwt.verifyAsync.mockResolvedValue({
+      sub: 'user-1',
+      tokenId: 'active-session',
+    });
+    redis.get.mockResolvedValue('active-session');
+    redis.exists.mockResolvedValue(true);
+    prisma.user.findUnique.mockResolvedValue(makeUser());
+
+    const result = await service.refresh('active-refresh-token');
+
+    expect(result.accessToken).toBe('access-token');
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      {
+        sub: 'user-1',
+        role: UserRole.employee,
+        tokenId: 'active-session',
+      },
+      { expiresIn: 900 },
     );
   });
 

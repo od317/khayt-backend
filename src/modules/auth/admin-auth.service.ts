@@ -20,7 +20,11 @@ import {
   userLocationInclude,
   UserResponse,
 } from './auth.mapper';
-import { refreshKey } from './auth.constants';
+import {
+  activeSessionKey,
+  refreshKey,
+  refreshKeysPattern,
+} from './auth.constants';
 import {
   ADMIN_2FA_MAX_ATTEMPTS,
   ADMIN_2FA_TTL_SECONDS,
@@ -213,9 +217,7 @@ export class AdminAuthService {
     );
   }
 
-  private async issueTokens(
-    user: User,
-  ): Promise<{
+  private async issueTokens(user: User): Promise<{
     accessToken: string;
     refreshToken: string;
     accessTokenExpiresAt: string;
@@ -223,7 +225,7 @@ export class AdminAuthService {
     const tokenId = randomUUID();
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(
-        { sub: user.id, role: user.role },
+        { sub: user.id, role: user.role, tokenId },
         { expiresIn: this.accessExpiresIn },
       ),
       this.jwt.signAsync(
@@ -232,6 +234,12 @@ export class AdminAuthService {
       ),
     ]);
 
+    await this.redis.deleteByPattern(refreshKeysPattern(user.id));
+    await this.redis.set(
+      activeSessionKey(user.id),
+      tokenId,
+      this.refreshExpiresIn,
+    );
     await this.redis.set(
       refreshKey(user.id, tokenId),
       '1',

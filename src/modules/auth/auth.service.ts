@@ -29,6 +29,7 @@ import {
   OTP_RATE_LIMIT_MAX,
   OTP_RATE_WINDOW_SECONDS,
   OTP_TTL_SECONDS,
+  activeSessionKey,
   accessDenyKey,
   availabilityLimitKey,
   otpAttemptsKey,
@@ -197,6 +198,14 @@ export class AuthService {
     refreshToken: string,
   ): Promise<{ accessToken: string; accessTokenExpiresAt: string }> {
     const payload = await this.verifyRefreshToken(refreshToken);
+    const activeSession = await this.redis.get(activeSessionKey(payload.sub));
+    if (activeSession !== payload.tokenId) {
+      throw new UnauthorizedException({
+        error: 'invalid_token',
+        message: 'تم إلغاء جلسة تسجيل الدخول',
+      });
+    }
+
     const exists = await this.redis.exists(
       refreshKey(payload.sub, payload.tokenId),
     );
@@ -223,7 +232,7 @@ export class AuthService {
       });
     }
 
-    const accessToken = await this.signAccessToken(user);
+    const accessToken = await this.signAccessToken(user, payload.tokenId);
     return {
       accessToken,
       accessTokenExpiresAt: this.accessTokenExpiresAt(accessToken),
@@ -232,6 +241,7 @@ export class AuthService {
 
   async logout(userId: string, accessToken: string): Promise<{ success: true }> {
     await this.redis.deleteByPattern(refreshKeysPattern(userId));
+    await this.redis.del(activeSessionKey(userId));
 
     const payload = this.jwt.decode(accessToken);
     const now = Math.floor(Date.now() / 1000);
@@ -723,13 +733,19 @@ export class AuthService {
   private async issueTokens(user: User): Promise<AuthTokens> {
     const tokenId = randomUUID();
     const [accessToken, refreshToken] = await Promise.all([
-      this.signAccessToken(user),
+      this.signAccessToken(user, tokenId),
       this.jwt.signAsync(
         { sub: user.id, tokenId },
         { expiresIn: this.refreshExpiresIn },
       ),
     ]);
 
+    await this.redis.deleteByPattern(refreshKeysPattern(user.id));
+    await this.redis.set(
+      activeSessionKey(user.id),
+      tokenId,
+      this.refreshTtlSeconds,
+    );
     await this.redis.set(
       refreshKey(user.id, tokenId),
       '1',
@@ -743,9 +759,12 @@ export class AuthService {
     };
   }
 
-  private signAccessToken(user: Pick<User, 'id' | 'role'>): Promise<string> {
+  private signAccessToken(
+    user: Pick<User, 'id' | 'role'>,
+    tokenId: string,
+  ): Promise<string> {
     return this.jwt.signAsync(
-      { sub: user.id, role: user.role },
+      { sub: user.id, role: user.role, tokenId },
       { expiresIn: this.accessExpiresIn },
     );
   }

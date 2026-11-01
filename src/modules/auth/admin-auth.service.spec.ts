@@ -11,7 +11,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { AppConfig } from '../../config/configuration';
-import { ADMIN_CHALLENGE_PURPOSE, admin2faKey } from './admin-constants';
+import {
+  ADMIN_CHALLENGE_PURPOSE,
+  admin2faKey,
+} from './admin-constants';
+import { activeSessionKey } from './auth.constants';
 import { AdminAuthService } from './admin-auth.service';
 import { EmailService } from './email.service';
 
@@ -49,6 +53,7 @@ describe('AdminAuthService', () => {
     set: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
     del: ReturnType<typeof vi.fn>;
+    deleteByPattern: ReturnType<typeof vi.fn>;
     exists: ReturnType<typeof vi.fn>;
     increment: ReturnType<typeof vi.fn>;
     expire: ReturnType<typeof vi.fn>;
@@ -69,6 +74,7 @@ describe('AdminAuthService', () => {
       set: vi.fn().mockResolvedValue(undefined),
       get: vi.fn(),
       del: vi.fn().mockResolvedValue(undefined),
+      deleteByPattern: vi.fn().mockResolvedValue(undefined),
       exists: vi.fn(),
       increment: vi.fn().mockResolvedValue(1),
       expire: vi.fn().mockResolvedValue(undefined),
@@ -84,9 +90,14 @@ describe('AdminAuthService', () => {
       signAsync: vi
         .fn()
         .mockImplementation(
-          async (payload: { tokenId?: string; purpose?: string }) => {
+          async (payload: {
+            tokenId?: string;
+            purpose?: string;
+            role?: string;
+          }) => {
             if (payload.purpose === ADMIN_CHALLENGE_PURPOSE)
               return 'challenge-token';
+            if (payload.role) return 'access-token';
             return payload.tokenId ? 'refresh-token' : 'access-token';
           },
         ),
@@ -276,6 +287,16 @@ describe('AdminAuthService', () => {
         /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
       );
       expect(result.user.id).toBe('user-1');
+      expect(redis.deleteByPattern).toHaveBeenCalledWith('refresh:user-1:*');
+      const accessPayload = jwt.signAsync.mock.calls.find(
+        (call) => call[0].role === UserRole.admin,
+      )?.[0];
+      expect(accessPayload?.tokenId).toEqual(expect.any(String));
+      expect(redis.set).toHaveBeenCalledWith(
+        activeSessionKey('user-1'),
+        accessPayload?.tokenId,
+        30 * 24 * 60 * 60,
+      );
     });
   });
 });

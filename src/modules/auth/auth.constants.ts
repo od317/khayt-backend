@@ -16,6 +16,9 @@ export const availabilityLimitKey = (userId: string): string =>
 export const refreshKey = (userId: string, tokenId: string): string =>
   `refresh:${userId}:${tokenId}`;
 
+export const activeSessionKey = (userId: string): string =>
+  `auth:session:${userId}`;
+
 export const refreshKeysPattern = (userId: string): string =>
   `refresh:${userId}:*`;
 
