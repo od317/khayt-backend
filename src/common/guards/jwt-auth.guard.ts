@@ -10,17 +10,6 @@ import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AuthenticatedUser } from '../types/auth';
 
-function isRevokedSessionError(error: unknown): error is HttpException {
-  if (!(error instanceof HttpException)) return false;
-  const response = error.getResponse();
-  return (
-    typeof response === 'object' &&
-    response !== null &&
-    'error' in response &&
-    response.error === 'session_revoked'
-  );
-}
-
 const isSwaggerRequest = (req: Request): boolean => {
   const path = (req.originalUrl ?? req.url).split('?')[0];
   return (
@@ -67,9 +56,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       const result = await (super.canActivate(context) as Promise<boolean>);
       return result;
     } catch (error) {
-      // On public routes, an invalid token must NOT block the request.
-      // Just leave req.user undefined and let the request through.
-      if (isPublic && !isRevokedSessionError(error)) {
+      // Public routes do not require authentication. A stale token should
+      // not prevent actions such as signing in or requesting a new code.
+      if (isPublic) {
         return true;
       }
       throw error;
@@ -87,15 +76,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getClass(),
     ]);
 
-    // On public routes, we never want handleRequest to throw — return
-    // whatever we got (which may be `false`) and let the request proceed.
+    // On public routes, return the authenticated user when available;
+    // otherwise proceed anonymously, including for revoked tokens.
     if (isPublic) {
-      if (isRevokedSessionError(err)) {
-        throw err;
-      }
-      if (isRevokedSessionError(info)) {
-        throw info;
-      }
       return (user || undefined) as TUser;
     }
 

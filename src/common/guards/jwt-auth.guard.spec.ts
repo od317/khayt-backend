@@ -8,21 +8,21 @@ describe('JwtAuthGuard on public routes', () => {
     getHandler: vi.fn(),
     getClass: vi.fn(),
   } as unknown as ExecutionContext;
-  const createGuard = () =>
+  const createGuard = (isPublic = true) =>
     new JwtAuthGuard({
-      getAllAndOverride: vi.fn().mockReturnValue(true),
+      getAllAndOverride: vi.fn().mockReturnValue(isPublic),
     } as unknown as Reflector);
 
-  it('rejects a revoked session instead of treating it as anonymous', () => {
+  it('allows a revoked session to access public routes anonymously', () => {
     const guard = createGuard();
     const error = new UnauthorizedException({
       error: 'session_revoked',
       message: 'Session revoked',
     });
 
-    expect(() => guard.handleRequest(error, false, undefined, context)).toThrow(
-      error,
-    );
+    expect(
+      guard.handleRequest(error, false, undefined, context),
+    ).toBeUndefined();
   });
 
   it('still allows other invalid tokens to access public routes anonymously', () => {
@@ -35,5 +35,17 @@ describe('JwtAuthGuard on public routes', () => {
     expect(
       guard.handleRequest(error, false, undefined, context),
     ).toBeUndefined();
+  });
+
+  it('still rejects revoked sessions on protected routes', () => {
+    const guard = createGuard(false);
+    const error = new UnauthorizedException({
+      error: 'session_revoked',
+      message: 'Session revoked',
+    });
+
+    expect(() =>
+      guard.handleRequest(error, false, undefined, context),
+    ).toThrow(error);
   });
 });
