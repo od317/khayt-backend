@@ -26,7 +26,7 @@ npm install
 docker compose up -d                 # postgres (:5433) + redis (:6379)
 cp .env.example .env                 # defaults work for local Docker
 npx prisma migrate dev
-npm run db:seed                      # demo users, posts, products, …
+npm run db:seed                      # only 45 demo users + 675 posts for store/employee/workshop
 npm run dev                          # http://localhost:3000
 ```
 
@@ -40,7 +40,8 @@ npm run dev                          # http://localhost:3000
 | --- | --- |
 | `npm run dev` | Nest watch mode |
 | `npm run build` / `npm start` | Production build + run |
-| `npm run db:seed` | Reseed demo data |
+| `npm run db:seed` | Seed only 15 demo users per store/employee/workshop role and 15 posts per user |
+| `npm run db:seed:full` | Run the full Prisma demo seed (users, posts, products, …) |
 | `npm run db:reset` | Migrate reset + seed |
 | `npm run db:up` / `db:down` | Start/stop Docker DB+Redis |
 | `npm test` | Vitest |

@@ -969,6 +969,19 @@ async function main(): Promise<void> {
   // ------------------------------------------------------------
   // Users
   // ------------------------------------------------------------
+  const DEMO_USERS_PER_ROLE = 15;
+  const DEMO_LOCATIONS = [
+    { id: 'loc-damascus', name: 'دمشق' },
+    { id: 'loc-halep', name: 'حلب' },
+    { id: 'loc-homs', name: 'حمص' },
+    { id: 'loc-hama', name: 'حماة' },
+    { id: 'loc-lattakia', name: 'اللاذقية' },
+    { id: 'loc-tartous', name: 'طرطوس' },
+    { id: 'loc-idlib', name: 'إدلب' },
+    { id: 'loc-daraa', name: 'درعا' },
+    { id: 'loc-sweida', name: 'السويداء' },
+    { id: 'loc-rural-damascus', name: 'ريف دمشق' },
+  ] as const;
   const users = [
     // ─────────────────────────────────────────
     // Original 6
@@ -1243,6 +1256,43 @@ async function main(): Promise<void> {
         onboardingCompleted: true,
         bio: `مسوق أقمشة وألبسة — منطقة ${n}`,
         availableForWork: n % 2 === 1,
+      };
+    }),
+    ...Array.from({ length: DEMO_USERS_PER_ROLE }, (_, i) => {
+      const n = i + 1;
+      const location = DEMO_LOCATIONS[i % DEMO_LOCATIONS.length]!;
+      return {
+        id: `demo-employee-${String(n).padStart(2, '0')}`,
+        phone: `+963994090${String(n).padStart(3, '0')}`,
+        name: `عامل نسيج ${n}`,
+        role: UserRole.employee,
+        locationId: location.id,
+        onboardingCompleted: true,
+        bio: `عامل في مجال الخياطة والألبسة — ${location.name}`,
+      };
+    }),
+    ...Array.from({ length: DEMO_USERS_PER_ROLE }, (_, i) => {
+      const n = i + 1;
+      const location = DEMO_LOCATIONS[i % DEMO_LOCATIONS.length]!;
+      return {
+        id: `demo-workshop-${String(n).padStart(2, '0')}`,
+        phone: `+963994091${String(n).padStart(3, '0')}`,
+        name: `مشغل خيط ${n}`,
+        role: UserRole.workshop,
+        locationId: location.id,
+        onboardingCompleted: true,
+      };
+    }),
+    ...Array.from({ length: DEMO_USERS_PER_ROLE }, (_, i) => {
+      const n = i + 1;
+      const location = DEMO_LOCATIONS[i % DEMO_LOCATIONS.length]!;
+      return {
+        id: `demo-store-${String(n).padStart(2, '0')}`,
+        phone: `+963994092${String(n).padStart(3, '0')}`,
+        name: `متجر خيط ${n}`,
+        role: UserRole.store,
+        locationId: location.id,
+        onboardingCompleted: true,
       };
     }),
   ];
@@ -1748,6 +1798,43 @@ async function main(): Promise<void> {
         topics: ['خياطة أساسية', 'تطريز', 'تصميم'],
         experience: `${4 + n} سنوات`,
         services: ['دورات خياطة', 'دورات تطريز', 'دورات تصميم'],
+      };
+    }),
+    ...Array.from({ length: DEMO_USERS_PER_ROLE }, (_, i) => {
+      const n = i + 1;
+      const location = DEMO_LOCATIONS[i % DEMO_LOCATIONS.length]!;
+      return {
+        id: `biz-demo-workshop-${String(n).padStart(2, '0')}`,
+        ownerId: `demo-workshop-${String(n).padStart(2, '0')}`,
+        type: BusinessType.workshop,
+        name: `مشغل خيط ${n}`,
+        location: location.name,
+        description: `مشغل متخصص بالخياطة وإنتاج الألبسة في ${location.name}`,
+        phone: `+963994091${String(n).padStart(3, '0')}`,
+        imageUrl: directoryImage(n + 4),
+        verified: n % 2 === 0,
+        capacity: `${500 + n * 100} قطعة شهرياً`,
+        equipment: 'ماكينات خياطة صناعية',
+        minOrder: '10 قطع',
+        experience: `${2 + (n % 10)} سنوات`,
+        services: ['خياطة ألبسة', 'قص وتفصيل', 'تعديلات'],
+      };
+    }),
+    ...Array.from({ length: DEMO_USERS_PER_ROLE }, (_, i) => {
+      const n = i + 1;
+      const location = DEMO_LOCATIONS[i % DEMO_LOCATIONS.length]!;
+      return {
+        id: `biz-demo-store-${String(n).padStart(2, '0')}`,
+        ownerId: `demo-store-${String(n).padStart(2, '0')}`,
+        type: BusinessType.store,
+        name: `متجر خيط ${n}`,
+        location: location.name,
+        description: `متجر للأقمشة والألبسة في ${location.name}`,
+        phone: `+963994092${String(n).padStart(3, '0')}`,
+        imageUrl: directoryImage(n + 8),
+        verified: n % 2 === 1,
+        services: ['بيع بالجملة', 'بيع بالمفرق', 'توصيل'],
+        experience: `${1 + (n % 10)} سنوات`,
       };
     }),
   ];
@@ -3008,7 +3095,7 @@ async function main(): Promise<void> {
   console.log(`  posts: ${postsWithImages.length}`);
 
   // ------------------------------------------------------------
-  // Bulk: 15 posts + 15 reels for every user (incl. يحيى معدل)
+  // Seed 15 posts per user; existing users also receive 15 reels.
   // ------------------------------------------------------------
   {
     const REEL_VIDEOS = [
@@ -3072,6 +3159,11 @@ async function main(): Promise<void> {
       const businessId = user.business?.id ?? null;
       const display = user.name?.trim() || user.id;
       const postType = postTypeForRole(user.role as UserRole);
+      const isAddedRoleDemoUser =
+        user.id.startsWith('demo-employee-') ||
+        user.id.startsWith('demo-workshop-') ||
+        user.id.startsWith('demo-store-');
+      const includeReels = !isAddedRoleDemoUser;
 
       for (let i = 1; i <= 15; i++) {
         const n = String(i).padStart(2, '0');
@@ -3116,12 +3208,15 @@ async function main(): Promise<void> {
           create: { id: postId, ...postData },
           update: postData,
         });
-        await prisma.post.upsert({
-          where: { id: reelId },
-          create: { id: reelId, ...reelData },
-          update: reelData,
-        });
-        bulkCount += 2;
+        bulkCount += 1;
+        if (includeReels) {
+          await prisma.post.upsert({
+            where: { id: reelId },
+            create: { id: reelId, ...reelData },
+            update: reelData,
+          });
+          bulkCount += 1;
+        }
       }
     }
     console.log(
